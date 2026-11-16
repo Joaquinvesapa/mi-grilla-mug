@@ -4,7 +4,7 @@
 |---------|-------|
 | Ticket | DISC-001 |
 | Fecha | 2026-11-16 |
-| Estado | Explorando |
+| Estado | Cerrado |
 
 ## Visión
 
