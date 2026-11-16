@@ -142,6 +142,11 @@ la comparación con un amigo, el perfil con avatar y el panel de admin para edit
   a administrar el integrante más antiguo. La invitación es **solo por link**, que vence a los 3
   días; reemplaza la decisión anterior de "link o código". Los amigos se ven en la grilla, con un
   selector de grupo, solo si el usuario está en algún grupo — así lo decidió el usuario.
+- 2026-11-16: Fondo de pantalla del grupo. Al descargar, el usuario elige "Grilla sola" o "Con
+  amigos", y el grupo si está en varios. Si está en uno solo se usa ese, y si no está en ninguno no
+  se le pregunta. Las iniciales de los amigos aparecen en sus shows encendidos y también en los shows
+  opacos que eligieron los amigos. Un día sin selección se descarga con todo encendido, igual que el
+  fondo personal — así lo decidió el usuario.
 - 2026-11-16: Se aprueba la partición en 7 PRDs con el orden de la tabla de abajo — el usuario la
   aprobó explícitamente.
 
@@ -155,7 +160,7 @@ la comparación con un amigo, el perfil con avatar y el panel de admin para edit
 | 4 | Fondo de pantalla personal: una imagen por día para iPhone | prd-DISC-001-04.md | validado |
 | 5 | En vivo ahora: quién toca y quién sigue en cada escenario, con reloj simulable | prd-DISC-001-05.md | validado |
 | 6 | Grupos: crear, invitar por link, unirse y ver selecciones | prd-DISC-001-06.md | validado |
-| 7 | Fondo de pantalla del grupo: indicador de amigos que coinciden | prd-DISC-001-07.md | identificado |
+| 7 | Fondo de pantalla del grupo: indicador de amigos que coinciden | prd-DISC-001-07.md | validado |
 
 **Dependencias:** 2←1 · 3←2 · 4←3 · 5←3 · 6←3 · 7←4,6. **Orden de implementación:** 1 → 2 → 3 → 4
 → 5 → 6 → 7. Cada PRD se implementa después como su propio ticket FEATURE.
