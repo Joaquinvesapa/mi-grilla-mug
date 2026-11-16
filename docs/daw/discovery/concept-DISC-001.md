@@ -113,6 +113,10 @@ la comparación con un amigo, el perfil con avatar y el panel de admin para edit
   afuera (ver "Fuera del MVP").
 - 2026-11-16: La CI corre al abrir o actualizar un pull request, y de nuevo al mergear a `main`.
   Un push a una rama sin pull request no la dispara — así lo decidió el usuario.
+- 2026-11-16: Cuentas. El registro pide email, contraseña y nombre visible — el nombre sirve para
+  reconocerse en los grupos. La contraseña tiene mínimo 8 caracteres, con al menos una letra y un
+  número. La sesión dura 30 días, para que no venza en pleno festival. Después de 5 intentos
+  fallidos en 15 minutos, el inicio de sesión de ese email se bloquea por 15 minutos.
 - 2026-11-16: Se aprueba la partición en 7 PRDs con el orden de la tabla de abajo — el usuario la
   aprobó explícitamente.
 
@@ -121,7 +125,7 @@ la comparación con un amigo, el perfil con avatar y el panel de admin para edit
 | # | Título | Archivo | Estado |
 |---|--------|---------|--------|
 | 1 | Plataforma base: scaffold, PWA instalable (base offline), shell mobile first, CI (unit + integración + E2E), `/demo` con mockup de iPhone | prd-DISC-001-01.md | validado |
-| 2 | Cuentas: registro e inicio de sesión con email y contraseña | prd-DISC-001-02.md | identificado |
+| 2 | Cuentas: registro e inicio de sesión con email y contraseña | prd-DISC-001-02.md | validado |
 | 3 | Grilla y mi selección: JSON normalizado + seed, vista escenarios × horarios con scroll x/y, selección, aviso de solapados, lectura offline | prd-DISC-001-03.md | identificado |
 | 4 | Fondo de pantalla personal: una imagen por día para iPhone | prd-DISC-001-04.md | identificado |
 | 5 | En vivo ahora: quién toca y quién sigue en cada escenario, con reloj simulable | prd-DISC-001-05.md | identificado |
