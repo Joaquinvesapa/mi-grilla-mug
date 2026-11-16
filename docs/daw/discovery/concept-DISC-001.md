@@ -137,6 +137,11 @@ la comparación con un amigo, el perfil con avatar y el panel de admin para edit
   escenarios donde suena un show elegido por el usuario, y los elegidos llevan un ícono — así lo
   pidió el usuario. La hora simulada se controla solo en `/demo`; fuera de la demo la app usa la
   hora real. Fechas confirmadas: 13 al 15 de marzo de 2026, hora de Argentina.
+- 2026-11-16: Grupos. Hasta 20 integrantes por grupo y hasta 10 grupos por usuario. Quien crea el
+  grupo lo administra: lo renombra, saca integrantes, lo borra y genera links nuevos. Si sale, pasa
+  a administrar el integrante más antiguo. La invitación es **solo por link**, que vence a los 3
+  días; reemplaza la decisión anterior de "link o código". Los amigos se ven en la grilla, con un
+  selector de grupo, solo si el usuario está en algún grupo — así lo decidió el usuario.
 - 2026-11-16: Se aprueba la partición en 7 PRDs con el orden de la tabla de abajo — el usuario la
   aprobó explícitamente.
 
@@ -149,7 +154,7 @@ la comparación con un amigo, el perfil con avatar y el panel de admin para edit
 | 3 | Grilla y mi selección: JSON normalizado + seed, vista escenarios × horarios con scroll x/y, selección, aviso de solapados, lectura offline | prd-DISC-001-03.md | validado |
 | 4 | Fondo de pantalla personal: una imagen por día para iPhone | prd-DISC-001-04.md | validado |
 | 5 | En vivo ahora: quién toca y quién sigue en cada escenario, con reloj simulable | prd-DISC-001-05.md | validado |
-| 6 | Grupos: crear, invitar por link o código, unirse y ver selecciones | prd-DISC-001-06.md | identificado |
+| 6 | Grupos: crear, invitar por link, unirse y ver selecciones | prd-DISC-001-06.md | validado |
 | 7 | Fondo de pantalla del grupo: indicador de amigos que coinciden | prd-DISC-001-07.md | identificado |
 
 **Dependencias:** 2←1 · 3←2 · 4←3 · 5←3 · 6←3 · 7←4,6. **Orden de implementación:** 1 → 2 → 3 → 4
