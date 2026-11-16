@@ -127,6 +127,11 @@ la comparación con un amigo, el perfil con avatar y el panel de admin para edit
   dispositivo, gana la selección pendiente, que es el último guardado. La selección pendiente es
   del usuario que la guardó. Consecuencia para el PRD 04: el fondo de pantalla se tiene que poder
   generar sin conexión y con la selección pendiente.
+- 2026-11-16: Fondo de pantalla personal. Una sola resolución, 1290 × 2796. Muestra el día completo
+  con los 5 escenarios, con un tema oscuro fijo. Si el día no tiene ningún artista elegido, se
+  descarga igual con todos encendidos, como una grilla para tener a mano — todos opacos no se
+  leerían bajo el sol. La imagen usa la selección que se ve en la pantalla, y se genera sin
+  conexión.
 - 2026-11-16: Se aprueba la partición en 7 PRDs con el orden de la tabla de abajo — el usuario la
   aprobó explícitamente.
 
@@ -137,7 +142,7 @@ la comparación con un amigo, el perfil con avatar y el panel de admin para edit
 | 1 | Plataforma base: scaffold, PWA instalable (base offline), shell mobile first, CI (unit + integración + E2E), `/demo` con mockup de iPhone | prd-DISC-001-01.md | validado |
 | 2 | Cuentas: registro e inicio de sesión con email y contraseña | prd-DISC-001-02.md | validado |
 | 3 | Grilla y mi selección: JSON normalizado + seed, vista escenarios × horarios con scroll x/y, selección, aviso de solapados, lectura offline | prd-DISC-001-03.md | validado |
-| 4 | Fondo de pantalla personal: una imagen por día para iPhone | prd-DISC-001-04.md | identificado |
+| 4 | Fondo de pantalla personal: una imagen por día para iPhone | prd-DISC-001-04.md | validado |
 | 5 | En vivo ahora: quién toca y quién sigue en cada escenario, con reloj simulable | prd-DISC-001-05.md | identificado |
 | 6 | Grupos: crear, invitar por link o código, unirse y ver selecciones | prd-DISC-001-06.md | identificado |
 | 7 | Fondo de pantalla del grupo: indicador de amigos que coinciden | prd-DISC-001-07.md | identificado |
