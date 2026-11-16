@@ -69,9 +69,9 @@ la comparación con un amigo, el perfil con avatar y el panel de admin para edit
   escenarios (Flow, Samsung, Alternative, Perry's y Kidzapalooza) y 91 shows. Coincide con el póster
   oficial del viernes. Tres shows terminan después de la medianoche: Peggy Gou, Skrillex y Kygo.
   Algunos shows de Kidzapalooza tienen subtítulo.
-- **El festival ya pasó.** Las fechas del 13 al 15 de marzo de 2026 hay que confirmarlas. "En vivo
-  ahora" nunca mostraría nada con el reloj real, así que necesita una forma de simular la hora
-  (por ejemplo, en `/demo`). Eso se define en su PRD.
+- **El festival ya pasó.** Fue del viernes 13 al domingo 15 de marzo de 2026 (confirmado por el
+  usuario). "En vivo ahora" nunca mostraría nada con el reloj real, así que `/demo` tiene un reloj
+  simulado (PRD 05).
 
 ## Decisiones tomadas
 
@@ -132,6 +132,11 @@ la comparación con un amigo, el perfil con avatar y el panel de admin para edit
   descarga igual con todos encendidos, como una grilla para tener a mano — todos opacos no se
   leerían bajo el sol. La imagen usa la selección que se ve en la pantalla, y se genera sin
   conexión.
+- 2026-11-16: En vivo ahora. Un botón flotante "En vivo" abajo a la derecha de la grilla abre un
+  panel desde abajo. Muestra los 5 escenarios con el show actual y el siguiente. Primero van los
+  escenarios donde suena un show elegido por el usuario, y los elegidos llevan un ícono — así lo
+  pidió el usuario. La hora simulada se controla solo en `/demo`; fuera de la demo la app usa la
+  hora real. Fechas confirmadas: 13 al 15 de marzo de 2026, hora de Argentina.
 - 2026-11-16: Se aprueba la partición en 7 PRDs con el orden de la tabla de abajo — el usuario la
   aprobó explícitamente.
 
@@ -143,7 +148,7 @@ la comparación con un amigo, el perfil con avatar y el panel de admin para edit
 | 2 | Cuentas: registro e inicio de sesión con email y contraseña | prd-DISC-001-02.md | validado |
 | 3 | Grilla y mi selección: JSON normalizado + seed, vista escenarios × horarios con scroll x/y, selección, aviso de solapados, lectura offline | prd-DISC-001-03.md | validado |
 | 4 | Fondo de pantalla personal: una imagen por día para iPhone | prd-DISC-001-04.md | validado |
-| 5 | En vivo ahora: quién toca y quién sigue en cada escenario, con reloj simulable | prd-DISC-001-05.md | identificado |
+| 5 | En vivo ahora: quién toca y quién sigue en cada escenario, con reloj simulable | prd-DISC-001-05.md | validado |
 | 6 | Grupos: crear, invitar por link o código, unirse y ver selecciones | prd-DISC-001-06.md | identificado |
 | 7 | Fondo de pantalla del grupo: indicador de amigos que coinciden | prd-DISC-001-07.md | identificado |
 
