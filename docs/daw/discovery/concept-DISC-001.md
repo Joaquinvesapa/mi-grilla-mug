@@ -117,6 +117,16 @@ la comparación con un amigo, el perfil con avatar y el panel de admin para edit
   reconocerse en los grupos. La contraseña tiene mínimo 8 caracteres, con al menos una letra y un
   número. La sesión dura 30 días, para que no venza en pleno festival. Después de 5 intentos
   fallidos en 15 minutos, el inicio de sesión de ese email se bloquea por 15 minutos.
+- 2026-11-16: Grilla. La selección se guarda con un botón "Guardar", con cambios pendientes y la
+  opción "Descartar"; el usuario lo prefirió al guardado automático. La grilla solo se ve con sesión
+  iniciada. En el celular se ven 3 escenarios a la vez. El día inicial depende de la hora de la app:
+  durante el festival abre ese día, fuera del festival abre el viernes.
+- 2026-11-16: Guardar sin conexión. Si el usuario toca "Guardar" sin señal, la selección queda
+  guardada en el dispositivo como pendiente y se sincroniza sola cuando vuelve la conexión. Un aviso
+  sugiere descargar la grilla como fondo de pantalla mientras tanto. Si hubo cambios desde otro
+  dispositivo, gana la selección pendiente, que es el último guardado. La selección pendiente es
+  del usuario que la guardó. Consecuencia para el PRD 04: el fondo de pantalla se tiene que poder
+  generar sin conexión y con la selección pendiente.
 - 2026-11-16: Se aprueba la partición en 7 PRDs con el orden de la tabla de abajo — el usuario la
   aprobó explícitamente.
 
@@ -126,7 +136,7 @@ la comparación con un amigo, el perfil con avatar y el panel de admin para edit
 |---|--------|---------|--------|
 | 1 | Plataforma base: scaffold, PWA instalable (base offline), shell mobile first, CI (unit + integración + E2E), `/demo` con mockup de iPhone | prd-DISC-001-01.md | validado |
 | 2 | Cuentas: registro e inicio de sesión con email y contraseña | prd-DISC-001-02.md | validado |
-| 3 | Grilla y mi selección: JSON normalizado + seed, vista escenarios × horarios con scroll x/y, selección, aviso de solapados, lectura offline | prd-DISC-001-03.md | identificado |
+| 3 | Grilla y mi selección: JSON normalizado + seed, vista escenarios × horarios con scroll x/y, selección, aviso de solapados, lectura offline | prd-DISC-001-03.md | validado |
 | 4 | Fondo de pantalla personal: una imagen por día para iPhone | prd-DISC-001-04.md | identificado |
 | 5 | En vivo ahora: quién toca y quién sigue en cada escenario, con reloj simulable | prd-DISC-001-05.md | identificado |
 | 6 | Grupos: crear, invitar por link o código, unirse y ver selecciones | prd-DISC-001-06.md | identificado |
