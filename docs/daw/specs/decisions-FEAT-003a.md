@@ -34,3 +34,26 @@ decir que se mostró al usuario sin pedirle aprobación previa; cualquier objeci
 - `DATE_PATTERN` y `TIME_PATTERN` se exportan desde `src/lib/festival-time.ts` y `SeedCode` se
   compone con `UnsafeDatabaseUrlCode`, para no duplicar fuentes de verdad. — orquestador —
   2026-11-17 — Block 1
+
+## Block 2 — Lógica de la grilla y servicios de selección
+
+- `dayAxis`, `blockGeometry` y `findClashes` reciben los `Show` de `schedule-types.ts` (instantes
+  ISO), y el eje y `hourMarks` devuelven `Date`, que es lo que recibe `formatClock`. "Hora entera
+  anterior/posterior" es floor/ceil: un inicio o fin en punto se conserva (el offset −03:00 es de
+  horas enteras). `dayAxis([])` lanza `RangeError`. — orquestador — 2026-11-17 — Block 2
+- `saveSelection` chequea `Array.isArray` antes de leer la grilla; si `getSchedule()` falla devuelve
+  `SERVICE_UNAVAILABLE` sin una línea `[selection]` propia, porque el fallo ya quedó registrado como
+  `[schedule] SERVICE_UNAVAILABLE at=…` con código y hora (R-05). — orquestador — 2026-11-17 —
+  Block 2
+- Si el `SELECT … FOR UPDATE` no encuentra al usuario (borrado entre la verificación de sesión y el
+  guardado), la transacción hace rollback y devuelve `SERVICE_UNAVAILABLE`: sin ese chequeo un
+  guardado vacío de un usuario borrado daría `ok: true`. — orquestador — 2026-11-17 — Block 2
+- Los servicios se arman con fábricas inyectables (`createScheduleService`,
+  `createSelectionService`) y las funciones de la spec usan una instancia compartida, como
+  `createAccounts`/`getAccounts`; la memoización vive en esa instancia. — orquestador —
+  2026-11-17 — Block 2
+- `getSelection` devuelve los ids ordenados por id, sin memoizar. — orquestador — 2026-11-17 —
+  Block 2
+- R-10: además del test de integración, el verificador corrió la misma secuencia SQL sin el
+  `FOR UPDATE` contra la base local y obtuvo mezcla en 10 de 10 rondas (con el lock, 0 de 10). —
+  orquestador — 2026-11-17 — Block 2
