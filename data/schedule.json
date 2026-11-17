@@ -1,0 +1,785 @@
+{
+  "festival": {
+    "timeZone": "America/Argentina/Buenos_Aires"
+  },
+  "days": [
+    {
+      "id": "fri",
+      "name": "Viernes",
+      "date": "2026-03-13",
+      "position": 1
+    },
+    {
+      "id": "sat",
+      "name": "Sábado",
+      "date": "2026-03-14",
+      "position": 2
+    },
+    {
+      "id": "sun",
+      "name": "Domingo",
+      "date": "2026-03-15",
+      "position": 3
+    }
+  ],
+  "stages": [
+    {
+      "id": "flow",
+      "name": "Flow",
+      "position": 1
+    },
+    {
+      "id": "samsung",
+      "name": "Samsung",
+      "position": 2
+    },
+    {
+      "id": "alternative",
+      "name": "Alternative",
+      "position": 3
+    },
+    {
+      "id": "perrys",
+      "name": "Perry's",
+      "position": 4
+    },
+    {
+      "id": "kidzapalooza",
+      "name": "Kidzapalooza",
+      "position": 5
+    }
+  ],
+  "shows": [
+    {
+      "id": "fri-flow-1430",
+      "dayId": "fri",
+      "stageId": "flow",
+      "artist": "Tiger Mood",
+      "start": "14:30",
+      "end": "15:15"
+    },
+    {
+      "id": "fri-flow-1600",
+      "dayId": "fri",
+      "stageId": "flow",
+      "artist": "Judeline",
+      "start": "16:00",
+      "end": "17:00"
+    },
+    {
+      "id": "fri-flow-1800",
+      "dayId": "fri",
+      "stageId": "flow",
+      "artist": "DJO",
+      "start": "18:00",
+      "end": "19:00"
+    },
+    {
+      "id": "fri-flow-2000",
+      "dayId": "fri",
+      "stageId": "flow",
+      "artist": "Turnstile",
+      "start": "20:00",
+      "end": "21:00"
+    },
+    {
+      "id": "fri-flow-2215",
+      "dayId": "fri",
+      "stageId": "flow",
+      "artist": "Tyler, The Creator",
+      "start": "22:15",
+      "end": "23:30"
+    },
+    {
+      "id": "fri-samsung-1345",
+      "dayId": "fri",
+      "stageId": "samsung",
+      "artist": "Mora Fisz",
+      "start": "13:45",
+      "end": "14:30"
+    },
+    {
+      "id": "fri-samsung-1515",
+      "dayId": "fri",
+      "stageId": "samsung",
+      "artist": "Guitarricadelafuente",
+      "start": "15:15",
+      "end": "16:00"
+    },
+    {
+      "id": "fri-samsung-1700",
+      "dayId": "fri",
+      "stageId": "samsung",
+      "artist": "Royel Otis",
+      "start": "17:00",
+      "end": "18:00"
+    },
+    {
+      "id": "fri-samsung-1900",
+      "dayId": "fri",
+      "stageId": "samsung",
+      "artist": "Katseye",
+      "start": "19:00",
+      "end": "20:00"
+    },
+    {
+      "id": "fri-samsung-2100",
+      "dayId": "fri",
+      "stageId": "samsung",
+      "artist": "Lorde",
+      "start": "21:00",
+      "end": "22:15"
+    },
+    {
+      "id": "fri-samsung-2330",
+      "dayId": "fri",
+      "stageId": "samsung",
+      "artist": "Peggy Gou",
+      "start": "23:30",
+      "end": "01:00"
+    },
+    {
+      "id": "fri-alternative-1430",
+      "dayId": "fri",
+      "stageId": "alternative",
+      "artist": "Spaghetti Western",
+      "start": "14:30",
+      "end": "15:15"
+    },
+    {
+      "id": "fri-alternative-1600",
+      "dayId": "fri",
+      "stageId": "alternative",
+      "artist": "Balu Brigada",
+      "start": "16:00",
+      "end": "17:00"
+    },
+    {
+      "id": "fri-alternative-1800",
+      "dayId": "fri",
+      "stageId": "alternative",
+      "artist": "Militantes del Climax",
+      "start": "18:00",
+      "end": "19:00"
+    },
+    {
+      "id": "fri-alternative-2000",
+      "dayId": "fri",
+      "stageId": "alternative",
+      "artist": "Danny Ocean",
+      "start": "20:00",
+      "end": "21:00"
+    },
+    {
+      "id": "fri-alternative-2215",
+      "dayId": "fri",
+      "stageId": "alternative",
+      "artist": "Turf",
+      "start": "22:15",
+      "end": "23:30"
+    },
+    {
+      "id": "fri-perrys-1345",
+      "dayId": "fri",
+      "stageId": "perrys",
+      "artist": "Jero Jones",
+      "start": "13:45",
+      "end": "14:30"
+    },
+    {
+      "id": "fri-perrys-1445",
+      "dayId": "fri",
+      "stageId": "perrys",
+      "artist": "Victoria Whynot",
+      "start": "14:45",
+      "end": "15:30"
+    },
+    {
+      "id": "fri-perrys-1600",
+      "dayId": "fri",
+      "stageId": "perrys",
+      "artist": "Little Boogie",
+      "start": "16:00",
+      "end": "16:45"
+    },
+    {
+      "id": "fri-perrys-1700",
+      "dayId": "fri",
+      "stageId": "perrys",
+      "artist": "Zell",
+      "start": "17:00",
+      "end": "18:00"
+    },
+    {
+      "id": "fri-perrys-1815",
+      "dayId": "fri",
+      "stageId": "perrys",
+      "artist": "Easykid",
+      "start": "18:15",
+      "end": "19:15"
+    },
+    {
+      "id": "fri-perrys-1930",
+      "dayId": "fri",
+      "stageId": "perrys",
+      "artist": "Gordo",
+      "start": "19:30",
+      "end": "20:30"
+    },
+    {
+      "id": "fri-perrys-2045",
+      "dayId": "fri",
+      "stageId": "perrys",
+      "artist": "Röz",
+      "start": "20:45",
+      "end": "21:45"
+    },
+    {
+      "id": "fri-perrys-2215",
+      "dayId": "fri",
+      "stageId": "perrys",
+      "artist": "¥ousuk€ ¥uk1mat$u",
+      "start": "22:15",
+      "end": "23:30"
+    },
+    {
+      "id": "fri-kidzapalooza-1500",
+      "dayId": "fri",
+      "stageId": "kidzapalooza",
+      "artist": "Arjaus Crew",
+      "subtitle": "Franco y Mateo Trocca - B2B",
+      "start": "15:00",
+      "end": "15:45"
+    },
+    {
+      "id": "fri-kidzapalooza-1600",
+      "dayId": "fri",
+      "stageId": "kidzapalooza",
+      "artist": "Desenchufados en Banda",
+      "start": "16:00",
+      "end": "16:45"
+    },
+    {
+      "id": "fri-kidzapalooza-1700",
+      "dayId": "fri",
+      "stageId": "kidzapalooza",
+      "artist": "Partysani Klezmer Band",
+      "start": "17:00",
+      "end": "17:45"
+    },
+    {
+      "id": "fri-kidzapalooza-1800",
+      "dayId": "fri",
+      "stageId": "kidzapalooza",
+      "artist": "Mecache Rock",
+      "start": "18:00",
+      "end": "18:45"
+    },
+    {
+      "id": "fri-kidzapalooza-1900",
+      "dayId": "fri",
+      "stageId": "kidzapalooza",
+      "artist": "Piñon Fijo",
+      "start": "19:00",
+      "end": "19:45"
+    },
+    {
+      "id": "fri-kidzapalooza-2000",
+      "dayId": "fri",
+      "stageId": "kidzapalooza",
+      "artist": "Kidza Boom",
+      "start": "20:00",
+      "end": "20:45"
+    },
+    {
+      "id": "sat-flow-1430",
+      "dayId": "sat",
+      "stageId": "flow",
+      "artist": "Joaquina",
+      "start": "14:30",
+      "end": "15:15"
+    },
+    {
+      "id": "sat-flow-1600",
+      "dayId": "sat",
+      "stageId": "flow",
+      "artist": "Lany",
+      "start": "16:00",
+      "end": "17:00"
+    },
+    {
+      "id": "sat-flow-1800",
+      "dayId": "sat",
+      "stageId": "flow",
+      "artist": "Marina",
+      "start": "18:00",
+      "end": "19:00"
+    },
+    {
+      "id": "sat-flow-2015",
+      "dayId": "sat",
+      "stageId": "flow",
+      "artist": "Addison Rae",
+      "start": "20:15",
+      "end": "21:15"
+    },
+    {
+      "id": "sat-flow-2215",
+      "dayId": "sat",
+      "stageId": "flow",
+      "artist": "Chappell Roan",
+      "start": "22:15",
+      "end": "23:45"
+    },
+    {
+      "id": "sat-samsung-1345",
+      "dayId": "sat",
+      "stageId": "samsung",
+      "artist": "Tobika",
+      "start": "13:45",
+      "end": "14:30"
+    },
+    {
+      "id": "sat-samsung-1515",
+      "dayId": "sat",
+      "stageId": "samsung",
+      "artist": "Nasa Histoires",
+      "start": "15:15",
+      "end": "16:00"
+    },
+    {
+      "id": "sat-samsung-1700",
+      "dayId": "sat",
+      "stageId": "samsung",
+      "artist": "Angela Torres",
+      "start": "17:00",
+      "end": "18:00"
+    },
+    {
+      "id": "sat-samsung-1900",
+      "dayId": "sat",
+      "stageId": "samsung",
+      "artist": "Paulo Londra",
+      "start": "19:00",
+      "end": "20:15"
+    },
+    {
+      "id": "sat-samsung-2115",
+      "dayId": "sat",
+      "stageId": "samsung",
+      "artist": "Lewis Capaldi",
+      "start": "21:15",
+      "end": "22:15"
+    },
+    {
+      "id": "sat-samsung-2345",
+      "dayId": "sat",
+      "stageId": "samsung",
+      "artist": "Skrillex",
+      "start": "23:45",
+      "end": "01:00"
+    },
+    {
+      "id": "sat-alternative-1430",
+      "dayId": "sat",
+      "stageId": "alternative",
+      "artist": "Marttein",
+      "start": "14:30",
+      "end": "15:15"
+    },
+    {
+      "id": "sat-alternative-1600",
+      "dayId": "sat",
+      "stageId": "alternative",
+      "artist": "Timø",
+      "start": "16:00",
+      "end": "17:00"
+    },
+    {
+      "id": "sat-alternative-1800",
+      "dayId": "sat",
+      "stageId": "alternative",
+      "artist": "Soledad",
+      "start": "18:00",
+      "end": "19:00"
+    },
+    {
+      "id": "sat-alternative-2015",
+      "dayId": "sat",
+      "stageId": "alternative",
+      "artist": "Tv Girl",
+      "start": "20:15",
+      "end": "21:15"
+    },
+    {
+      "id": "sat-alternative-2230",
+      "dayId": "sat",
+      "stageId": "alternative",
+      "artist": "Riize",
+      "start": "22:30",
+      "end": "23:30"
+    },
+    {
+      "id": "sat-perrys-1345",
+      "dayId": "sat",
+      "stageId": "perrys",
+      "artist": "Paula Os",
+      "start": "13:45",
+      "end": "14:30"
+    },
+    {
+      "id": "sat-perrys-1445",
+      "dayId": "sat",
+      "stageId": "perrys",
+      "artist": "Terra",
+      "start": "14:45",
+      "end": "15:30"
+    },
+    {
+      "id": "sat-perrys-1600",
+      "dayId": "sat",
+      "stageId": "perrys",
+      "artist": "Imbermind",
+      "start": "16:00",
+      "end": "17:00"
+    },
+    {
+      "id": "sat-perrys-1715",
+      "dayId": "sat",
+      "stageId": "perrys",
+      "artist": "Amigo de Artistas",
+      "start": "17:15",
+      "end": "18:00"
+    },
+    {
+      "id": "sat-perrys-1830",
+      "dayId": "sat",
+      "stageId": "perrys",
+      "artist": "Six Sex",
+      "start": "18:30",
+      "end": "19:30"
+    },
+    {
+      "id": "sat-perrys-1945",
+      "dayId": "sat",
+      "stageId": "perrys",
+      "artist": "Hamdi",
+      "start": "19:45",
+      "end": "20:45"
+    },
+    {
+      "id": "sat-perrys-2100",
+      "dayId": "sat",
+      "stageId": "perrys",
+      "artist": "2Hollis + Rommulas",
+      "start": "21:00",
+      "end": "22:00"
+    },
+    {
+      "id": "sat-perrys-2230",
+      "dayId": "sat",
+      "stageId": "perrys",
+      "artist": "Brutalismus 3000",
+      "start": "22:30",
+      "end": "23:45"
+    },
+    {
+      "id": "sat-kidzapalooza-1500",
+      "dayId": "sat",
+      "stageId": "kidzapalooza",
+      "artist": "Arjaus Crew",
+      "subtitle": "Mateo Trocca",
+      "start": "15:00",
+      "end": "15:45"
+    },
+    {
+      "id": "sat-kidzapalooza-1600",
+      "dayId": "sat",
+      "stageId": "kidzapalooza",
+      "artist": "Latin Duo",
+      "start": "16:00",
+      "end": "16:45"
+    },
+    {
+      "id": "sat-kidzapalooza-1700",
+      "dayId": "sat",
+      "stageId": "kidzapalooza",
+      "artist": "School Of Rock",
+      "start": "17:00",
+      "end": "17:45"
+    },
+    {
+      "id": "sat-kidzapalooza-1800",
+      "dayId": "sat",
+      "stageId": "kidzapalooza",
+      "artist": "Kiseki",
+      "start": "18:00",
+      "end": "18:45"
+    },
+    {
+      "id": "sat-kidzapalooza-1900",
+      "dayId": "sat",
+      "stageId": "kidzapalooza",
+      "artist": "Panam Y Circo",
+      "start": "19:00",
+      "end": "19:45"
+    },
+    {
+      "id": "sat-kidzapalooza-2000",
+      "dayId": "sat",
+      "stageId": "kidzapalooza",
+      "artist": "Kidza Boom",
+      "start": "20:00",
+      "end": "20:45"
+    },
+    {
+      "id": "sun-flow-1415",
+      "dayId": "sun",
+      "stageId": "flow",
+      "artist": "143Leti",
+      "start": "14:15",
+      "end": "15:00"
+    },
+    {
+      "id": "sun-flow-1545",
+      "dayId": "sun",
+      "stageId": "flow",
+      "artist": "Yami Safdie",
+      "start": "15:45",
+      "end": "16:45"
+    },
+    {
+      "id": "sun-flow-1745",
+      "dayId": "sun",
+      "stageId": "flow",
+      "artist": "Blood Orange",
+      "start": "17:45",
+      "end": "18:45"
+    },
+    {
+      "id": "sun-flow-1945",
+      "dayId": "sun",
+      "stageId": "flow",
+      "artist": "Doechii",
+      "start": "19:45",
+      "end": "20:45"
+    },
+    {
+      "id": "sun-flow-2200",
+      "dayId": "sun",
+      "stageId": "flow",
+      "artist": "Sabrina Carpenter",
+      "start": "22:00",
+      "end": "23:20"
+    },
+    {
+      "id": "sun-samsung-1330",
+      "dayId": "sun",
+      "stageId": "samsung",
+      "artist": "Reybruja",
+      "start": "13:30",
+      "end": "14:15"
+    },
+    {
+      "id": "sun-samsung-1500",
+      "dayId": "sun",
+      "stageId": "samsung",
+      "artist": "Massacre",
+      "start": "15:00",
+      "end": "15:45"
+    },
+    {
+      "id": "sun-samsung-1645",
+      "dayId": "sun",
+      "stageId": "samsung",
+      "artist": "Viagra Boys",
+      "start": "16:45",
+      "end": "17:45"
+    },
+    {
+      "id": "sun-samsung-1845",
+      "dayId": "sun",
+      "stageId": "samsung",
+      "artist": "Interpol",
+      "start": "18:45",
+      "end": "19:45"
+    },
+    {
+      "id": "sun-samsung-2045",
+      "dayId": "sun",
+      "stageId": "samsung",
+      "artist": "Deftones",
+      "start": "20:45",
+      "end": "22:00"
+    },
+    {
+      "id": "sun-samsung-2320",
+      "dayId": "sun",
+      "stageId": "samsung",
+      "artist": "Kygo",
+      "start": "23:20",
+      "end": "00:35"
+    },
+    {
+      "id": "sun-alternative-1415",
+      "dayId": "sun",
+      "stageId": "alternative",
+      "artist": "Ryan",
+      "start": "14:15",
+      "end": "15:00"
+    },
+    {
+      "id": "sun-alternative-1545",
+      "dayId": "sun",
+      "stageId": "alternative",
+      "artist": "The Warning",
+      "start": "15:45",
+      "end": "16:45"
+    },
+    {
+      "id": "sun-alternative-1745",
+      "dayId": "sun",
+      "stageId": "alternative",
+      "artist": "Ruel",
+      "start": "17:45",
+      "end": "18:45"
+    },
+    {
+      "id": "sun-alternative-1945",
+      "dayId": "sun",
+      "stageId": "alternative",
+      "artist": "Men I Trust",
+      "start": "19:45",
+      "end": "20:45"
+    },
+    {
+      "id": "sun-alternative-2215",
+      "dayId": "sun",
+      "stageId": "alternative",
+      "artist": "Ratones Paranoicos",
+      "start": "22:15",
+      "end": "23:15"
+    },
+    {
+      "id": "sun-perrys-1330",
+      "dayId": "sun",
+      "stageId": "perrys",
+      "artist": "Ludmila di Pasquale",
+      "start": "13:30",
+      "end": "14:15"
+    },
+    {
+      "id": "sun-perrys-1430",
+      "dayId": "sun",
+      "stageId": "perrys",
+      "artist": "Félix Vestre",
+      "start": "14:30",
+      "end": "15:30"
+    },
+    {
+      "id": "sun-perrys-1545",
+      "dayId": "sun",
+      "stageId": "perrys",
+      "artist": "Cerounno",
+      "start": "15:45",
+      "end": "16:45"
+    },
+    {
+      "id": "sun-perrys-1700",
+      "dayId": "sun",
+      "stageId": "perrys",
+      "artist": "Saramalacara",
+      "start": "17:00",
+      "end": "18:00"
+    },
+    {
+      "id": "sun-perrys-1815",
+      "dayId": "sun",
+      "stageId": "perrys",
+      "artist": "Horsegirl",
+      "start": "18:15",
+      "end": "19:15"
+    },
+    {
+      "id": "sun-perrys-1930",
+      "dayId": "sun",
+      "stageId": "perrys",
+      "artist": "Ezequiel Arias",
+      "start": "19:30",
+      "end": "20:30"
+    },
+    {
+      "id": "sun-perrys-2045",
+      "dayId": "sun",
+      "stageId": "perrys",
+      "artist": "Bunt.",
+      "start": "20:45",
+      "end": "21:45"
+    },
+    {
+      "id": "sun-perrys-2215",
+      "dayId": "sun",
+      "stageId": "perrys",
+      "artist": "Ben Böhmer",
+      "start": "22:15",
+      "end": "23:30"
+    },
+    {
+      "id": "sun-kidzapalooza-1500",
+      "dayId": "sun",
+      "stageId": "kidzapalooza",
+      "artist": "Arjaus Crew",
+      "subtitle": "Franco Trocca",
+      "start": "15:00",
+      "end": "15:45"
+    },
+    {
+      "id": "sun-kidzapalooza-1600",
+      "dayId": "sun",
+      "stageId": "kidzapalooza",
+      "artist": "Las Canciones de Ainé",
+      "start": "16:00",
+      "end": "16:45"
+    },
+    {
+      "id": "sun-kidzapalooza-1700",
+      "dayId": "sun",
+      "stageId": "kidzapalooza",
+      "artist": "Divertrap",
+      "start": "17:00",
+      "end": "17:45"
+    },
+    {
+      "id": "sun-kidzapalooza-1800",
+      "dayId": "sun",
+      "stageId": "kidzapalooza",
+      "artist": "¡Qué Lío, Hugo!",
+      "start": "18:00",
+      "end": "18:20"
+    },
+    {
+      "id": "sun-kidzapalooza-1830",
+      "dayId": "sun",
+      "stageId": "kidzapalooza",
+      "artist": "Astrocity",
+      "start": "18:30",
+      "end": "18:50"
+    },
+    {
+      "id": "sun-kidzapalooza-1900",
+      "dayId": "sun",
+      "stageId": "kidzapalooza",
+      "artist": "Topa",
+      "start": "19:00",
+      "end": "19:45"
+    },
+    {
+      "id": "sun-kidzapalooza-2000",
+      "dayId": "sun",
+      "stageId": "kidzapalooza",
+      "artist": "Kidza Boom",
+      "start": "20:00",
+      "end": "20:45"
+    }
+  ]
+}

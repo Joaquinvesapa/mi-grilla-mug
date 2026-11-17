@@ -128,6 +128,23 @@ function conditionsAt(workflow: Workflow): string[] {
   ]);
 }
 
+/**
+ * Jobs (keys of `suites`) where `pnpm db:seed` is missing or not between `pnpm db:migrate` and the
+ * job's suite command: the suites read the grid from the database, so it has to be there first.
+ */
+function jobsSeedingOutOfOrder(workflow: Workflow, suites: Record<string, string>): string[] {
+  const jobs = jobsOf(workflow);
+  return Object.entries(suites)
+    .filter(([name, suite]) => {
+      const commands = commandsOf(jobs[name] ?? {});
+      const migrate = commands.indexOf("pnpm db:migrate");
+      const seed = commands.indexOf("pnpm db:seed");
+      const run = commands.indexOf(suite);
+      return migrate < 0 || seed < 0 || run < 0 || !(migrate < seed && seed < run);
+    })
+    .map(([name]) => name);
+}
+
 function composePostgresImage(): unknown {
   const compose = parse(readFileSync(COMPOSE_PATH, "utf8")) as {
     services?: Record<string, { image?: unknown }>;
@@ -374,6 +391,43 @@ describe("CI workflow — jobs (AC-08)", () => {
     expect(migrate, "e2e migra después de pnpm test:e2e").toBeLessThan(
       e2eCommands.indexOf("pnpm test:e2e"),
     );
+  });
+
+  it("test-workflow-seed-step: integration y e2e corren pnpm db:seed después de pnpm db:migrate y antes de la suite; un workflow sin el paso es rechazado", () => {
+    const SUITES: Record<string, string> = {
+      integration: "pnpm test:integration",
+      e2e: "pnpm test:e2e",
+    };
+
+    // Guard: a job without the seed, or with it out of order, is rejected.
+    const broken: Workflow = {
+      jobs: {
+        missing: { steps: [{ run: "pnpm db:migrate" }, { run: "pnpm test:integration" }] },
+        beforeMigrate: {
+          steps: [{ run: "pnpm db:seed" }, { run: "pnpm db:migrate" }, { run: "pnpm test:e2e" }],
+        },
+        afterSuite: {
+          steps: [{ run: "pnpm db:migrate" }, { run: "pnpm test:e2e" }, { run: "pnpm db:seed" }],
+        },
+        ok: {
+          steps: [{ run: "pnpm db:migrate" }, { run: "pnpm db:seed" }, { run: "pnpm test:e2e" }],
+        },
+      },
+    };
+    const brokenSuites: Record<string, string> = {
+      missing: "pnpm test:integration",
+      beforeMigrate: "pnpm test:e2e",
+      afterSuite: "pnpm test:e2e",
+      ok: "pnpm test:e2e",
+    };
+    expect(jobsSeedingOutOfOrder(broken, brokenSuites)).toEqual([
+      "missing",
+      "beforeMigrate",
+      "afterSuite",
+    ]);
+
+    expect(jobsSeedingOutOfOrder(readWorkflow(), SUITES)).toEqual([]);
+    expect(scripts["db:seed"]).toBe("node prisma/seed.ts");
   });
 
   it("cada job usa Node de .nvmrc y la cache de pnpm", () => {

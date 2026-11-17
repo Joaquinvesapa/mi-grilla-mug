@@ -40,6 +40,7 @@ Con `BETTER_AUTH_URL` en `https:`, la cookie de sesión es `Secure` y lleva el p
 docker compose up -d   # Postgres 17 en 127.0.0.1:5432 (o `pnpm db:up`, que espera a que esté sano)
 pnpm install           # también genera el cliente de Prisma (postinstall)
 pnpm db:migrate        # aplica las migraciones
+pnpm db:seed           # carga la grilla del festival (data/schedule.json)
 pnpm dev               # http://localhost:3000
 ```
 
@@ -59,22 +60,27 @@ producción: `pnpm build && pnpm start`.
 - `pnpm typecheck`: `next typegen` + `tsc --noEmit` (TypeScript 7).
 - `pnpm test`: tests unitarios (Vitest, jsdom) con coverage; falla bajo 80 % líneas, 70 % ramas u
   80 % funciones.
-- `pnpm test:integration`: tests de integración contra la base PostgreSQL real de `DATABASE_URL`.
+- `pnpm test:integration`: tests de integración contra la base PostgreSQL real de `DATABASE_URL`,
+  levantada, migrada y sembrada (`pnpm db:up && pnpm db:migrate && pnpm db:seed`).
 - `pnpm test:e2e`: Playwright contra el build de producción (`pnpm build && pnpm start`, puerto
-  3100): iPhone (WebKit), Pixel 7, 360 px y desktop (`/demo`). Los tests crean cuentas, así que
-  necesitan la base levantada y migrada (`pnpm db:up && pnpm db:migrate`) y `BETTER_AUTH_SECRET` en
+  3100): iPhone (WebKit), Pixel 7, 360 px y desktop (`/demo`). Los tests crean cuentas y leen la
+  grilla, así que necesitan la base levantada, migrada y sembrada
+  (`pnpm db:up && pnpm db:migrate && pnpm db:seed`) y `BETTER_AUTH_SECRET` en
   `.env`; `BETTER_AUTH_URL` la fija la config de Playwright (`http://127.0.0.1:3100`). La primera
   vez: `pnpm exec playwright install webkit chromium`.
 - `pnpm test:e2e:docker`: la misma suite E2E dentro de la imagen oficial de Playwright, para hosts
   sin las bibliotecas de WebKit. Acepta los argumentos de `playwright test` (por ejemplo
   `--project iphone-webkit`). **Solo Linux:** el contenedor usa la red del host
   (`--network host`), así que llega a la base de `docker-compose.yml` en `127.0.0.1:5432` y necesita
-  el puerto 3100 libre en el host. Igual que `pnpm test:e2e`, pide la base levantada y migrada antes.
+  el puerto 3100 libre en el host. Igual que `pnpm test:e2e`, pide la base levantada, migrada y sembrada antes.
   `DATABASE_URL` y `BETTER_AUTH_SECRET` se pasan por nombre, sin mostrar sus valores: los del
   entorno si están definidas, y si no, las de `.env`.
 - `pnpm db:up` / `pnpm db:down`: levanta (y espera) / baja el Postgres de `docker-compose.yml`.
 - `pnpm db:generate`: regenera el cliente de Prisma.
 - `pnpm db:migrate`: aplica las migraciones (`prisma migrate deploy`).
+- `pnpm db:seed`: carga la grilla de `data/schedule.json` (días, escenarios y shows) en la base. Se
+  puede correr de nuevo: actualiza lo que ya está. Si en la base hay un show que no está en el JSON,
+  falla sin tocar nada (`[seed] SCHEDULE_ORPHANED`).
 
 ## CI
 

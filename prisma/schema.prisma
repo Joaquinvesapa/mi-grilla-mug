@@ -14,16 +14,17 @@ datasource db {
 // Las cuatro tablas que exige Better Auth (ADR-003). Los ids los genera Better Auth.
 
 model User {
-  id            String    @id
+  id            String         @id
   name          String
   // Siempre en minúsculas: Better Auth lo normaliza y las reglas de cuenta también (FR-02).
-  email         String    @unique
-  emailVerified Boolean   @default(false) @map("email_verified")
+  email         String         @unique
+  emailVerified Boolean        @default(false) @map("email_verified")
   image         String?
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
   sessions      Session[]
   accounts      Account[]
+  selectedShows SelectedShow[]
 
   @@map("users")
 }
@@ -90,4 +91,62 @@ model LoginThrottle {
   // Para la purga de ventanas vencidas (R-12).
   @@index([windowStartedAt])
   @@map("login_throttles")
+}
+
+// La grilla del festival (FEAT-003a). La fuente es data/schedule.json y la carga prisma/seed.ts:
+// la app nunca la escribe. Los ids son los del JSON, asignados una sola vez.
+
+model FestivalDay {
+  // fri, sat o sun.
+  id       String   @id
+  name     String
+  // Fecha en que empieza el día del festival; dura hasta las 06:00 del día siguiente (FR-08).
+  date     DateTime @db.Date
+  position Int      @unique
+  shows    Show[]
+
+  @@map("festival_days")
+}
+
+model Stage {
+  id       String @id
+  name     String
+  // Columna de la grilla: Flow, Samsung, Alternative, Perry's, Kidzapalooza (FR-02).
+  position Int    @unique
+  shows    Show[]
+
+  @@map("stages")
+}
+
+model Show {
+  // `{día}-{escenario}-{HHMM}`, congelado: un show nunca se identifica por el artista.
+  id            String         @id
+  dayId         String         @map("day_id")
+  day           FestivalDay    @relation(fields: [dayId], references: [id], onDelete: Restrict)
+  stageId       String         @map("stage_id")
+  stage         Stage          @relation(fields: [stageId], references: [id], onDelete: Restrict)
+  artist        String
+  subtitle      String?
+  // Con zona: un show es un instante, sin depender del TimeZone de la sesión. Un show que termina
+  // después de la medianoche termina al día calendario siguiente (FR-04).
+  startsAt      DateTime       @map("starts_at") @db.Timestamptz(3)
+  endsAt        DateTime       @map("ends_at") @db.Timestamptz(3)
+  selectedShows SelectedShow[]
+
+  @@index([dayId])
+  @@map("shows")
+}
+
+// La selección guardada de cada usuario: una fila por show elegido.
+model SelectedShow {
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Restrict: un show elegido por alguien no se borra sin decidir qué pasa con esa selección.
+  showId    String   @map("show_id")
+  show      Show     @relation(fields: [showId], references: [id], onDelete: Restrict)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@id([userId, showId])
+  @@index([showId])
+  @@map("selected_shows")
 }

@@ -9,6 +9,8 @@ export default defineConfig({
   schema: "prisma/schema.prisma",
   migrations: {
     path: "prisma/migrations",
+    // The grid (data/schedule.json). Plain Node, no transpiler: see prisma/seed.ts.
+    seed: "node prisma/seed.ts",
   },
   datasource: {
     url: process.env.DATABASE_URL,

@@ -88,6 +88,8 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm db:migrate
+      # La grilla (data/schedule.json): la leen los tests de la selección (FEAT-003a).
+      - run: pnpm db:seed
       - run: pnpm test:integration
 
   e2e:
@@ -137,6 +139,8 @@ jobs:
       - run: pnpm exec playwright install --with-deps webkit chromium
       # Las cuentas (FEAT-002) viven en la base: el esquema tiene que estar antes del primer registro.
       - run: pnpm db:migrate
+      # La grilla (FEAT-003a) también vive en la base: `/` la lee en cada pedido.
+      - run: pnpm db:seed
       # Build de producción + `next start` en el puerto 3100 (ADR-002), los 4 proyectos.
       - run: pnpm test:e2e
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

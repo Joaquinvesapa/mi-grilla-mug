@@ -19,6 +19,7 @@
     "db:down": "docker compose down",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",
+    "db:seed": "node prisma/seed.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
