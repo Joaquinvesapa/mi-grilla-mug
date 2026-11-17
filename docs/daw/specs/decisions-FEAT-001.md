@@ -105,3 +105,53 @@ aprobó — fecha — bloque.
   acepta `postgres://`; (g) con `?uselibpqcompat=true`, `sslmode=require` cifra sin verificar el
   certificado (semántica libpq, coherente con la spec): evaluar rechazar el parámetro antes del
   deploy. — usuario — 2026-11-17 — Block 3
+
+## Block 4 — PWA instalable y pantalla sin conexión
+
+- Corrección de la spec, que obligó a volver a PLAN: en serwist 9.5.14 `fallbacks` solo se engancha
+  a `runtimeCaching`, así que `sw.ts` lleva una única ruta `NetworkOnly` para navegaciones del mismo
+  origen fuera de `/api/`, sin caché (commit `8b06ef7`, Spec loops 2). — usuario — 2026-11-17 —
+  Block 4
+- `createSerwistRoute` con `useNativeEsbuild: true`: sin esa opción, en Linux usa `esbuild-wasm`,
+  que no está instalado. La spec fija `esbuild`. No se usa `withSerwist` en `next.config.ts`
+  (`@serwist/turbopack` importa `esbuild` con `webpackIgnore`). — usuario — 2026-11-17 — Block 4
+- `allowBuilds` en `pnpm-workspace.yaml` con `@swc/core: false` y `esbuild: false` (denegados):
+  pnpm 12 corta la instalación con `ERR_PNPM_IGNORED_BUILDS`. `esbuild` funciona sin su postinstall
+  (toma el binario de `@esbuild/<plataforma>`, que va en `optionalDependencies`) y el `dist/` de
+  `@serwist/turbopack` no importa `@swc/core`. Riesgo residual: con `--no-optional`, esbuild queda
+  sin binario. — usuario — 2026-11-17 — Block 4
+- `globPatterns` = los de Serwist más `woff2`, para precachear Public Sans. Lo verifica un E2E sobre
+  Cache Storage (`/~offline`, `.css` y `.woff2`). `/~offline` lleva una revisión `randomUUID()` por
+  build. — usuario — 2026-11-17 — Block 4
+- `SerwistProvider` con `cacheOnNavigation={false}` (R-06), `disable` fuera de producción
+  (ADR-002) y `reloadOnOnline={false}`: la recarga por defecto recargaba cualquier pantalla al
+  volver la señal, y en el PRD 02 tiraría los cambios pendientes. Solo `/~offline` se recarga sola
+  (`OfflineRetry`, el único `"use client"` de esa pantalla). "Reintentar" recarga la URL que falló,
+  no `/`. — usuario — 2026-11-17 — Block 4
+- `/// <reference lib="webworker" />` en `sw.ts` (lo recomienda Serwist): suma los tipos de
+  webworker a todo el programa de `tsc`, y `skipLibCheck: true` tapa los choques entre `dom` y
+  `webworker`. Si molesta, la alternativa es un tsconfig propio para el worker. — usuario —
+  2026-11-17 — Block 4
+- Sistema visual compartido: `.app-screen` (`100dvh` menos las safe areas) y `.app-card` en
+  `@layer components` de `globals.css`, usadas por el inicio y por `/~offline`. Los hex que no
+  pueden leer variables CSS (manifest, `themeColor`, Satori) salen de `src/lib/palette.ts` (`BASE`,
+  `FOAM`), con un test que los compara con `globals.css`. — usuario — 2026-11-17 — Block 4
+- Íconos: el monograma "MG" vive en `src/components/app-icon.tsx`, compartido por `icon.tsx` (favicon
+  32×32), `apple-icon.tsx` (180) e `icons/[size]` (192/512, `dynamicParams = false`). El mismo PNG
+  sirve para 512 "any" y para "maskable" (el monograma entra en la zona segura). El manifest suma
+  `description` y `lang: "es-AR"`. — usuario — 2026-11-17 — Block 4
+- Tests: los E2E de PWA corren en iphone-webkit, mobile-chromium y mobile-360 (la spec pedía
+  mobile-chromium; WebKit en Docker también los pasa). El E2E de "Reintentar" neutraliza `online`
+  con `addInitScript` y espera la hidratación por las claves `__react*` del botón. No hay unit test
+  del `location.reload()` por defecto, porque jsdom no lo puede observar; lo cubren los E2E. —
+  usuario — 2026-11-17 — Block 4
+- Pendientes registrados: (a) Next 16 emite `mobile-web-app-capable` y no
+  `apple-mobile-web-app-capable`: confirmar el modo standalone en el iPhone real en VERIFY; (b) los
+  íconos usan la fuente por defecto de `next/og`, porque Public Sans necesitaría un `.ttf`
+  versionado; (c) `/serwist/sw.js.map` es público (código propio, sin secretos); (d) ADR-002 todavía
+  habla de configurar Serwist en `next.config.ts`; (e) `@serwist/turbopack` 9.5.15 ya salió y la
+  spec fija la 9.5.14; (f) el E2E de "Reintentar" (`pwa.spec.ts:139-148`) espera la hidratación
+  por las claves internas `__react*` y usa un `waitForTimeout(500)` fijo. No puede dar un falso
+  verde, pero es frágil: cambiarlo a un `data-*` que ponga `OfflineRetry` al montarse antes de que
+  la CI lo corra (Block 6); (g) el comentario de `manifest.ts:3` quedó sobre el import y no junto a
+  los colores. — usuario — 2026-11-17 — Block 4

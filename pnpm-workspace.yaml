@@ -1,6 +1,10 @@
 allowBuilds:
   "@prisma/engines": true
   prisma: true
+  # Denied on purpose: esbuild resolves its platform binary through optionalDependencies without
+  # the postinstall, and @serwist/turbopack never imports @swc/core.
+  "@swc/core": false
+  esbuild: false
 minimumReleaseAgeExclude:
   - "@oxfmt/binding-android-arm-eabi@0.79.0"
   - "@oxfmt/binding-android-arm64@0.79.0"

@@ -9,9 +9,6 @@ type Feature = {
   preview: ReactNode;
 };
 
-// The one card style of the page: every section is the same surface with the same radius.
-const CARD = "flex flex-col gap-4 rounded-xl bg-card p-5";
-
 const FEATURES: Feature[] = [
   {
     id: "grilla",
@@ -46,7 +43,7 @@ export default function HomePage() {
       </header>
 
       {FEATURES.map((feature) => (
-        <section key={feature.id} aria-labelledby={`feature-${feature.id}`} className={CARD}>
+        <section key={feature.id} aria-labelledby={`feature-${feature.id}`} className="app-card">
           <div className="flex items-start justify-between gap-3">
             <h2 id={`feature-${feature.id}`} className="text-xl font-semibold">
               {feature.title}
@@ -60,7 +57,7 @@ export default function HomePage() {
         </section>
       ))}
 
-      <section aria-labelledby="install" className={CARD}>
+      <section aria-labelledby="install" className="app-card">
         <h2 id="install" className="text-xl font-semibold">
           Instalala en tu iPhone
         </h2>

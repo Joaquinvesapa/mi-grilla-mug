@@ -135,6 +135,18 @@
     padding-left: env(safe-area-inset-left, 0px);
   }
 
+  /* A screen that fills exactly what .app-shell leaves between its safe-area paddings: as tall
+     as the visible area, without ever scrolling. For a page that lays itself out against the
+     screen's height (the "Sin conexión" screen); a scrolling page does not need it. */
+  .app-screen {
+    min-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  }
+
+  /* The one card of the app: every section is the same surface with the same radius. */
+  .app-card {
+    @apply flex flex-col gap-4 rounded-xl bg-card p-5;
+  }
+
   /* Figures that line up as they change (times, counters). */
   .tabular {
     font-variant-numeric: tabular-nums;
