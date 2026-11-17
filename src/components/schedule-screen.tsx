@@ -81,19 +81,24 @@ export function ScheduleScreen({
     return () => window.removeEventListener("beforeunload", warn);
   }, [hasPending]);
 
+  // Back to exactly what is saved: the last failure no longer applies to anything, so it must not
+  // come back with the next change. Adjusted while rendering (React's pattern for state derived
+  // from other state), so the toggle itself can stay a functional update.
+  if (error !== null && pending.size === 0) {
+    setError(null);
+  }
+
   function toggle(showId: string) {
-    const next = new Set(draft);
-    if (next.has(showId)) {
-      next.delete(showId);
-    } else {
-      next.add(showId);
-    }
-    setDraft(next);
-    // Back to exactly what is saved: the last failure no longer applies to anything, so it must not
-    // come back with the next change.
-    if (difference(next, saved).size === 0) {
-      setError(null);
-    }
+    // A functional update: two taps handled before a re-render both count.
+    setDraft((current) => {
+      const next = new Set(current);
+      if (next.has(showId)) {
+        next.delete(showId);
+      } else {
+        next.add(showId);
+      }
+      return next;
+    });
   }
 
   function discard() {

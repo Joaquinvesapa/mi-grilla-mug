@@ -80,3 +80,20 @@ decir que se mostró al usuario sin pedirle aprobación previa; cualquier objeci
 - `page.tsx` carga grilla y selección en paralelo; una grilla sin días se trata como un fallo de
   carga (`SCHEDULE_UNAVAILABLE`). El test de la página vive en `tests/unit/app/home-page.test.tsx`.
   — orquestador — 2026-11-17 — Block 3
+- NFR-04 (hallado por `test-e2e-grid-names-two-lines` del Block 4): con 13 px semibold y la columna
+  de la spec, tres nombres de Kidzapalooza ocupaban 3 líneas a 360 px. Sin tocar lo que fija la
+  spec, el bloque reduce su aire lateral (`inset-x-px`, `px-1`: 92 px útiles para el nombre) y el
+  nombre suma `tracking-[-0.01em]` y `hyphens-auto` (con `overflow-wrap:anywhere` de respaldo). —
+  orquestador — 2026-11-17 — Block 3 (corrección desde Block 4)
+- Para que NFR-04 valga también con la marca de choque, el ícono (`TriangleAlert`, 12 px, relleno
+  gold con contorno `rp-base`) va en la línea del horario y no le quita ancho al nombre; el horario
+  suma `tracking-[-0.03em]` para dejarle lugar. La marca "sin guardar" pasa de un punto a
+  `border-dashed` en el bloque, porque el punto caía sobre el ícono en bloques cortos. Medido a
+  360 px en WebKit y Chromium con los 91 shows elegidos. — orquestador — 2026-11-17 — Block 3
+  (corrección desde Block 4)
+- `toggle` vuelve a la actualización funcional del borrador (dos toques antes de un render se
+  pisaban: quedaba solo el último) y la limpieza del error viejo pasa al render como estado
+  derivado. — orquestador — 2026-11-17 — Block 3 (corrección desde Block 4)
+- Límite conocido, fuera de NFR-04: en los shows de 20 minutos (bloques de 44 px, AC-28), nombre y
+  horario no entran completos; AC-28 solo exige la altura mínima. — orquestador — 2026-11-17 —
+  Block 3

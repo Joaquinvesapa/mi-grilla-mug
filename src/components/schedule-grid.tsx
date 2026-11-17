@@ -166,48 +166,60 @@ function ShowBlock({ show, geometry, selected, pending, clash, onToggle }: ShowB
       aria-describedby={describedBy || undefined}
       onClick={() => onToggle(show.id)}
       // Geometry straight from blockGeometry: the height is the duration at scale (FR-03), never
-      // under 44 px (NFR-03). The 2 px inset only narrows it.
+      // under 44 px (NFR-03). The 1 px inset and 4 px padding only narrow it: at 360 px they leave
+      // the name 92 px, which is what "Partysani Klezmer Band" and "Las Canciones de Ainé" need to
+      // fit in 2 lines at 13 px semibold (NFR-04).
       style={{ top: geometry.top, height: geometry.height }}
       className={cn(
-        "absolute inset-x-0.5 flex flex-col items-start gap-0.5 overflow-hidden rounded-md border px-1.5 py-1 text-left transition-[background-color,border-color,transform] duration-100 ease-out outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 data-[pressed=true]:scale-[0.97]",
+        "absolute inset-x-px flex flex-col items-start gap-0.5 overflow-hidden rounded-md border px-1 py-1 text-left transition-[background-color,border-color,transform] duration-100 ease-out outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 data-[pressed=true]:scale-[0.97]",
         selected
           ? "border-background bg-primary text-primary-foreground"
           : "border-border bg-card text-foreground hover:bg-accent/40 data-[pressed=true]:bg-accent/60",
+        // Unsaved: a dashed outline, which takes no room from the name or the time line.
+        pending && "border-dashed",
       )}
       {...pressed}
     >
-      <span className="flex w-full items-start gap-1">
-        <span className="min-w-0 flex-1 text-[13px] leading-tight font-semibold [overflow-wrap:anywhere]">
+      <span className="flex w-full">
+        {/* Spanish hyphenation (html lang="es-AR") breaks a long word before it is split blindly
+            ("Desen-chufados"); overflow-wrap:anywhere stays as the fallback where the browser has
+            no dictionary. The slightly tight tracking is the other margin NFR-04 needs. The name
+            has the row to itself: no mark takes width from it. */}
+        <span className="min-w-0 flex-1 text-[13px] leading-tight font-semibold tracking-[-0.01em] [overflow-wrap:anywhere] hyphens-auto">
           {show.artist}
         </span>
-        {clash ? (
-          <span
-            className={cn(
-              "shrink-0 rounded-sm",
-              selected ? "bg-background px-0.5 text-warning" : "text-warning",
-            )}
-          >
-            <TriangleAlert aria-hidden="true" className="size-3.5" />
-            <span id={clashId} hidden>
-              Choca con otro show elegido
-            </span>
-          </span>
-        ) : null}
       </span>
       {/* Whitespace between the parts: a flex container does not draw it, but it keeps the
           words apart in the accessible name ("DJO 18:00 – 19:00"). */}{" "}
       {show.subtitle ? (
-        <span className="w-full text-[12px] leading-tight [overflow-wrap:anywhere] opacity-80">
+        <span className="w-full text-[12px] leading-tight [overflow-wrap:anywhere] hyphens-auto opacity-80">
           {show.subtitle}
         </span>
       ) : null}{" "}
-      <span className="tabular text-[12px] leading-tight opacity-80">{timeRange(show)}</span>
+      <span data-time-line className="relative w-full">
+        <span className="tabular text-[12px] leading-tight tracking-[-0.03em] opacity-80">
+          {timeRange(show)}
+        </span>
+        {clash ? (
+          // At the end of the time line, in the room the time leaves plus 2 px of the right padding:
+          // at 360 px the time measures 78–82 px of the name's 92 (with its tight tracking), so a
+          // 12 px icon keeps 2 px from it and 2 px from the border, and never takes width from the
+          // name (NFR-04). Gold filled, dark outlined: legible on the foam of a chosen block, the
+          // only kind that can clash.
+          <TriangleAlert
+            aria-hidden="true"
+            className="absolute top-1/2 -right-[2px] size-3 -translate-y-1/2 fill-warning text-rp-base"
+          />
+        ) : null}
+      </span>
+      {clash ? (
+        <span id={clashId} hidden>
+          Choca con otro show elegido
+        </span>
+      ) : null}
       {pending ? (
-        <span className="absolute right-1 bottom-1 flex items-center">
-          <span aria-hidden="true" className="size-1.5 rounded-full bg-current" />
-          <span id={pendingId} hidden>
-            Sin guardar
-          </span>
+        <span id={pendingId} hidden>
+          Sin guardar
         </span>
       ) : null}
     </button>

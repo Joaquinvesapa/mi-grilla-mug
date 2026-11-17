@@ -91,7 +91,15 @@ describe("ScheduleGrid", () => {
       const block = blockOf(container, id);
       expect(block).toHaveAttribute("aria-pressed", "true");
       expect(within(block).getByText(CLASH_TEXT)).toBeInTheDocument();
-      expect(block.querySelector("svg.lucide-triangle-alert")).not.toBeNull();
+      // On the time line, not in the name's row: the mark never takes width from the artist's
+      // name (NFR-04 holds with a clash too). Gold fill, dark outline: legible on the foam fill.
+      const icon = within(block)
+        .getByText(/^\d\d:\d\d – \d\d:\d\d$/)
+        .closest("[data-time-line]")
+        ?.querySelector("svg.lucide-triangle-alert");
+      expect(icon).not.toBeNull();
+      expect(icon).toHaveClass("fill-warning");
+      expect(block.firstElementChild?.querySelector("svg")).toBeNull();
     }
     const edge = blockOf(container, "fri-samsung-1700");
     expect(edge).toHaveAttribute("aria-pressed", "true");
@@ -108,6 +116,10 @@ describe("ScheduleGrid", () => {
     expect(blockOf(container, "fri-flow-1800")).toHaveAttribute("data-pending", "true");
     expect(blockOf(container, "fri-samsung-1700")).toHaveAccessibleDescription(/Sin guardar/);
     expect(blockOf(container, "fri-perrys-1815")).not.toHaveAttribute("data-pending");
+    // Drawn as a dashed outline, which takes no room from the name or the time line.
+    expect(blockOf(container, "fri-flow-1800")).toHaveClass("border-dashed");
+    expect(blockOf(container, "fri-samsung-1700")).toHaveClass("border-dashed");
+    expect(blockOf(container, "fri-perrys-1815")).not.toHaveClass("border-dashed");
   });
 
   it("test-grid-block-accessible-name: choque y sin guardar van en la descripción, no en el nombre", () => {
@@ -155,6 +167,18 @@ describe("ScheduleGrid", () => {
     for (const mark of container.querySelectorAll("[data-hour-mark]")) {
       expect(mark).toHaveClass("text-[12px]");
     }
+  });
+
+  it("test-grid-name-fit: el nombre del artista entra en 2 líneas a 360 px: 13 px semibold, guiones en español y menos aire lateral (NFR-04)", () => {
+    const { container } = renderFriday();
+
+    const block = blockOf(container, "fri-kidzapalooza-1500");
+    const name = block.querySelector(":scope > span > span");
+    expect(name).toHaveTextContent("Arjaus Crew");
+    // Spec-fixed: 13 px semibold. jsdom has no layout; the two-line check itself is the E2E
+    // test-e2e-grid-names-two-lines, these are the knobs it depends on.
+    expect(name).toHaveClass("text-[13px]", "font-semibold", "hyphens-auto", "tracking-[-0.01em]");
+    expect(block).toHaveClass("inset-x-px", "px-1");
   });
 
   it("da respuesta táctil al bloque con data-pressed", () => {

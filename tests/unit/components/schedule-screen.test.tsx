@@ -67,6 +67,19 @@ describe("ScheduleScreen", () => {
     expect(blockOf(document, "fri-flow-1800")).toHaveAttribute("aria-pressed", "false");
   });
 
+  it("dos toques en la misma tarea suman los dos shows (el borrador no se pisa)", () => {
+    renderScreen();
+
+    act(() => {
+      fireEvent.click(blockOf(document, "fri-flow-1800"));
+      fireEvent.click(blockOf(document, "fri-perrys-1815"));
+    });
+
+    expect(blockOf(document, "fri-flow-1800")).toHaveAttribute("aria-pressed", "true");
+    expect(blockOf(document, "fri-perrys-1815")).toHaveAttribute("aria-pressed", "true");
+    expect(pendingBar()).toHaveTextContent("2 cambios sin guardar");
+  });
+
   it("test-screen-pending-across-days: lo marcado el viernes sigue elegido y pendiente al volver del sábado", () => {
     renderScreen();
 
