@@ -155,3 +155,38 @@ aprobó — fecha — bloque.
   verde, pero es frágil: cambiarlo a un `data-*` que ponga `OfflineRetry` al montarse antes de que
   la CI lo corra (Block 6); (g) el comentario de `manifest.ts:3` quedó sobre el import y no junto a
   los colores. — usuario — 2026-11-17 — Block 4
+
+## Block 5 — `/demo` con marco de iPhone
+
+- `ResizeObserver` sobre el área del marco y no sobre la ventana: un `ResizeObserver` no puede
+  observar `window`. El área (`flex-1 min-h-0 overflow-hidden`, debajo del título) es la "altura
+  disponible" que pide la spec, ya descontado el título. La spec dice "sobre la ventana": alinear
+  su texto en la próxima revisión. — usuario — 2026-11-17 — Block 5
+- Una caja exterior toma el tamaño ya escalado (`FRAME_* × scale`) para que el `transform` no deje
+  la caja de 876 px en el layout; el área tiene `overflow-hidden` para que el SSR, que arranca en
+  escala 1, no genere scroll antes del primer resize. — usuario — 2026-11-17 — Block 5
+- Dynamic Island de 112×30 a 10 px del borde (la real mide 126×37 a 11 px), para no tapar el h1 del
+  inicio; con `pointer-events-none`, los toques la atraviesan. Los radios del bisel se derivan de
+  constantes (`OUTER_RADIUS`, `OUTER_RADIUS - BEZEL`). — usuario — 2026-11-17 — Block 5
+- `computeFrameScale` trata NaN, ±Infinity y una altura de marco inválida igual que 0: devuelve 1.
+  — usuario — 2026-11-17 — Block 5
+- Tests más allá de los requeridos: render del iframe (src, título, tamaño, sin `allow`), escala por
+  `ResizeObserver`, altura 0, `disconnect` al desmontar, headers también en `/demo`, y un iframe de
+  control en el test de otro origen para que la aserción negativa no pase en vacío. —
+  usuario — 2026-11-17 — Block 5
+- Pendientes registrados: (a) la tabla de cobertura de la spec asigna NFR-01 (360/430 px) al Block 5
+  sin un test requerido que lo respalde; `/demo` es solo desktop y `/` ya lo cubren los Blocks 2 y
+  4: corregir la tabla en la próxima revisión de la spec; (b) el rechazo desde otro origen (R-08)
+  solo se prueba en Chromium (`demo.spec.ts` corre en `desktop`); los headers se validan a nivel
+  HTTP, independiente del navegador; (c) el test de otro origen (`demo.spec.ts`, `toHaveCount(0)`
+  sobre el frame rechazado) es el de más riesgo de flakiness: vigilarlo cuando la CI lo corra
+  (Block 6). — usuario — 2026-11-17 — Block 5
+- Ronda 2 de correcciones (aprobada por el usuario): radios del bisel derivados de `OUTER_RADIUS` /
+  `SCREEN_RADIUS`, con un test unitario de la invariante "radio de la pantalla = radio exterior −
+  bisel"; el test unitario pasó a `tests/unit/components/iphone-frame.test.tsx` con JSX, como el
+  resto de los tests de componentes. — usuario — 2026-11-17 — Block 5
+- Pendientes de la ronda 2: (d) la spec (§ Block 5) todavía nombra `iphone-frame.test.ts`: alinear
+  a `.tsx` en la próxima revisión de la spec; (e) `demo.spec.ts:65,143` tiene un `!` innecesario
+  después de `elementHandle()` y el título del test de headers (`:90`) nombra solo `/` aunque
+  revisa también `/demo` (cosméticos, para el Block 6); (f) `tests/unit/components/pressable.test.ts`
+  (Block 2) sigue usando `createElement` en un `.ts`. — usuario — 2026-11-17 — Block 5
