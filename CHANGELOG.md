@@ -6,6 +6,7 @@ Todos los cambios notables de Mi Grilla se registran en este archivo. El formato
 ## [Unreleased]
 
 ### Added
+
 - [FEAT-001] Base del proyecto: Next.js 16, TypeScript 7, Tailwind 4 con shadcn/ui y paleta Rosé
   Pine, y la toolchain de oxc (oxlint y oxfmt).
 - [FEAT-001] Pantalla de inicio con shell nativo de iPhone: safe areas, `100dvh`, toques sin demora
