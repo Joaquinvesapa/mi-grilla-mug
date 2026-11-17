@@ -1,5 +1,17 @@
 @import "tailwindcss";
 
+/*
+ * Touch has no hover: a phone fakes one on tap and leaves it stuck. Every `hover:` utility only
+ * applies where the primary input really hovers and is precise (mobile-native, fix 1 / Baseline).
+ */
+@custom-variant hover {
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      @slot;
+    }
+  }
+}
+
 /* Rosé Pine (main variant). Source: rose-pine/palette, dist/css/rose-pine.css */
 @theme {
   --color-rp-base: #191724;
@@ -35,9 +47,12 @@
   --secondary-foreground: var(--color-rp-text);
   --muted: var(--color-rp-overlay);
   --muted-foreground: var(--color-rp-subtle);
-  --accent: var(--color-rp-highlight-low);
+  /* highlight-med: highlight-low (#21202e) barely separates from base and surface. */
+  --accent: var(--color-rp-highlight-med);
   --accent-foreground: var(--color-rp-text);
   --destructive: var(--color-rp-love);
+  /* Dark text on love, as primary does on foam. */
+  --destructive-foreground: var(--color-rp-base);
   --warning: var(--color-rp-gold);
   --border: var(--color-rp-highlight-med);
   --input: var(--color-rp-highlight-med);
@@ -45,10 +60,13 @@
 }
 
 @theme inline {
+  --font-sans: var(--font-public-sans), ui-sans-serif, system-ui, sans-serif;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  /* One step above xl, still derived from --radius: the phone outline in the home previews. */
+  --radius-2xl: calc(var(--radius) + 8px);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -64,6 +82,7 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-warning: var(--warning);
   --color-border: var(--border);
   --color-input: var(--input);
@@ -75,7 +94,49 @@
     @apply border-border outline-ring/50;
   }
 
+  html {
+    /* No gray flash over a tapped element: each control draws its own pressed state (fix 2). */
+    -webkit-tap-highlight-color: transparent;
+    /* No font inflation when the phone turns. */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    /* The page does not rubber-band or pull-to-refresh past its own edges. */
+    overscroll-behavior-y: none;
+  }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background font-sans text-foreground antialiased;
+  }
+
+  /* Controls answer the first tap, without waiting to rule out a double-tap zoom (fix 5), and a
+     long press does not select their label or open the copy callout (fix 8). Content text stays
+     selectable. */
+  button,
+  a,
+  [role="button"] {
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+}
+
+/*
+ * Native shell: exactly the visible height while Safari's bars show and hide (100dvh, never
+ * 100vh; fix 3), painted edge to edge under the notch and the home indicator, with the content
+ * padded out of them (viewport-fit=cover in the layout + env(); fix 7).
+ */
+@layer components {
+  .app-shell {
+    min-height: 100dvh;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-left: env(safe-area-inset-left, 0px);
+  }
+
+  /* Figures that line up as they change (times, counters). */
+  .tabular {
+    font-variant-numeric: tabular-nums;
   }
 }

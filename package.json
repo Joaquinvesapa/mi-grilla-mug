@@ -11,9 +11,13 @@
     "format": "oxfmt",
     "format:check": "oxfmt --check",
     "typecheck": "next typegen && tsc --noEmit",
-    "test": "vitest run --project unit --coverage"
+    "test": "vitest run --project unit --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:docker": "bash scripts/test-e2e-docker.sh"
   },
   "dependencies": {
+    "@radix-ui/react-collapsible": "1.2.1",
+    "@radix-ui/react-slot": "1.5.0",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "lucide-react": "1.73.0",
@@ -24,6 +28,7 @@
     "tailwind-merge": "3.7.0"
   },
   "devDependencies": {
+    "@playwright/test": "1.65.1",
     "@tailwindcss/postcss": "4.3.5",
     "@testing-library/dom": "10.4.2",
     "@testing-library/jest-dom": "7.0.1",

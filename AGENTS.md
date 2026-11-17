@@ -37,13 +37,13 @@ dentro de un mockup de iPhone.
 | Framework | Next.js 16.4.6 (App Router, Turbopack) + React 19.3.1 · PWA instalable con Serwist 9.5.14 (`serwist` + `@serwist/turbopack`, ADR-002 — planificada, se instala en el Block 4 de FEAT-001) |
 | Database | PostgreSQL + Prisma 7.10.1 (planificada, se instala en el Block 3 de FEAT-001) |
 | UI | Tailwind CSS 4.3.5 (`@tailwindcss/postcss`) + shadcn/ui (CLI 4.23.0, estilo new-york) · paleta Rosé Pine, tema oscuro único |
-| Test runner | Vitest 5.1.0 (unit en jsdom con coverage v8 / integración en node) + Playwright 1.65.1 (E2E — planificada, se instala en el Block 2 de FEAT-001) |
+| Test runner | Vitest 5.1.0 (unit en jsdom con coverage v8 / integración en node) + Playwright 1.65.1 (E2E, instalada en el Block 2 de FEAT-001; navegadores: `pnpm exec playwright install webkit chromium`. WebKit necesita bibliotecas del sistema que en algunos hosts faltan, por ejemplo en Arch: ahí se corre con `pnpm test:e2e:docker`) |
 | Linter / formatter | oxlint 1.94.0 + oxlint-tsgolint 7.0.2007 (lint con tipos) · oxfmt 0.79.0 — sin ESLint ni Prettier (ADR-001) |
 | Type check | `next typegen && tsc --noEmit` con TypeScript 7 (`next build` no chequea tipos: `ignoreBuildErrors`, ADR-001) |
 | Package manager | pnpm 12.18.0 (`packageManager`) |
 
 > Todas las versiones de `package.json` son exactas (sin `^` ni `~`). Las marcadas como
-> "planificada" (Prisma, Serwist, Playwright) son las versiones fijadas en la spec de FEAT-001:
+> "planificada" (Prisma, Serwist) son las versiones fijadas en la spec de FEAT-001:
 > todavía no están en `package.json` y entran, con esa misma versión, en el bloque que las instala.
 
 ---
@@ -55,7 +55,7 @@ dentro de un mockup de iPhone.
 | Coverage floor — line | 80 % (PRD 01, NFR-05; `vitest.config.ts`) |
 | Coverage floor — branch | 70 % (PLAN de FEAT-001; `vitest.config.ts`) |
 | Coverage floor — function | 80 % (PLAN de FEAT-001; `vitest.config.ts`) |
-| How the suite is run | `pnpm test` (unit + coverage con los pisos). Integración (`pnpm test:integration`) y E2E (`pnpm test:e2e`): _pendientes, los agregan los Blocks 3 y 2 de FEAT-001; la CI, el Block 6_ |
+| How the suite is run | `pnpm test` (unit + coverage con los pisos). `pnpm test:e2e`: Playwright contra el build de producción (`pnpm build && pnpm start` en el puerto 3100, ADR-002) en 4 proyectos: `iphone-webkit` (iPhone 15), `mobile-chromium` (Pixel 7), `mobile-360` (Chromium 360×780) y `desktop` (Chromium 1280×800, solo `/demo`). `pnpm test:e2e:docker`: la misma suite dentro de la imagen oficial `mcr.microsoft.com/playwright:v1.65.1-noble`, para hosts sin las bibliotecas de WebKit (no toca el `node_modules` del host; acepta los argumentos de `playwright test`). Integración (`pnpm test:integration`): _pendiente, la agrega el Block 3 de FEAT-001; la CI, el Block 6_ |
 | What a skipped test owes | El motivo, en la misma línea del test salteado. |
 
 - El mínimo de la CI son los tres pisos de arriba: la cobertura bajo cualquiera de ellos hace fallar
@@ -74,7 +74,9 @@ Si un número de acá no coincide con el que exige la CI, gana el de la CI y se 
 - **Folder structure:** `src/app/` (rutas, layouts y route handlers delgados), `src/components/`
   (UI; `ui/` = shadcn), `src/lib/` (utilidades puras, sin I/O), `src/server/` (acceso a la base y
   lógica de servidor; cada módulo con `import "server-only"`), `src/server/generated/prisma/`
-  (cliente generado, fuera de git). Tests en `tests/{unit,integration,e2e}/`.
+  (cliente generado, fuera de git). Tests en `tests/{unit,integration,e2e}/`. `scripts/`:
+  herramientas de desarrollo en shell, invocadas desde `package.json`; nunca se importan desde
+  `src/`.
 - **Layer separation:** `src/app/` y `src/components/` nunca importan `@prisma/*` ni
   `@/server/generated/*`; usan funciones de `src/server/`. Lo hace cumplir `no-restricted-imports`
   en oxlint.
@@ -82,7 +84,8 @@ Si un número de acá no coincide con el que exige la CI, gana el de la CI y se 
   un código (`{ ok: false, code: "DB_UNREACHABLE" }`). Ningún `catch` silencioso: o registra un código
   genérico o re-lanza. Al cliente nunca llega `error.message` de infraestructura.
 - **Naming:** archivos y carpetas en kebab-case; componentes en PascalCase; funciones y variables en
-  camelCase; identificadores en inglés; textos de UI en español.
+  camelCase, salvo las constantes de módulo inmutables, que van en SCREAMING_SNAKE_CASE
+  (`STEPS`, `LOAD_BUDGET_MS`); identificadores en inglés; textos de UI en español.
 - **Dependencies:** versiones exactas (sin `^` ni `~`); una dependencia nueva se justifica en la
   spec de su ticket; ESLint y Prettier no se instalan (ADR-001).
 
@@ -107,6 +110,10 @@ Si un número de acá no coincide con el que exige la CI, gana el de la CI y se 
     principios visuales, no su estructura de landing (hero, secciones, fotos).
   Cada spec de una pantalla mobile cita qué puntos de estas guías aplica, y la revisión de cada
   bloque de UI los verifica.
+- **Paleta Rosé Pine (decisión del usuario, 2026-11-16):** sus neutros con tinte violeta (base,
+  surface, overlay, highlight) son el fondo de la app, y esta decisión prevalece sobre el "nada de
+  violeta ni lavanda" de `design-taste-frontend` para fondos y neutros. Iris (`#c4a7e7`) sigue sin
+  usarse como acento: el acento es foam.
 - Sin `any` (si es inevitable, con un comentario del motivo).
 - Componentes de servidor por defecto y `"use client"` solo donde hay interacción.
 
