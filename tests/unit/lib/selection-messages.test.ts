@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  OFFLINE_PENDING_BODY,
+  OFFLINE_PENDING_TITLE,
   pendingChangesLabel,
   type SelectionMessageCode,
   selectionMessageFor,
@@ -13,6 +15,9 @@ const CATALOG = {
   SERVICE_UNAVAILABLE: "No pudimos guardar. Probá de nuevo en un rato.",
   NETWORK_ERROR: "No pudimos guardar. Revisá tu conexión y probá de nuevo.",
   SCHEDULE_UNAVAILABLE: "No pudimos cargar la grilla. Probá de nuevo en un rato.",
+  USER_MISMATCH: "Entraste con otra cuenta. Recargá la grilla para seguir.",
+  STORAGE_UNAVAILABLE:
+    "No pudimos guardar: no hay conexión y este celular no dejó guardar los cambios.",
 } satisfies Record<SelectionMessageCode, string>;
 
 describe("selectionMessageFor", () => {
@@ -23,6 +28,21 @@ describe("selectionMessageFor", () => {
     for (const unknown of ["", "NOPE", "toString", "__proto__", "P2002"]) {
       expect(selectionMessageFor(unknown)).toBe(CATALOG.SERVICE_UNAVAILABLE);
     }
+  });
+});
+
+describe("new codes and the offline notice", () => {
+  it("test-messages-new-codes: USER_MISMATCH and STORAGE_UNAVAILABLE have their own texts, and the notice its title and body", () => {
+    expect(selectionMessageFor("USER_MISMATCH")).toBe(
+      "Entraste con otra cuenta. Recargá la grilla para seguir.",
+    );
+    expect(selectionMessageFor("STORAGE_UNAVAILABLE")).toBe(
+      "No pudimos guardar: no hay conexión y este celular no dejó guardar los cambios.",
+    );
+    expect(OFFLINE_PENDING_TITLE).toBe("Guardado solo en este celular");
+    expect(OFFLINE_PENDING_BODY).toBe(
+      "Tus cambios se suben solos cuando vuelva la conexión. Mientras tanto, descargá la grilla como fondo de pantalla para tenerla a mano.",
+    );
   });
 });
 

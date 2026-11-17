@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { loginAction } from "@/app/auth-actions";
+import { ForgetDeviceCopy } from "@/components/forget-device-copy";
 import { InstallGuide } from "@/components/install-guide";
 import { LoginForm } from "@/components/login-form";
 import { getAccounts } from "@/server/accounts";
@@ -21,6 +22,8 @@ export default async function LoginPage() {
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-col gap-6 px-5 pt-10 pb-12">
+      {/* Nobody is signed in here: the last user's device copy goes (R-03 of FEAT-003b). */}
+      <ForgetDeviceCopy />
       <header className="flex flex-col gap-3 pb-2">
         <h1 className="text-5xl font-semibold tracking-tight">
           Mi <span className="text-primary">Grilla</span>

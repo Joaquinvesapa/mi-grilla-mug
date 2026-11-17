@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { registerAction } from "@/app/auth-actions";
+import { ForgetDeviceCopy } from "@/components/forget-device-copy";
 import { RegisterForm } from "@/components/register-form";
 import { getAccounts } from "@/server/accounts";
 
@@ -20,6 +21,8 @@ export default async function RegisterPage() {
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-col gap-6 px-5 pt-10 pb-12">
+      {/* Nobody is signed in here: the last user's device copy goes (R-03 of FEAT-003b). */}
+      <ForgetDeviceCopy />
       <header className="flex flex-col gap-3 pb-2">
         <h1 className="text-4xl font-semibold tracking-tight">Creá tu cuenta</h1>
         <p className="max-w-[32ch] text-lg text-muted-foreground">

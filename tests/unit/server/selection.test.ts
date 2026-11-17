@@ -276,7 +276,7 @@ describe("saveSelectionAction", () => {
   it("test-selection-action-unauthorized: without a session it is UNAUTHENTICATED and never saves; AccountsUnavailableError is SERVICE_UNAVAILABLE", async () => {
     accounts.getCurrentUser.mockResolvedValueOnce(null);
 
-    expect(await saveSelectionAction([FIRST])).toStrictEqual({
+    expect(await saveSelectionAction([FIRST], USER_ID)).toStrictEqual({
       ok: false,
       code: "UNAUTHENTICATED",
     });
@@ -284,7 +284,7 @@ describe("saveSelectionAction", () => {
 
     accounts.getCurrentUser.mockRejectedValueOnce(new accounts.AccountsUnavailableError());
 
-    expect(await saveSelectionAction([FIRST])).toStrictEqual({
+    expect(await saveSelectionAction([FIRST], USER_ID)).toStrictEqual({
       ok: false,
       code: "SERVICE_UNAVAILABLE",
     });
@@ -295,7 +295,7 @@ describe("saveSelectionAction", () => {
     accounts.getCurrentUser.mockResolvedValueOnce({ id: USER_ID, name: "Ana", email: "a@b.co" });
     saveSpy.mockResolvedValueOnce({ ok: false, code: "INVALID_SELECTION" });
 
-    const result = await saveSelectionAction([FIRST]);
+    const result = await saveSelectionAction([FIRST], USER_ID);
 
     expect(result).toStrictEqual({ ok: false, code: "INVALID_SELECTION" });
     expect(saveSpy).toHaveBeenCalledWith(USER_ID, [FIRST]);
@@ -306,6 +306,47 @@ describe("saveSelectionAction", () => {
   it("an unexpected error from the session check is rethrown", async () => {
     accounts.getCurrentUser.mockRejectedValueOnce(new TypeError("boom"));
 
-    await expect(saveSelectionAction([FIRST])).rejects.toThrow(TypeError);
+    await expect(saveSelectionAction([FIRST], USER_ID)).rejects.toThrow(TypeError);
+  });
+
+  it("test-action-user-mismatch-rejected: with A's session and B as expectedUserId it is USER_MISMATCH and never saves", async () => {
+    accounts.getCurrentUser.mockResolvedValueOnce({ id: USER_ID, name: "Ana", email: "a@b.co" });
+
+    expect(await saveSelectionAction([FIRST, SECOND], "user-beto")).toStrictEqual({
+      ok: false,
+      code: "USER_MISMATCH",
+    });
+    expect(saveSpy).not.toHaveBeenCalled();
+  });
+
+  it("test-action-expected-user-invalid: a number, an empty string or 65 characters as expectedUserId is USER_MISMATCH", async () => {
+    for (const expected of [42, "", "a".repeat(65), undefined, null, [USER_ID]]) {
+      accounts.getCurrentUser.mockResolvedValueOnce({ id: USER_ID, name: "Ana", email: "a@b.co" });
+
+      expect(await saveSelectionAction([FIRST], expected)).toStrictEqual({
+        ok: false,
+        code: "USER_MISMATCH",
+      });
+    }
+    expect(saveSpy).not.toHaveBeenCalled();
+  });
+
+  it("test-action-unauthorized-before-mismatch: without a session it is UNAUTHENTICATED even with no expectedUserId", async () => {
+    accounts.getCurrentUser.mockResolvedValueOnce(null);
+
+    expect(await saveSelectionAction([FIRST], undefined)).toStrictEqual({
+      ok: false,
+      code: "UNAUTHENTICATED",
+    });
+    expect(saveSpy).not.toHaveBeenCalled();
+  });
+
+  it("a 64-character expectedUserId equal to the session's user saves", async () => {
+    const longId = "u".repeat(64);
+    accounts.getCurrentUser.mockResolvedValueOnce({ id: longId, name: "Ana", email: "a@b.co" });
+    saveSpy.mockResolvedValueOnce({ ok: true });
+
+    expect(await saveSelectionAction([FIRST], longId)).toStrictEqual({ ok: true });
+    expect(saveSpy).toHaveBeenCalledWith(longId, [FIRST]);
   });
 });

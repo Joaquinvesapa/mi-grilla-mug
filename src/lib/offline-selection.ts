@@ -32,7 +32,8 @@ const PENDING_KEY_PREFIX = "mi-grilla:pending:";
 /** A future format bumps this, and every stored value of another version is ignored. */
 const FORMAT_VERSION = 1;
 
-const USER_ID_MAX_LENGTH = 64;
+/** The longest user id accepted, here and by `saveSelectionAction` as `expectedUserId`. */
+export const USER_ID_MAX_LENGTH = 64;
 const USER_NAME_MAX_LENGTH = 100;
 
 // The same limits as `src/server/selection.ts`, which `src/lib/` cannot import.

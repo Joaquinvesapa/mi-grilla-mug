@@ -24,6 +24,17 @@ vi.mock("@/server/schedule", () => ({ getSchedule: mocks.getSchedule }));
 vi.mock("@/server/selection", () => ({ getSelection: mocks.getSelection }));
 vi.mock("@/app/auth-actions", () => ({ logoutAction: vi.fn() }));
 vi.mock("@/app/selection-actions", () => ({ saveSelectionAction: vi.fn() }));
+// The screen itself is real in the other tests; here only what the page hands it matters.
+const screenSpy = vi.hoisted(() => vi.fn());
+vi.mock("@/components/schedule-screen", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/components/schedule-screen")>();
+  return {
+    ScheduleScreen: (props: Parameters<typeof actual.ScheduleScreen>[0]) => {
+      screenSpy(props);
+      return <actual.ScheduleScreen {...props} />;
+    },
+  };
+});
 
 const { default: HomePage } = await import("@/app/page");
 
@@ -110,6 +121,18 @@ describe("HomePage", () => {
       selectionMessageFor("SCHEDULE_UNAVAILABLE"),
     );
     expect(screen.queryByRole("region", { name: /^Grilla del/ })).not.toBeInTheDocument();
+  });
+
+  it("test-home-page-user-id: pasa a la pantalla el id del usuario de la sesión y mode online", async () => {
+    await renderPage();
+
+    expect(screenSpy).toHaveBeenCalled();
+    expect(screenSpy.mock.calls[0]?.[0]).toMatchObject({
+      userId: "user-1",
+      userName: "Ana",
+      mode: "online",
+      savedShowIds: ["fri-flow-1800"],
+    });
   });
 
   it("sin sesión redirige a /login sin cargar la grilla", async () => {
