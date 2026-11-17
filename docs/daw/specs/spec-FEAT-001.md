@@ -6,8 +6,8 @@
 | PRD | docs/daw/prd/prd-FEAT-001.md |
 | Tier | FEATURE |
 | Date | 2026-11-16 |
-| Spec loops | 1 |
-| Loops since last human decision | 1 |
+| Spec loops | 2 |
+| Loops since last human decision | 2 |
 
 ## Summary
 Scaffold de Mi Grilla sobre Next.js 16 (App Router), TypeScript 7, Tailwind 4 + shadcn/ui, Prisma 7 +
@@ -324,8 +324,11 @@ Implementa FR-04 y FR-09. El route handler es delgado: delega en `src/server/hea
   con `additionalPrecacheEntries` de `/~offline`; responde con `Service-Worker-Allowed: /`.
 - `src/app/sw.ts` (new) — `Serwist` con `precacheEntries` del build (incluye `/_next/static/**`, CSS,
   JS y la fuente autohospedada), `skipWaiting`, `clientsClaim`, `navigationPreload`,
-  `runtimeCaching: []` (sin `defaultCache`), `fallbacks` de documentos a `/~offline`; las peticiones
-  a `/api/` y a otros orígenes no se interceptan (R-05, R-06).
+  `runtimeCaching` con una única ruta `NetworkOnly` para navegaciones (`request.mode ===
+  "navigate"`) del mismo origen fuera de `/api/` (sin `defaultCache` y sin guardar nada en caché),
+  `fallbacks` de documentos a `/~offline`; las peticiones a `/api/` y a otros orígenes no se
+  interceptan (R-05, R-06). La ruta existe porque en serwist 9.5.14 `fallbacks` solo se engancha a
+  las estrategias de `runtimeCaching`: con la lista vacía, `/~offline` nunca se serviría.
 - `src/app/~offline/page.tsx` (new) — pantalla "Sin conexión" con la identidad de la app (estilos y
   fuente precacheados).
 - `tests/unit/app/manifest.test.ts` (new)

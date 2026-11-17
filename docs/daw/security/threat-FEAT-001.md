@@ -77,7 +77,10 @@
   reemplazan la versión anterior (R-05).
 - **Repudiation:** no aplica. El SW no hace acciones del usuario.
 - **Information Disclosure:** el SW no cachea respuestas de `/api/*` ni nada de fuera del origen.
-  En FEAT-001 solo precachea `/~offline` y los assets estáticos del build (R-06).
+  En FEAT-001 solo precachea `/~offline` y los assets estáticos del build (R-06). La única ruta de
+  `runtimeCaching` es `NetworkOnly` para navegaciones del mismo origen fuera de `/api/`. Existe
+  solo para que `fallbacks` sirva `/~offline` y no guarda ninguna respuesta en Cache Storage, así
+  que no hay HTML de un usuario cacheado que otro pueda leer.
 - **Denial of Service:** un SW roto podría dejar la app sin cargar. Ante un fallo de red, la
   navegación cae en `/~offline`. Un build nuevo reemplaza al SW.
 - **Elevation of Privilege:** el SW no tiene más permisos que la página. No pide permisos de
@@ -120,7 +123,7 @@
 | R-03 | `DATABASE_URL` o el cliente Prisma terminan en el bundle del navegador | I | L | H | `import "server-only"` en `src/server/db.ts` y `src/server/health.ts`, y regla de capas en AGENTS.md: solo `src/server/` importa Prisma |
 | R-04 | Conexión a una base remota sin TLS | T | L | H | `db.ts` rechaza al arrancar un host no loopback ni `postgres` (servicio de la CI) sin `sslmode=require`. Lo cubre un test unitario |
 | R-05 | Un service worker viejo sigue sirviendo contenido de un build anterior | T | M | M | Precache versionado por Serwist, `skipWaiting` + `clientsClaim`, y limpieza de cachés viejas |
-| R-06 | El SW cachea respuestas que no debería, como datos de la API | I | L | M | Sin runtime caching de `/api/*` ni de otros orígenes en FEAT-001. Solo precache de `/~offline` y estáticos |
+| R-06 | El SW cachea respuestas que no debería, como datos de la API | I | L | M | Sin runtime caching de `/api/*` ni de otros orígenes en FEAT-001. Solo precache de `/~offline` y estáticos. La única ruta de runtime es `NetworkOnly` para navegaciones del mismo origen fuera de `/api/`, sin caché. Un E2E verifica que offline `/api/health` falla por red y que Cache Storage no guarda URLs de `/api/` ni de otros orígenes |
 | R-07 | Logs del servidor con la cadena de conexión | I | L | H | Se loguea solo el código genérico (`DB_UNREACHABLE` / `DB_TIMEOUT`), nunca `error.message` de Prisma |
 | R-08 | Clickjacking: otro sitio embebe la app | S | M | M | `X-Frame-Options: SAMEORIGIN` y `Content-Security-Policy: frame-ancestors 'self'` en todas las rutas. Un test E2E verifica los headers |
 | R-09 | Un PR desde un fork ejecuta código con acceso a secretos o con un token con escritura | E | L | H | Evento `pull_request` (nunca `pull_request_target`), sin secretos en el workflow, `permissions: contents: read` |

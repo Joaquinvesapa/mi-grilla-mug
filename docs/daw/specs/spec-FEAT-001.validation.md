@@ -15,10 +15,10 @@
   ✅ F-SPEC-16: every documented error is named by a test
   ✅ F-SPEC-11: dependencies between blocks are declared
   ⚠️ W-SPEC-01: block referencing no FR — enabler or gold-plating?: Block 1 (Scaffold y calidad local)
-  ⚠️ W-SPEC-02: large block, consider splitting: Block 1 (Scaffold y calidad local) (19 files, 795 words), Block 2 (Inicio y shell nativo) (11 files, 587 words), Block 3 (Base de datos y chequeo de salud) (10 files, 609 words), Block 4 (PWA instalable y pantalla sin conexión) (10 files, 461 words), Block 6 (CI, protección de `main` y documentación) (7 files, 763 words)
+  ⚠️ W-SPEC-02: large block, consider splitting: Block 1 (Scaffold y calidad local) (19 files, 795 words), Block 2 (Inicio y shell nativo) (11 files, 587 words), Block 3 (Base de datos y chequeo de salud) (10 files, 609 words), Block 4 (PWA instalable y pantalla sin conexión) (10 files, 506 words), Block 6 (CI, protección de `main` y documentación) (7 files, 763 words)
   👁  F-SPEC-12 (contradicts the PRD) and F-SPEC-13 (terminology diverging from
       the PRD) are MANUAL: judge them and say so explicitly in your report.
-  ✅ F-SPEC-LOOP: 1 loop(s) since a human decided, under the ceiling of 3; 1 in total for this document
+  ✅ F-SPEC-LOOP: 2 loop(s) since a human decided, under the ceiling of 3; 2 in total for this document
 ────────────────────────────────────────────────────────────────
 Total: 13 passed, 0 failed, 2 warnings
 Result: PASSED
