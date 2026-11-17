@@ -6,8 +6,8 @@
 | PRD | docs/daw/prd/prd-FEAT-003b.md |
 | Tier | FEATURE |
 | Date | 2026-11-17 |
-| Spec loops | 0 |
-| Loops since last human decision | 0 |
+| Spec loops | 1 |
+| Loops since last human decision | 1 |
 
 ## Summary
 Los datos sin conexión viven en el dispositivo (`localStorage`), no en las cachés del service worker
@@ -327,8 +327,11 @@ Implementa FR-01 sin conexión (AC-20, AC-21) y FR-03 desde esa pantalla. Primer
 cliente): una `main.app-fixed-screen` vacía con `aria-busy="true"`. En un efecto: si
 `location.pathname` no es `/` → la tarjeta. Si es `/`: `readSnapshot()`; sin copia válida → la
 tarjeta (AC-21); con copia → `ScheduleScreen` con `mode="offline"`, `userId`/`userName`/`schedule`
-de la copia, `savedShowIds` = la pendiente de ese usuario si existe o la confirmada de la copia, e
-`initialDayId = festivalDayFor(new Date(), schedule.days)`. La pantalla con grilla no recarga al
+de la copia, `savedShowIds` = la selección confirmada de la copia (`snapshot.savedShowIds`), e
+`initialDayId = festivalDayFor(new Date(), schedule.days)`. La pendiente de ese usuario no se pasa
+por props: `ScheduleScreen` la adopta sola al montar (Block 2), y `savedShowIds` sigue siendo la
+selección confirmada a la que vuelve si la sincronización la rechaza (corrección de CODE, Spec
+loop 1). La pantalla con grilla no recarga al
 volver la señal: `ScheduleScreen` sincroniza ahí (Block 2). La tarjeta sigue recargando sola.
 
 **Data model**

@@ -17,7 +17,7 @@
   ⚠️ W-SPEC-02: large block, consider splitting: Block 1 (Copia y pendiente en el dispositivo) (4 files, 590 words), Block 2 (Guardar sin conexión y sincronizar) (14 files, 1258 words)
   👁  F-SPEC-12 (contradicts the PRD) and F-SPEC-13 (terminology diverging from
       the PRD) are MANUAL: judge them and say so explicitly in your report.
-  ✅ F-SPEC-LOOP: 0 loop(s) since a human decided, under the ceiling of 3; 0 in total for this document
+  ✅ F-SPEC-LOOP: 1 loop(s) since a human decided, under the ceiling of 3; 1 in total for this document
 ────────────────────────────────────────────────────────────────
 Total: 13 passed, 0 failed, 1 warnings
 Result: PASSED
