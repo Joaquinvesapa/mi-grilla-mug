@@ -19,14 +19,17 @@
     "db:down": "docker compose down",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",
+    "db:seed": "node prisma/seed.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
     "@prisma/adapter-pg": "7.10.1",
     "@prisma/client": "7.10.1",
+    "@radix-ui/react-alert-dialog": "1.2.1",
     "@radix-ui/react-collapsible": "1.2.1",
     "@radix-ui/react-label": "2.1.17",
     "@radix-ui/react-slot": "1.5.0",
+    "@radix-ui/react-tabs": "1.2.1",
     "@serwist/turbopack": "9.5.15",
     "better-auth": "1.7.25",
     "class-variance-authority": "0.7.1",
@@ -38,7 +41,8 @@
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "server-only": "0.0.1",
-    "tailwind-merge": "3.7.0"
+    "tailwind-merge": "3.7.0",
+    "vaul": "1.1.2"
   },
   "devDependencies": {
     "@playwright/test": "1.65.1",

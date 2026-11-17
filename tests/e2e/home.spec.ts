@@ -2,13 +2,31 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 
 import { signUp } from "./auth";
 import { declaresInShippedCss, readCssRules, readShippedCss } from "./css";
+import { gridRegion, openMenu } from "./grid";
 
-const SECTIONS = ["Armá tu grilla", "Llevala en la pantalla de bloqueo", "Coincidí con tu grupo"];
+// The FEAT-001 "Muy pronto" cards are gone: `/` is the grid now (FEAT-003a). Their titles must not
+// come back.
+const OLD_SECTIONS = [
+  "Armá tu grilla",
+  "Llevala en la pantalla de bloqueo",
+  "Coincidí con tu grupo",
+];
 const STEPS = [/Safari/, /Compartir/, /Agregar a pantalla de inicio/];
-const TAPPABLE = 'a[href], button, [role="button"], summary, input, select, textarea';
+// Outside the grid: the show blocks have their own size checks (AC-28 of FEAT-003a, grid.spec.ts).
+const TAPPABLE = ["a[href]", "button", '[role="button"]', "summary", "input", "select", "textarea"]
+  .map((selector) => `${selector}:not([data-show-id])`)
+  .join(", ");
+/**
+ * Vaul injects its own stylesheet, with `[data-vaul-handle]:hover` outside any media query. The app
+ * never renders Vaul's handle (the drawer draws its own bar), so that rule matches nothing and cannot
+ * leave a hover stuck; the test checks that it still matches nothing.
+ */
+const THIRD_PARTY_HOVER = ["[data-vaul-handle]"];
 
-function installTrigger(page: Page): Locator {
-  return page.getByRole("button", { name: "Cómo instalarla" });
+/** "Cómo instalarla" lives in the menu sheet (FEAT-003a): open it first. */
+async function installTrigger(page: Page): Promise<Locator> {
+  const sheet = await openMenu(page);
+  return sheet.getByRole("button", { name: "Cómo instalarla" });
 }
 
 async function expectTapTargetsAtLeast44(page: Page) {
@@ -39,42 +57,57 @@ test.beforeEach(async ({ page }, testInfo) => {
 });
 
 test.describe("pantalla de inicio", () => {
-  test("muestra Mi Grilla y en ningún lado nombra a Lollapalooza (AC-01, AC-13)", async ({
+  test("muestra Mi Grilla en la barra y en ningún lado nombra a Lollapalooza (AC-01, AC-13)", async ({
     page,
   }) => {
     await page.goto("/");
 
     const shell = page.locator(".app-shell");
-    await expect(shell.getByRole("heading", { level: 1, name: "Mi Grilla" })).toBeVisible();
+    // The top bar of the grid screen.
+    await expect(
+      shell.locator("header").getByRole("heading", { level: 1, name: "Mi Grilla" }),
+    ).toBeVisible();
     await expect(page).toHaveTitle("Mi Grilla");
     await expect(page.locator("html")).toHaveAttribute("lang", "es-AR");
 
     const html = await page.evaluate(() => document.documentElement.outerHTML);
     expect(html).not.toMatch(/lollapalooza/i);
     expect(await page.title()).not.toMatch(/lollapalooza/i);
+    // Nor in the menu, which only renders once it is open.
+    await openMenu(page);
+    const withMenu = await page.evaluate(() => document.documentElement.outerHTML);
+    expect(withMenu).toContain("Cómo instalarla");
+    expect(withMenu).not.toMatch(/lollapalooza/i);
   });
 
-  test('tiene las tres secciones "Muy pronto" y la página hace scroll vertical', async ({
+  test('es la grilla: sin las tarjetas "Muy pronto", el documento no scrollea y la grilla sí', async ({
     page,
   }) => {
     await page.goto("/");
+    const grid = gridRegion(page);
+    await expect(grid).toBeVisible();
 
-    for (const name of SECTIONS) {
-      const section = page.getByRole("region", { name });
-      await expect(section).toBeVisible();
-      await expect(section).toContainText("Muy pronto");
+    for (const name of OLD_SECTIONS) {
+      await expect(page.getByRole("region", { name })).toHaveCount(0);
     }
+    await expect(page.getByText("Muy pronto")).toHaveCount(0);
 
+    // mobile-native fix 3: the screen is exactly the visible height; what scrolls is the grid.
     const { scrollHeight, innerHeight } = await page.evaluate(() => ({
       scrollHeight: document.documentElement.scrollHeight,
       innerHeight: window.innerHeight,
     }));
-    expect(scrollHeight).toBeGreaterThan(innerHeight);
+    expect(scrollHeight).toBeLessThanOrEqual(innerHeight);
+    const inner = await grid.evaluate((el) => ({
+      scrollHeight: el.scrollHeight,
+      clientHeight: el.clientHeight,
+    }));
+    expect(inner.scrollHeight).toBeGreaterThan(inner.clientHeight);
   });
 
-  test("la guía de instalación despliega los 3 pasos de iPhone", async ({ page }) => {
+  test("la guía de instalación, en el menú, despliega los 3 pasos de iPhone", async ({ page }) => {
     await page.goto("/");
-    const trigger = installTrigger(page);
+    const trigger = await installTrigger(page);
     await expect(trigger).toHaveAttribute("aria-expanded", "false");
 
     await trigger.click();
@@ -108,7 +141,7 @@ test.describe("sin scroll horizontal y objetivos táctiles de 44 × 44 (AC-15, N
       await expectNoHorizontalScroll(page);
       await expectTapTargetsAtLeast44(page);
 
-      await installTrigger(page).click();
+      await (await installTrigger(page)).click();
       await expect(page.getByRole("listitem")).toHaveCount(3);
 
       await expectNoHorizontalScroll(page);
@@ -154,13 +187,19 @@ test.describe("shell nativo", () => {
   }) => {
     await page.goto("/");
 
+    // With the menu open, so the drawer's own rules are on the page too.
+    await openMenu(page);
     const hoverRules = (await readCssRules(page)).filter((rule) =>
       rule.selector.includes(":hover"),
     );
+    for (const selector of THIRD_PARTY_HOVER) {
+      await expect(page.locator(selector), `${selector} no debería existir`).toHaveCount(0);
+    }
     expect(hoverRules.length, "la página no tiene ningún :hover que revisar").toBeGreaterThan(0);
 
     const ungated = hoverRules.filter(
       (rule) =>
+        !THIRD_PARTY_HOVER.some((selector) => rule.selector.startsWith(selector)) &&
         !rule.conditions.some(
           (condition) => /hover:\s*hover/.test(condition) && /pointer:\s*fine/.test(condition),
         ),
@@ -170,7 +209,7 @@ test.describe("shell nativo", () => {
 
   test("sin destello gris al tocar (AC-18)", async ({ page }) => {
     await page.goto("/");
-    const trigger = installTrigger(page);
+    const trigger = await installTrigger(page);
 
     const computed = await trigger.evaluate((el) =>
       getComputedStyle(el).getPropertyValue("-webkit-tap-highlight-color").trim(),
@@ -203,7 +242,7 @@ test.describe("shell nativo", () => {
     page,
   }) => {
     await page.goto("/");
-    const trigger = installTrigger(page);
+    const trigger = await installTrigger(page);
 
     const style = await trigger.evaluate((el) => {
       const computed = getComputedStyle(el);
@@ -232,7 +271,7 @@ test.describe("shell nativo", () => {
     page,
   }) => {
     await page.goto("/");
-    const trigger = installTrigger(page);
+    const trigger = await installTrigger(page);
     await trigger.scrollIntoViewIfNeeded();
 
     expect(await trigger.evaluate((el) => getComputedStyle(el).touchAction)).toBe("manipulation");

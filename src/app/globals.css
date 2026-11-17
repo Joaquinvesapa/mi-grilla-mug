@@ -142,6 +142,32 @@
     min-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
   }
 
+  /* A screen of exactly 100dvh that never scrolls the document: whatever has to scroll does it
+     inside (the grid, fix 3). It takes back the top and bottom insets .app-shell pads, so its bars
+     paint their own surface under the notch and the home indicator and pad their content out of
+     them (fix 7): the top bar pads env(safe-area-inset-top), the pending notice
+     env(safe-area-inset-bottom), and the grid the bottom one when there is no notice. */
+  .app-fixed-screen {
+    height: 100dvh;
+    margin-top: calc(-1 * env(safe-area-inset-top, 0px));
+    margin-bottom: calc(-1 * env(safe-area-inset-bottom, 0px));
+    overflow: hidden;
+  }
+
+  /* The grid's own scroll, on both axes, with the browser's momentum and bounce (gestures). It
+     contains its overscroll, so reaching an edge never drags the page or chains to it (mobile-native,
+     scroll). Long-pressing a show does not select its text or open the callout: the blocks are
+     buttons, already covered in the base layer (fix 8); the hour marks and stage names follow. */
+  .schedule-scroll {
+    overflow: auto;
+    /* The last hours scroll clear of the home indicator when the notice is not there. */
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    overscroll-behavior: contain;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+
   /* The one card of the app: every section is the same surface with the same radius. */
   .app-card {
     @apply flex flex-col gap-4 rounded-xl bg-card p-5;

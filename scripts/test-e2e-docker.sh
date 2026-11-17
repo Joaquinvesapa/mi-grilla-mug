@@ -15,7 +15,8 @@
 #   host's. That is how `next start` inside it reaches the Postgres of docker-compose.yml at the
 #   DATABASE_URL of `.env` (127.0.0.1:5432), unchanged. It also means port 3100 has to be free on
 #   the host. Docker Desktop (macOS, Windows) does not share the host's loopback this way.
-# - The database has to be up and migrated first, on the host: `pnpm db:up && pnpm db:migrate`.
+# - The database has to be up, migrated and seeded first, on the host:
+#   `pnpm db:up && pnpm db:migrate && pnpm db:seed`.
 # - DATABASE_URL and BETTER_AUTH_SECRET are passed by name (`-e NAME`, never `-e NAME=value`), so
 #   their values never show up in this script, its output or `ps`. Docker forwards them only when
 #   they are set in the host's environment; otherwise `next start` reads them from the repo's
