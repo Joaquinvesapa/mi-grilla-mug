@@ -46,3 +46,10 @@ minimumReleaseAgeExclude:
   - "@oxlint/binding-win32-x64-msvc@1.94.0"
   - oxfmt@0.79.0
   - oxlint@1.94.0
+  # Excepción puntual por remediación de SAST (GHSA-3g3m-2fjr-6pw4, GHSA-g3hv-75wg-m249): Serwist
+  # 9.5.15 trae glob 14 / minimatch 11. Se retira cuando la versión supere la ventana de antigüedad.
+  - "@serwist/build@9.5.15"
+  - "@serwist/turbopack@9.5.15"
+  - "@serwist/utils@9.5.15"
+  - "@serwist/window@9.5.15"
+  - serwist@9.5.15

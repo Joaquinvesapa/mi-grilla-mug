@@ -247,3 +247,19 @@ aprobó — fecha — bloque.
   concurrency compara el texto exacto de la expresión y un reformateo inocuo lo rompe; (i)
   `AGENTS.md` nombra `postgres:17.12` sin un test que lo ate a la CI (lo cubre "gana la CI"). —
   usuario — 2026-11-17 — Block 6
+
+## Cierre de CODE
+
+- Remediación de SAST: `serwist` y `@serwist/turbopack` pasan de 9.5.14 (la versión que fija la
+  spec) a 9.5.15, que trae `glob` 14.0.6 y `minimatch` 11.0.8 y cierra GHSA-3g3m-2fjr-6pw4 y la ruta
+  de GHSA-g3hv-75wg-m249 por `@serwist/build`. Como 9.5.15 se publicó el 2026-11-17, quedan 5
+  excepciones puntuales por versión exacta en `minimumReleaseAgeExclude` de `pnpm-workspace.yaml`
+  (`serwist` y `@serwist/{build,turbopack,utils,window}`), que se retiran cuando la versión supere la
+  ventana de antigüedad. `AGENTS.md` dice 9.5.15. Resuelve el pendiente (e) del Block 4. —
+  usuario — 2026-11-17 — cierre de CODE
+- `minimatch` 10.2.6 vía `shadcn>ts-morph>@ts-morph/common` (GHSA-g3hv-75wg-m249) queda suprimido
+  como ACCEPTED_RISK en `docs/daw/security/sast-FEAT-001.md`, con revisión antes del 2027-03-17:
+  shadcn 4.23.0 es la última versión y la CLI no corre en la CI, el build ni producción. —
+  usuario — 2026-11-17 — cierre de CODE
+- Pendiente registrado: `pnpm audit` no corre en la CI; sumar `pnpm audit --audit-level=high` al
+  job `quality` en un ticket aparte. — usuario — 2026-11-17 — cierre de CODE

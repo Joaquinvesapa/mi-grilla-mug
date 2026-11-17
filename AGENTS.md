@@ -34,7 +34,7 @@ dentro de un mockup de iPhone.
 |-------|-------|
 | Language | TypeScript 7.0.2 (`strict`, `noUncheckedIndexedAccess`) — compilador nativo (ADR-001) |
 | Runtime | Node 24 LTS (`.nvmrc`, `engines.node` 24.x) |
-| Framework | Next.js 16.4.6 (App Router, Turbopack) + React 19.3.1 · PWA instalable con Serwist 9.5.14 (`serwist` + `@serwist/turbopack`, ADR-002; el service worker solo corre con `next build` + `next start`) |
+| Framework | Next.js 16.4.6 (App Router, Turbopack) + React 19.3.1 · PWA instalable con Serwist 9.5.15 (`serwist` + `@serwist/turbopack`, ADR-002; el service worker solo corre con `next build` + `next start`) |
 | Database | PostgreSQL 17 (imagen `postgres:17.12`, la misma en `docker-compose.yml` en local y en los services de la CI) + Prisma 7.10.1 (`@prisma/adapter-pg`; cliente generado en `src/server/generated/prisma/`) |
 | UI | Tailwind CSS 4.3.5 (`@tailwindcss/postcss`) + shadcn/ui (CLI 4.23.0, estilo new-york) · paleta Rosé Pine, tema oscuro único |
 | Test runner | Vitest 5.1.0 (unit en jsdom con coverage v8 / integración en node) + Playwright 1.65.1 (E2E; navegadores: `pnpm exec playwright install webkit chromium`. WebKit necesita bibliotecas del sistema que en algunos hosts faltan, por ejemplo en Arch: ahí se corre con `pnpm test:e2e:docker`) |
