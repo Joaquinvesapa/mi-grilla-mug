@@ -56,3 +56,52 @@ aprobó — fecha — bloque.
   PRD 02, el primero con formularios; (c) el test de AC-18 pasa también por el preflight de
   Tailwind; (d) el test de NFR-07 mide con puntero `mouse`: el camino táctil se verifica en el
   iPhone real en VERIFY. — usuario — 2026-11-17 — Block 2
+
+## Block 3 — Base de datos y chequeo de salud
+
+- `GET /api/health`: todo método que no sea GET, HEAD y OPTIONS incluidos, responde `405` con
+  `Content-Type: application/json`, body `{"error":"METHOD_NOT_ALLOWED"}`, `Allow: GET` y
+  `Cache-Control: no-store` (cumple el "siempre `application/json`" del contrato; permitir HEAD
+  habría cambiado la spec). En HEAD llegan el status y los headers, pero no el body: Node lo
+  descarta en toda respuesta a HEAD. — usuario — 2026-11-17 — Block 3
+- `assertSafeDatabaseUrl` acepta `postgresql://` y también `postgres://`, con las mismas reglas de
+  TLS. Remoto exige `sslmode` `require`, `verify-ca` o `verify-full`. — usuario — 2026-11-17 —
+  Block 3
+- Una `DATABASE_URL` ausente (`MissingDatabaseUrlError`, `DATABASE_URL_MISSING`) o insegura
+  (`UnsafeDatabaseUrlError`) se detecta al crear el cliente en el primer pedido (`getDb()`), no al
+  arrancar el proceso: la app levanta y `/api/health` responde 500 con cuerpo vacío, sin filtrar
+  la URL. Así `next start` y los E2E funcionan sin base. — usuario — 2026-11-17 — Block 3
+- Cierre del bypass de R-04: `?host=`, `?hostaddr=` y un `sslmode` repetido se rechazan con
+  `INVALID_URL` con cualquier host, porque `pg-connection-string` 2.14.1 prioriza `?host=` sobre la
+  autoridad y usa el último `sslmode`. — revisión del Block 3 (module-verifier) — 2026-11-17 —
+  Block 3
+- `allowBuilds` en `pnpm-workspace.yaml` solo para `prisma` y `@prisma/engines`: pnpm 12 bloquea
+  sus scripts de instalación (`ERR_PNPM_IGNORED_BUILDS`), y el de engines descarga el schema-engine
+  que usa `migrate`. — usuario — 2026-11-17 — Block 3
+- Agregados fuera de la spec: `disconnectDb()` en `src/server/db.ts` (cierra el pool y resetea el
+  singleton; hoy solo lo usan los tests de integración), el log `DB_POOL_ERROR` del `onPoolError`
+  del adapter (sin él se descartaban en silencio los errores de conexiones ociosas), el singleton
+  en `globalThis` con `Symbol.for("mi-grilla.db")` por la recarga en caliente y `force-dynamic` en
+  la route. — usuario — 2026-11-17 — Block 3
+- La caché de 2 s guarda tanto `up` como `down`, cuenta desde el inicio del check, y los checks
+  simultáneos comparten el probe en curso. Formato de log: `[health] DB_TIMEOUT at=<ISO>`. —
+  usuario — 2026-11-17 — Block 3
+- Tests: alias `server-only` → `server-only/empty.js` en `vitest.config.ts`, solo para los tests.
+  `src/server/db.ts` queda fuera de la cobertura unitaria y lo cubre la integración. La
+  integración llama a `GET()`/`POST()` del módulo de la route, sin servidor HTTP, con un puerto
+  efímero cerrado para el caso 503. El camino HTTP real (routing, `force-dynamic`, HEAD) se cubre
+  con un E2E en el Block 6. — usuario — 2026-11-17 — Block 3
+- Dependencias: `prisma`, `dotenv` y `@types/pg` en dev; `@prisma/client`, `@prisma/adapter-pg` y
+  `pg` en runtime. Scripts `db:up` (`docker compose up -d --wait`), `db:down`, `db:generate` y
+  `db:migrate` (`prisma migrate deploy`). — usuario — 2026-11-17 — Block 3
+- Pendientes registrados (no se resuelven en este bloque): (a) el pool de `pg` no tiene
+  `connectionTimeoutMillis`; definirlo antes de las consultas reales del PRD 02; (b) la imagen
+  `postgres:17` es un tag de major flotante (así lo dice la spec); fijar el minor junto con el
+  servicio de la CI en el Block 6; (c) `PRISMA_HIDE_UPDATE_MESSAGE=1` en la CI (Block 6); (d) la
+  tabla Testing de `AGENTS.md` y el README (usuario `mi_grilla` del compose frente al placeholder
+  `USER` de `.env.example`) se actualizan en el Block 6; (e) los errores de configuración se
+  lanzan en lugar de devolverse como resultado tipado: excepción a la convención de `src/server/`
+  para errores de arranque; (f) el mensaje de `INVALID_URL` todavía dice "postgresql://" aunque se
+  acepta `postgres://`; (g) con `?uselibpqcompat=true`, `sslmode=require` cifra sin verificar el
+  certificado (semántica libpq, coherente con la spec): evaluar rechazar el parámetro antes del
+  deploy. — usuario — 2026-11-17 — Block 3

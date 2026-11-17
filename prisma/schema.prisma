@@ -1,0 +1,12 @@
+// Mi Grilla — esquema de Prisma.
+// FEAT-001 solo declara el generador y el datasource: no hay modelos. La primera migración llega
+// con el PRD 02. La URL de la base vive en prisma.config.ts (Prisma 7).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/server/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
