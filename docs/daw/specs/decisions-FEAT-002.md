@@ -52,3 +52,32 @@ decir que se mostró al usuario sin pedirle aprobación previa; cualquier objeci
 - `pnpm test:integration` vacía `users` y `login_throttles` de la base de `DATABASE_URL` (la de
   desarrollo local); el setup se niega a hacerlo si el host no es local ni el de la CI. —
   orquestador — 2026-11-17 — Block 2
+
+## Block 3 — Pantallas de registro e inicio de sesión
+
+- El CLI de shadcn 4.23.0 genera `input` y `label` importando el paquete paraguas `radix-ui` y
+  `cn`; se adaptaron al primitivo `@radix-ui/react-label` 2.1.17 (exacta, como pide la spec) y a
+  `@/lib/utils`, con el motivo comentado. Un `shadcn add` futuro necesita la misma adaptación. —
+  orquestador — 2026-11-17 — Block 3
+- Estado del formulario: `{ formError, fieldErrors: { campo: string[] }, values: { email, name } }`
+  con los mensajes ya traducidos; nunca lleva la contraseña. `FormFailure` es un tipo estructural en
+  `src/lib` para no importar tipos de `src/server`. — orquestador — 2026-11-17 — Block 3
+- `INVALID_INPUT` sin ningún campo con error cae en el mensaje general de `SERVICE_UNAVAILABLE`. —
+  orquestador — 2026-11-17 — Block 3
+- Archivo extra `src/components/form-feedback.tsx` (`FieldMessages`, `FormAlert`, `describedBy`)
+  para no duplicar el render de errores entre los dos formularios. — orquestador — 2026-11-17 —
+  Block 3
+- Registro en el orden Nombre, Email, Contraseña, con la ayuda "Al menos 8 caracteres, con una
+  letra y un número." en el `aria-describedby` de la contraseña. — orquestador — 2026-11-17 —
+  Block 3
+- En el inicio de sesión los errores van solo en el aviso general, sin `aria-invalid` en los
+  campos, para no señalar cuál falló (NFR-04). — orquestador — 2026-11-17 — Block 3
+- Copy propio: "Entrá con tu email para armar tu grilla y verla con tu grupo.", "Con tu email y una
+  contraseña. El nombre es el que van a ver tus amigos en los grupos.", botones "Entrar" y "Crear
+  cuenta" (con `aria-busy` mientras está pendiente), links "¿Primera vez? Creá tu cuenta" y "¿Ya
+  tenés cuenta? Entrá". — orquestador — 2026-11-17 — Block 3
+- `logoutAction` redirige a `/login` aunque `signOut` devuelva `SERVICE_UNAVAILABLE`: el servicio
+  ya lo registró y `/` vuelve a verificar la sesión. — orquestador — 2026-11-17 — Block 3
+- Los formularios reciben la Server Action por la prop `action` (las páginas pasan
+  `loginAction`/`registerAction`; los tests, una acción falsa). — orquestador — 2026-11-17 —
+  Block 3
