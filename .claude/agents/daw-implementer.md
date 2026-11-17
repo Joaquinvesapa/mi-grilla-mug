@@ -1,7 +1,8 @@
 ---
 name: "daw-implementer"
 description: "Implements exactly ONE block of an approved spec, with its tests, in an isolated context. Returns a report of what it built. Does not commit, does not touch the state, does not go beyond its block."
-model: "inherit"
+model: "opus"
+effort: "medium"
 tools: "Read, Write, Edit, Grep, Glob, Bash"
 ---
 
