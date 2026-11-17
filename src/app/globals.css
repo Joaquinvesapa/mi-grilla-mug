@@ -1,0 +1,81 @@
+@import "tailwindcss";
+
+/* Rosé Pine (main variant). Source: rose-pine/palette, dist/css/rose-pine.css */
+@theme {
+  --color-rp-base: #191724;
+  --color-rp-surface: #1f1d2e;
+  --color-rp-overlay: #26233a;
+  --color-rp-muted: #6e6a86;
+  --color-rp-subtle: #908caa;
+  --color-rp-text: #e0def4;
+  --color-rp-love: #eb6f92;
+  --color-rp-gold: #f6c177;
+  --color-rp-rose: #ebbcba;
+  --color-rp-pine: #31748f;
+  --color-rp-foam: #9ccfd8;
+  --color-rp-iris: #c4a7e7;
+  --color-rp-highlight-low: #21202e;
+  --color-rp-highlight-med: #403d52;
+  --color-rp-highlight-high: #524f67;
+}
+
+/* shadcn/ui variables mapped onto Rosé Pine. Single dark theme. */
+:root {
+  color-scheme: dark;
+  --radius: 0.625rem;
+  --background: var(--color-rp-base);
+  --foreground: var(--color-rp-text);
+  --card: var(--color-rp-surface);
+  --card-foreground: var(--color-rp-text);
+  --popover: var(--color-rp-overlay);
+  --popover-foreground: var(--color-rp-text);
+  --primary: var(--color-rp-foam);
+  --primary-foreground: var(--color-rp-base);
+  --secondary: var(--color-rp-overlay);
+  --secondary-foreground: var(--color-rp-text);
+  --muted: var(--color-rp-overlay);
+  --muted-foreground: var(--color-rp-subtle);
+  --accent: var(--color-rp-highlight-low);
+  --accent-foreground: var(--color-rp-text);
+  --destructive: var(--color-rp-love);
+  --warning: var(--color-rp-gold);
+  --border: var(--color-rp-highlight-med);
+  --input: var(--color-rp-highlight-med);
+  --ring: var(--color-rp-foam);
+}
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-warning: var(--warning);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}

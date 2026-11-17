@@ -1,0 +1,20 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "printWidth": 100,
+  "sortTailwindcss": {
+    "stylesheet": "./src/app/globals.css",
+    "functions": ["cn", "cva"]
+  },
+  "ignorePatterns": [
+    ".agents/",
+    ".daw/",
+    ".claude/",
+    "docs/",
+    "src/server/generated/",
+    "skills-lock.json",
+    ".next/",
+    "coverage/",
+    "AGENTS.md",
+    "CLAUDE.md"
+  ]
+}

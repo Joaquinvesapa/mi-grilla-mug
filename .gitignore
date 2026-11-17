@@ -12,3 +12,24 @@
 .daw-journal.jsonl
 .daw/**/__pycache__/
 # END DAW
+
+# Dependencies
+node_modules/
+
+# Next.js
+.next/
+next-env.d.ts
+*.tsbuildinfo
+
+# Tests
+coverage/
+playwright-report/
+test-results/
+blob-report/
+
+# Environment (secrets never committed; the example is)
+.env*
+!.env.example
+
+# Prisma generated client
+src/server/generated/

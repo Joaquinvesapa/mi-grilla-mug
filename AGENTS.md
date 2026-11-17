@@ -1,121 +1,159 @@
-# AGENTS.md — project context
+# AGENTS.md — Mi Grilla
 
-> **DAW template.** Fill in the `[...]` with what is true of YOUR project and delete what does not
-> apply. This file describes **the project**; **the process** is DAW's job (phases, gates, when to
-> test, when to commit). Do not mix the two: process rules written here compete with the pipeline's.
->
-> It is **tool-agnostic on purpose**: Claude Code reads it through the import in `CLAUDE.md`, Codex
-> CLI, Copilot CLI, Cursor and OpenCode read it directly, and Gemini CLI gets it through
-> `GEMINI.md`. The same file serves whichever tool you open the repo with — which is the point:
-> porting the pipeline to another tool must not mean rewriting what your project is.
+> Contexto del **proyecto**. El **proceso** (fases, gates, cuándo testear, cuándo commitear) lo
+> define DAW en `.daw/` y no se repite acá.
 
 ---
 
 ## Language
 
-**Always respond in the language the user writes in.** Write every artifact you produce — PRDs,
-specs, ADRs, reports, commit messages, status lines — in that same language, regardless of the
-language these instructions are written in.
+Working language: **español (Argentina)**. Todos los artefactos — PRDs, specs, ADRs, reportes,
+mensajes de commit, status lines y textos de la UI — se escriben en español.
 
-If this project has a fixed working language, state it here and use it instead:
-
-> Working language: `[e.g. Spanish — write all artifacts in Spanish]`
+En el código: **identificadores en inglés** (archivos, variables, funciones, componentes, tipos,
+tablas) y **textos de la UI en español** (decidido en el PLAN de FEAT-001).
 
 ---
 
 ## What this project is
 
-[One or two sentences: what the app does and who for. Take it from the PRD, do not reinvent it.]
+**Mi Grilla** es una PWA mobile-first para el Lollapalooza Argentina 2026 (13 al 15 de marzo de
+2026, ya realizado): cada persona arma su grilla eligiendo los shows que va a ver, la descarga como
+fondo de pantalla de bloqueo para iPhone y la comparte con grupos de amigos para ver con quién
+coincide. Es una demo / proyecto de portfolio con datos reales, presentable desde desktop en `/demo`
+dentro de un mockup de iPhone.
 
-**Reference PRD:** `docs/daw/prd/[your-prd].md`
+**Concepto:** `docs/daw/discovery/concept-DISC-001.md`
+**PRDs (orden de implementación 1 → 7):** `docs/daw/prd/prd-DISC-001-01.md` a `prd-DISC-001-07.md`
 
 ---
 
 ## Stack
 
-**This is the only place the stack lives.** DAW reads it from here and generates no derived file.
-Fill it in even if the repo is empty: without a stack there is nothing to plan or implement against.
-
-If the repo already has code and this section is empty, DAW will detect the stack from your config
-files and **propose the text for you to paste here**. You always confirm it.
-
 | Field | Value |
 |-------|-------|
-| Language | [e.g. TypeScript 5.x] |
-| Runtime | [e.g. Node 20] |
-| Framework | [e.g. Next.js 15 · or N/A] |
-| Database | [e.g. PostgreSQL + Prisma · or N/A] |
-| Test runner | [e.g. Vitest] |
-| Linter / formatter | [e.g. ESLint + Prettier] |
-| Package manager | [e.g. pnpm] |
+| Language | TypeScript 7.0.2 (`strict`, `noUncheckedIndexedAccess`) — compilador nativo (ADR-001) |
+| Runtime | Node 24 LTS (`.nvmrc`, `engines.node` 24.x) |
+| Framework | Next.js 16.4.6 (App Router, Turbopack) + React 19.3.1 · PWA instalable con Serwist 9.5.14 (`serwist` + `@serwist/turbopack`, ADR-002 — planificada, se instala en el Block 4 de FEAT-001) |
+| Database | PostgreSQL + Prisma 7.10.1 (planificada, se instala en el Block 3 de FEAT-001) |
+| UI | Tailwind CSS 4.3.5 (`@tailwindcss/postcss`) + shadcn/ui (CLI 4.23.0, estilo new-york) · paleta Rosé Pine, tema oscuro único |
+| Test runner | Vitest 5.1.0 (unit en jsdom con coverage v8 / integración en node) + Playwright 1.65.1 (E2E — planificada, se instala en el Block 2 de FEAT-001) |
+| Linter / formatter | oxlint 1.94.0 + oxlint-tsgolint 7.0.2007 (lint con tipos) · oxfmt 0.79.0 — sin ESLint ni Prettier (ADR-001) |
+| Type check | `next typegen && tsc --noEmit` con TypeScript 7 (`next build` no chequea tipos: `ignoreBuildErrors`, ADR-001) |
+| Package manager | pnpm 12.18.0 (`packageManager`) |
+
+> Todas las versiones de `package.json` son exactas (sin `^` ni `~`). Las marcadas como
+> "planificada" (Prisma, Serwist, Playwright) son las versiones fijadas en la spec de FEAT-001:
+> todavía no están en `package.json` y entran, con esa misma versión, en el bloque que las instala.
 
 ---
 
 ## Testing
 
-**The coverage floor lives here, and nowhere else.** `daw-test` and
-`daw-verify-module` both require a report to state the floor **and where it came from**, and both
-show it sourced as `AGENTS.md, "Testing"` — a section this template did not have, so every project
-was told to cite something the installer never created. A floor a report chooses for itself is a
-floor that passes itself; it belongs to the project.
-
 | Field | Value |
 |-------|-------|
-| Coverage floor — line | [e.g. 80%] |
-| Coverage floor — branch | [e.g. 70%] |
-| Coverage floor — function | [e.g. 80%] |
-| How the suite is run | [e.g. `pnpm test`] |
-| What a skipped test owes | [e.g. a reason on the same line] |
+| Coverage floor — line | 80 % (PRD 01, NFR-05; `vitest.config.ts`) |
+| Coverage floor — branch | 70 % (PLAN de FEAT-001; `vitest.config.ts`) |
+| Coverage floor — function | 80 % (PLAN de FEAT-001; `vitest.config.ts`) |
+| How the suite is run | `pnpm test` (unit + coverage con los pisos). Integración (`pnpm test:integration`) y E2E (`pnpm test:e2e`): _pendientes, los agregan los Blocks 3 y 2 de FEAT-001; la CI, el Block 6_ |
+| What a skipped test owes | El motivo, en la misma línea del test salteado. |
 
-If a number here is not the one your CI enforces, say which one wins. Two floors that disagree is
-the same as no floor.
+- El mínimo de la CI son los tres pisos de arriba: la cobertura bajo cualquiera de ellos hace fallar
+  `pnpm test`.
+
+- La CI corre al abrir o actualizar un PR y al mergear a `main`; nunca en un push sin PR.
+- Obligatorio: tests unitarios, tests de integración y al menos 1 test E2E.
+- Los tests de integración usan una base PostgreSQL real, no un mock.
+
+Si un número de acá no coincide con el que exige la CI, gana el de la CI y se corrige este archivo.
 
 ---
 
 ## Architecture conventions
 
-**DAW validates your code against this section** during the CODE phase, via `daw-validate-arch`.
-Leave it empty and that validation has nothing to compare against, so it stops being worth running.
-
-- **Folder structure:** [e.g. `src/features/<feature>/` with `ui`, `domain`, `data`]
-- **Layer separation:** [e.g. the UI never talks to the database; always through a service]
-- **Error handling:** [e.g. typed errors; never a silent catch]
-- **Naming:** [e.g. files in kebab-case, components in PascalCase]
-- **Dependencies:** [e.g. no new libraries without justifying them in the spec]
+- **Folder structure:** `src/app/` (rutas, layouts y route handlers delgados), `src/components/`
+  (UI; `ui/` = shadcn), `src/lib/` (utilidades puras, sin I/O), `src/server/` (acceso a la base y
+  lógica de servidor; cada módulo con `import "server-only"`), `src/server/generated/prisma/`
+  (cliente generado, fuera de git). Tests en `tests/{unit,integration,e2e}/`.
+- **Layer separation:** `src/app/` y `src/components/` nunca importan `@prisma/*` ni
+  `@/server/generated/*`; usan funciones de `src/server/`. Lo hace cumplir `no-restricted-imports`
+  en oxlint.
+- **Error handling:** en `src/server/` los errores esperados se devuelven como resultado tipado con
+  un código (`{ ok: false, code: "DB_UNREACHABLE" }`). Ningún `catch` silencioso: o registra un código
+  genérico o re-lanza. Al cliente nunca llega `error.message` de infraestructura.
+- **Naming:** archivos y carpetas en kebab-case; componentes en PascalCase; funciones y variables en
+  camelCase; identificadores en inglés; textos de UI en español.
+- **Dependencies:** versiones exactas (sin `^` ni `~`); una dependencia nueva se justifica en la
+  spec de su ticket; ESLint y Prettier no se instalan (ADR-001).
 
 ---
 
 ## Code conventions
 
-- [e.g. No `any`. If it is unavoidable, it comes with a comment explaining why.]
-- [e.g. Pure functions wherever possible; side effects at the edges.]
-- [e.g. Comments only when the *why* is not obvious from the code.]
+- TypeScript en modo `strict`.
+- UI con los componentes reales de shadcn/ui (copiados al repo y personalizables), no componentes
+  propios que imiten su estilo.
+- Mobile first: se diseña para 360–430 px de ancho; desktop solo sirve para `/demo`.
+- **Frontend mobile (decisión del usuario, 2026-11-16):** todo lo que sea UI/UX mobile se diseña,
+  implementa y revisa siguiendo las guías del repo en `.agents/skills/` (versiones fijadas en
+  `skills-lock.json`):
+  - `mobile-native/SKILL.md` — que la PWA se sienta nativa en el celular: safe areas y notch,
+    `100dvh`, sin zoom en inputs, sin tap highlight ni hover pegado, taps sin demora, scroll y
+    pull-to-refresh.
+  - `gestures/SKILL.md` — gestos que siguen al dedo 1:1 e interrumpibles: bottom sheets (panel "En
+    vivo"), swipe para cerrar, scroll x/y de la grilla.
+  - `design-taste-frontend/SKILL.md` — criterio visual: un solo sistema, copy propio, sin estética
+    genérica de plantilla. Está pensada para sitios de marketing: en Mi Grilla se toman sus
+    principios visuales, no su estructura de landing (hero, secciones, fotos).
+  Cada spec de una pantalla mobile cita qué puntos de estas guías aplica, y la revisión de cada
+  bloque de UI los verifica.
+- Sin `any` (si es inevitable, con un comentario del motivo).
+- Componentes de servidor por defecto y `"use client"` solo donde hay interacción.
 
 ---
 
 ## What NOT to do in this project
 
-This section is worth its weight in gold: it is where the scars go, the things that already went
-wrong once.
-
-- [e.g. Do not touch `config/` without asking.]
-- [e.g. Never call the payments API in tests — there is a mock.]
-- [e.g. No destructive migrations.]
+- **No usar logos, nombres de marca ni identidad visual de Lollapalooza.** La app tiene identidad
+  propia ("Mi Grilla") con el mismo formato escenarios × horarios.
+- **No identificar un show por el nombre del artista.** Siempre por su `id` estable: un mismo
+  artista puede repetirse (Arjaus Crew toca los 3 días).
+- **No editar la grilla desde la app ni scrapearla.** La fuente es el JSON normalizado versionado en
+  el repo, cargado con un seed de Prisma.
+- **No agregar envío de emails** (verificación, recuperación de contraseña, invitaciones por mail):
+  el MVP no tiene servicio de correo.
+- **No exponer el reloj simulado fuera de `/demo`.** En la app normal la hora es siempre la real.
+- **No mostrar a un no integrante** el nombre, los integrantes ni las selecciones de un grupo.
+- **No commitear secretos** (`.env`, credenciales de la base).
+- **No sumar funciones que quedaron fuera del MVP** (agenda, amistad 1 a 1, comparar con un amigo,
+  perfil con avatar, panel de admin) sin pasar antes por un PRD.
 
 ---
 
 ## Domain glossary
 
-The terms specific to your product, so the agent uses them correctly instead of inventing synonyms.
-
-- **[Term]:** [what it means exactly, here]
-- **[Term]:** [what it means exactly, here]
+- **Show:** una actuación de un artista en un escenario, un día, con hora de inicio y fin. Tiene un
+  `id` estable.
+- **Escenario:** Flow, Samsung, Alternative, Perry's y Kidzapalooza, en ese orden de columnas.
+- **Día del festival:** viernes, sábado o domingo. Va de las 06:00 a las 06:00 del día siguiente:
+  un show entre las 00:00 y las 06:00 pertenece al día anterior (Peggy Gou, viernes 23:30–01:00).
+- **Grilla:** la tabla de doble entrada escenarios (columnas) × horarios (filas) de un día, con el
+  formato del póster oficial.
+- **Selección:** los shows que el usuario eligió ver.
+- **Cambios pendientes:** marcas hechas en la grilla que todavía no se confirmaron con "Guardar".
+- **Selección pendiente de sincronizar:** una selección guardada sin conexión, en el dispositivo,
+  que se sube sola al volver la señal.
+- **Choque:** dos shows elegidos que comparten al menos un minuto.
+- **Fondo de pantalla:** imagen 1290 × 2796 de un día para la pantalla de bloqueo del iPhone.
+  *Personal:* elegidos encendidos y el resto opacos. *Del grupo:* además, las iniciales de los
+  amigos.
+- **Grupo:** hasta 20 integrantes que comparten su selección. Lo administra quien lo creó.
+- **Link de invitación:** el único link activo de un grupo; vence a los 3 días.
+- **En vivo:** el panel con el show actual y el siguiente de cada escenario.
+- **Reloj simulado:** la hora elegida en `/demo` para mostrar la app como si fuera el festival.
+- **`/demo`:** la página de desktop que muestra la app dentro de un mockup de iPhone.
 
 ---
-
-> ℹ️ **What does NOT belong in this file, because DAW provides it:** the order work happens in, when
-> the spec gets written, when tests run, when to commit, what it takes to move between phases. All
-> of that lives in `.daw/` and applies on its own.
 
 <!-- BEGIN DAW (managed by DAW — do not edit by hand) -->
 # DAW — Dilux Agentic Workflow
