@@ -3,7 +3,8 @@
 Corrida del cierre de CODE (Blocks 1–6): suite completa — unit con cobertura, integración contra
 PostgreSQL real (`postgres:17.12` de `docker-compose.yml`) y E2E de los 4 proyectos de Playwright
 dentro de la imagen oficial (WebKit no arranca en este host). Corrida el 2026-11-17 sobre
-`36f09fd` más la remediación de SAST sin commitear (`serwist` y `@serwist/turbopack` 9.5.15).
+`98d9bcb`, en el re-cierre después de la vuelta correctiva a PLAN (el código es el mismo de
+`ca3b77f`, con `serwist` y `@serwist/turbopack` 9.5.15; solo cambió documentación).
 
 | Field | Value |
 |---|---|
