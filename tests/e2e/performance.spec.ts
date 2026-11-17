@@ -1,5 +1,7 @@
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 
+import { signUp } from "./auth";
+
 const LOAD_BUDGET_MS = 3000;
 
 // 4G as the spec fixes it: 4 Mbps down, 3 Mbps up, 20 ms of latency (throughput in bytes/s).
@@ -18,17 +20,17 @@ async function emulateNetwork(context: BrowserContext, page: Page, offline: bool
 }
 
 /**
- * Loads `/` and returns the `load` event time from the navigation timing entry. A navigation that
- * does not finish (a network error, a server error) fails with the time it had been waiting.
+ * Loads `path` and returns the `load` event time from the navigation timing entry. A navigation
+ * that does not finish (a network error, a server error) fails with the time it had been waiting.
  */
-async function measureHomeLoad(page: Page): Promise<number> {
+async function measureLoad(page: Page, path: string): Promise<number> {
   const started = Date.now();
   try {
-    const response = await page.goto("/", { waitUntil: "load", timeout: 15_000 });
+    const response = await page.goto(path, { waitUntil: "load", timeout: 15_000 });
     if (!response?.ok()) throw new Error(`respuesta ${response?.status() ?? "vacía"}`);
   } catch (error) {
     const reason = error instanceof Error ? error.message.split("\n")[0] : String(error);
-    throw new Error(`La carga de / falló tras ${Date.now() - started} ms: ${reason}`);
+    throw new Error(`La carga de ${path} falló tras ${Date.now() - started} ms: ${reason}`);
   }
   return page.evaluate(() => {
     const [navigation] = performance.getEntriesByType(
@@ -38,17 +40,36 @@ async function measureHomeLoad(page: Page): Promise<number> {
   });
 }
 
+function expectWithinBudget(path: string, loadMs: number) {
+  test
+    .info()
+    .annotations.push({ type: "NFR-03", description: `${path}: load en ${loadMs.toFixed(0)} ms` });
+  expect(loadMs, `${path}: load en ${loadMs.toFixed(0)} ms`).toBeGreaterThan(0);
+  expect(loadMs, `${path}: load en ${loadMs.toFixed(0)} ms`).toBeLessThanOrEqual(LOAD_BUDGET_MS);
+}
+
 test.describe("rendimiento con 4G simulada (NFR-03)", () => {
-  test(`el evento load de / llega en ≤ ${LOAD_BUDGET_MS} ms`, async ({ page, context }) => {
+  test(`sin sesión, el evento load de /login llega en ≤ ${LOAD_BUDGET_MS} ms`, async ({
+    page,
+    context,
+  }) => {
     await emulateNetwork(context, page, false);
 
-    const loadMs = await measureHomeLoad(page);
+    expectWithinBudget("/login", await measureLoad(page, "/login"));
+  });
 
-    test
-      .info()
-      .annotations.push({ type: "NFR-03", description: `load en ${loadMs.toFixed(0)} ms` });
-    expect(loadMs, `load en ${loadMs.toFixed(0)} ms`).toBeGreaterThan(0);
-    expect(loadMs, `load en ${loadMs.toFixed(0)} ms`).toBeLessThanOrEqual(LOAD_BUDGET_MS);
+  test(`con sesión, el evento load de / llega en ≤ ${LOAD_BUDGET_MS} ms`, async ({
+    page,
+    context,
+  }, testInfo) => {
+    // The sign-up is setup, not what is measured: it runs before the network is throttled.
+    await signUp(page, testInfo);
+    await emulateNetwork(context, page, false);
+
+    const loadMs = await measureLoad(page, "/");
+
+    expect(new URL(page.url()).pathname, "la medición no fue sobre /").toBe("/");
+    expectWithinBudget("/", loadMs);
   });
 
   test("con un error de red la medición falla e informa el tiempo medido", async ({
@@ -57,6 +78,8 @@ test.describe("rendimiento con 4G simulada (NFR-03)", () => {
   }) => {
     await emulateNetwork(context, page, true);
 
-    await expect(measureHomeLoad(page)).rejects.toThrow(/^La carga de \/ falló tras \d+ ms: /);
+    await expect(measureLoad(page, "/login")).rejects.toThrow(
+      /^La carga de \/login falló tras \d+ ms: /,
+    );
   });
 });

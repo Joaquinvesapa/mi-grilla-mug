@@ -11,6 +11,16 @@
 #   volume, so later runs reuse them.
 # - The container runs as the host uid/gid, so whatever it writes into the repo (test-results/,
 #   playwright-report/, next-env.d.ts) belongs to the user, not to root.
+# - Linux only: the container shares the host's network (`--network host`), so its 127.0.0.1 is the
+#   host's. That is how `next start` inside it reaches the Postgres of docker-compose.yml at the
+#   DATABASE_URL of `.env` (127.0.0.1:5432), unchanged. It also means port 3100 has to be free on
+#   the host. Docker Desktop (macOS, Windows) does not share the host's loopback this way.
+# - The database has to be up and migrated first, on the host: `pnpm db:up && pnpm db:migrate`.
+# - DATABASE_URL and BETTER_AUTH_SECRET are passed by name (`-e NAME`, never `-e NAME=value`), so
+#   their values never show up in this script, its output or `ps`. Docker forwards them only when
+#   they are set in the host's environment; otherwise `next start` reads them from the repo's
+#   `.env`, which the container sees through the /work mount. BETTER_AUTH_URL is not passed: the
+#   Playwright config sets it to the URL the tests use.
 set -euo pipefail
 
 IMAGE="mcr.microsoft.com/playwright:v1.65.1-noble"
@@ -33,10 +43,12 @@ mkdir -p "$REPO/node_modules" "$REPO/.next"
 docker run --rm "${VOLUMES[@]}" "$IMAGE" \
   chown "$HOST_UID:$HOST_GID" /work/node_modules /work/.next /home/e2e
 
-docker run --rm --init --ipc=host \
+docker run --rm --init --ipc=host --network host \
   --user "$HOST_UID:$HOST_GID" \
   -e HOME=/home/e2e \
   -e CI \
+  -e DATABASE_URL \
+  -e BETTER_AUTH_SECRET \
   -v "$REPO:/work" \
   "${VOLUMES[@]}" \
   -w /work \

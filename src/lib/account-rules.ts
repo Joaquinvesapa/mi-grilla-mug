@@ -18,7 +18,10 @@ export const EMAIL_MAX_LENGTH = 254;
 export const PASSWORD_MIN_LENGTH = 8;
 export const PASSWORD_MAX_LENGTH = 128;
 export const NAME_MAX_LENGTH = 40;
-/** How long a locked email stays locked, shown in the lock message (the server enforces it). */
+/**
+ * How long a locked email stays locked, and the window its attempts are counted in (FR-10): shown
+ * in the lock message, and the source of the server's own durations (`login-throttle.ts`).
+ */
 export const LOGIN_LOCK_MINUTES = 15;
 
 const WHITESPACE = /\s/u;

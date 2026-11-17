@@ -81,3 +81,32 @@ decir que se mostró al usuario sin pedirle aprobación previa; cualquier objeci
 - Los formularios reciben la Server Action por la prop `action` (las páginas pasan
   `loginAction`/`registerAction`; los tests, una acción falsa). — orquestador — 2026-11-17 —
   Block 3
+- `LOGIN_LOCK_MINUTES = 15` vive en `src/lib/account-rules.ts` junto a las otras reglas; los textos
+  y, desde el Block 4, `LOGIN_WINDOW_MS`/`LOGIN_LOCK_MS` de `login-throttle.ts` salen de ahí. —
+  orquestador — 2026-11-17 — Block 3
+
+## Block 4 — Protección de `/`, cierre de sesión, E2E, CI y documentación
+
+- No hay un proyecto de Playwright de 430 px: `test-e2e-auth-screens-mobile` fija 360×780 y 430×932
+  con `setViewportSize` en cada proyecto mobile, como `home.spec`. — orquestador — 2026-11-17 —
+  Block 4
+- `scripts/test-e2e-docker.sh` pasa por nombre solo `DATABASE_URL` y `BETTER_AUTH_SECRET`; si no
+  están en el entorno del host, Next las lee del `.env` montado. `BETTER_AUTH_URL` sale de la config
+  de Playwright. — orquestador — 2026-11-17 — Block 4
+- `test-e2e-session-persists` registra, cierra sesión e inicia sesión por la UI, y mide `expires`
+  contra el momento del inicio de sesión; busca la cookie por el sufijo `session_token`. —
+  orquestador — 2026-11-17 — Block 4
+- `test-e2e-protected-unauthorized` también comprueba el 307 y el `Location: /login` del proxy con
+  `request.get(..., { maxRedirects: 0 })`; la cookie inventada es `better-auth.session_token`. —
+  orquestador — 2026-11-17 — Block 4
+- "Cerrar sesión" usa la variante `outline` del `Button` para no competir con el acento foam. —
+  orquestador — 2026-11-17 — Block 4
+- En `pwa.spec` el test del head abre `/login` (mismo layout raíz) y `openControlledHome` conserva
+  su nombre. — orquestador — 2026-11-17 — Block 4
+- Con la cookie inventada, `/` también responde 307, pero desde el `redirect("/login")` de la
+  página y no desde el proxy. `test-e2e-protected-unauthorized` distingue los dos casos por el
+  `content-type`: el 307 del proxy no lo trae, y la respuesta que pasó el proxy es `text/html`. Si
+  cambia el nombre de la cookie, el test falla en esa aserción. — orquestador — 2026-11-17 —
+  Block 4
+- WebKit no arranca en este host (faltan bibliotecas del sistema): la suite E2E completa se corrió
+  con `pnpm test:e2e:docker`. — orquestador — 2026-11-17 — Block 4

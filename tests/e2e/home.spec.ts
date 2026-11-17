@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
+import { signUp } from "./auth";
 import { declaresInShippedCss, readCssRules, readShippedCss } from "./css";
 
 const SECTIONS = ["Armá tu grilla", "Llevala en la pantalla de bloqueo", "Coincidí con tu grupo"];
@@ -31,6 +32,11 @@ async function expectNoHorizontalScroll(page: Page) {
     innerWidth,
   );
 }
+
+// `/` needs a session (FR-09): every test here starts signed in, with an account of its own.
+test.beforeEach(async ({ page }, testInfo) => {
+  await signUp(page, testInfo);
+});
 
 test.describe("pantalla de inicio", () => {
   test("muestra Mi Grilla y en ningún lado nombra a Lollapalooza (AC-01, AC-13)", async ({

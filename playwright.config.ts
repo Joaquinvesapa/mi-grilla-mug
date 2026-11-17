@@ -49,7 +49,9 @@ export default defineConfig({
   webServer: {
     command: "pnpm build && pnpm start",
     url: BASE_URL,
-    env: { PORT: String(PORT), HOSTNAME: "127.0.0.1" },
+    // BETTER_AUTH_URL has to be the origin the browser uses, or Better Auth rejects its requests.
+    // The secret and DATABASE_URL come from the environment or `.env` (the database migrated).
+    env: { PORT: String(PORT), HOSTNAME: "127.0.0.1", BETTER_AUTH_URL: BASE_URL },
     reuseExistingServer: false,
     timeout: 240_000,
     stdout: "ignore",

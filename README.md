@@ -21,12 +21,18 @@ cp .env.example .env
 ```
 
 Completá `.env`: elegí una contraseña para `POSTGRES_PASSWORD` y usá la misma en `DATABASE_URL`.
-Con el `docker-compose.yml` del repo, el usuario y la base son `mi_grilla`:
+Con el `docker-compose.yml` del repo, el usuario y la base son `mi_grilla`. Las cuentas (Better Auth)
+necesitan además un secreto de 32 caracteres o más, que firma las cookies de sesión (generalo con
+`openssl rand -base64 32` y no lo reuses entre entornos), y la URL pública de la app:
 
 ```sh
 DATABASE_URL=postgresql://mi_grilla:<tu-contraseña>@127.0.0.1:5432/mi_grilla
 POSTGRES_PASSWORD=<tu-contraseña>
+BETTER_AUTH_SECRET=<el-secreto-generado>
+BETTER_AUTH_URL=http://localhost:3000
 ```
+
+Con `BETTER_AUTH_URL` en `https:`, la cookie de sesión es `Secure` y lleva el prefijo `__Secure-`.
 
 `.env` no se commitea. Después:
 
@@ -37,7 +43,8 @@ pnpm db:migrate        # aplica las migraciones
 pnpm dev               # http://localhost:3000
 ```
 
-Con la base corriendo, `GET /api/health` responde `{"status":"ok","database":"up"}`.
+Con la base corriendo, `GET /api/health` responde `{"status":"ok","database":"up"}`. La pantalla
+principal `/` pide sesión: sin una, redirige a `/login` (o creá una cuenta en `/register`).
 
 El service worker (PWA instalable y pantalla "Sin conexión") solo se registra con el build de
 producción: `pnpm build && pnpm start`.
@@ -54,11 +61,17 @@ producción: `pnpm build && pnpm start`.
   80 % funciones.
 - `pnpm test:integration`: tests de integración contra la base PostgreSQL real de `DATABASE_URL`.
 - `pnpm test:e2e`: Playwright contra el build de producción (`pnpm build && pnpm start`, puerto
-  3100): iPhone (WebKit), Pixel 7, 360 px y desktop (`/demo`). La primera vez:
-  `pnpm exec playwright install webkit chromium`.
+  3100): iPhone (WebKit), Pixel 7, 360 px y desktop (`/demo`). Los tests crean cuentas, así que
+  necesitan la base levantada y migrada (`pnpm db:up && pnpm db:migrate`) y `BETTER_AUTH_SECRET` en
+  `.env`; `BETTER_AUTH_URL` la fija la config de Playwright (`http://127.0.0.1:3100`). La primera
+  vez: `pnpm exec playwright install webkit chromium`.
 - `pnpm test:e2e:docker`: la misma suite E2E dentro de la imagen oficial de Playwright, para hosts
   sin las bibliotecas de WebKit. Acepta los argumentos de `playwright test` (por ejemplo
-  `--project iphone-webkit`).
+  `--project iphone-webkit`). **Solo Linux:** el contenedor usa la red del host
+  (`--network host`), así que llega a la base de `docker-compose.yml` en `127.0.0.1:5432` y necesita
+  el puerto 3100 libre en el host. Igual que `pnpm test:e2e`, pide la base levantada y migrada antes.
+  `DATABASE_URL` y `BETTER_AUTH_SECRET` se pasan por nombre, sin mostrar sus valores: los del
+  entorno si están definidas, y si no, las de `.env`.
 - `pnpm db:up` / `pnpm db:down`: levanta (y espera) / baja el Postgres de `docker-compose.yml`.
 - `pnpm db:generate`: regenera el cliente de Prisma.
 - `pnpm db:migrate`: aplica las migraciones (`prisma migrate deploy`).
@@ -67,4 +80,7 @@ producción: `pnpm build && pnpm start`.
 
 `.github/workflows/ci.yml` corre al abrir, actualizar o reabrir un PR, y al mergear a `main`, con
 tres jobs en paralelo: `quality` (lint, formato, tipos y unit con coverage), `integration`
-(migraciones y tests de integración contra Postgres 17) y `e2e` (Playwright con WebKit y Chromium).
+(migraciones y tests de integración contra Postgres 17) y `e2e` (migraciones y Playwright con WebKit
+y Chromium, contra su propio Postgres 17). `integration` y `e2e` reciben un `BETTER_AUTH_SECRET`
+descartable escrito en el workflow, que no es un secreto, y su `BETTER_AUTH_URL`; `quality` no
+necesita ninguna de las dos.

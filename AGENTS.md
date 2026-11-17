@@ -36,6 +36,7 @@ dentro de un mockup de iPhone.
 | Runtime | Node 24 LTS (`.nvmrc`, `engines.node` 24.x) |
 | Framework | Next.js 16.4.6 (App Router, Turbopack) + React 19.3.1 · PWA instalable con Serwist 9.5.15 (`serwist` + `@serwist/turbopack`, ADR-002; el service worker solo corre con `next build` + `next start`) |
 | Database | PostgreSQL 17 (imagen `postgres:17.12`, la misma en `docker-compose.yml` en local y en los services de la CI) + Prisma 7.10.1 (`@prisma/adapter-pg`; cliente generado en `src/server/generated/prisma/`) |
+| Auth | Better Auth 1.7.25 (ADR-003): email y contraseña sobre Prisma, sesión en cookie `httpOnly` de 30 días; sin el handler HTTP montado: las Server Actions de `src/app/auth-actions.ts` llaman a `src/server/accounts.ts`, que usa `auth.api`. Necesita `BETTER_AUTH_SECRET` (≥ 32 caracteres) y `BETTER_AUTH_URL` |
 | UI | Tailwind CSS 4.3.5 (`@tailwindcss/postcss`) + shadcn/ui (CLI 4.23.0, estilo new-york) · paleta Rosé Pine, tema oscuro único |
 | Test runner | Vitest 5.1.0 (unit en jsdom con coverage v8 / integración en node) + Playwright 1.65.1 (E2E; navegadores: `pnpm exec playwright install webkit chromium`. WebKit necesita bibliotecas del sistema que en algunos hosts faltan, por ejemplo en Arch: ahí se corre con `pnpm test:e2e:docker`) |
 | Linter / formatter | oxlint 1.94.0 + oxlint-tsgolint 7.0.2007 (lint con tipos) · oxfmt 0.79.0 — sin ESLint ni Prettier (ADR-001) |
@@ -53,7 +54,7 @@ dentro de un mockup de iPhone.
 | Coverage floor — line | 80 % (PRD 01, NFR-05; `vitest.config.ts`) |
 | Coverage floor — branch | 70 % (PLAN de FEAT-001; `vitest.config.ts`) |
 | Coverage floor — function | 80 % (PLAN de FEAT-001; `vitest.config.ts`) |
-| How the suite is run | `pnpm test` (unit en jsdom + coverage con los pisos). `pnpm test:integration`: Vitest en node contra una base PostgreSQL real (`DATABASE_URL` de `.env`; antes, `pnpm db:up` y `pnpm db:migrate`). `pnpm test:e2e`: Playwright contra el build de producción (`pnpm build && pnpm start` en el puerto 3100, ADR-002) en 4 proyectos: `iphone-webkit` (iPhone 15), `mobile-chromium` (Pixel 7), `mobile-360` (Chromium 360×780) y `desktop` (Chromium 1280×800, solo `/demo`). `pnpm test:e2e:docker`: la misma suite dentro de la imagen oficial `mcr.microsoft.com/playwright:v1.65.1-noble`, para hosts sin las bibliotecas de WebKit (no toca el `node_modules` del host; acepta los argumentos de `playwright test`). Calidad: `pnpm lint`, `pnpm format:check`, `pnpm typecheck`. CI: `.github/workflows/ci.yml`, con tres jobs en paralelo de 10 minutos como máximo: `quality` (lint, formato, tipos y `pnpm test`), `integration` (`pnpm db:migrate` + `pnpm test:integration` contra un service `postgres:17.12`) y `e2e` (`pnpm test:e2e` con WebKit y Chromium) |
+| How the suite is run | `pnpm test` (unit en jsdom + coverage con los pisos). `pnpm test:integration`: Vitest en node contra una base PostgreSQL real (`DATABASE_URL` de `.env`; antes, `pnpm db:up` y `pnpm db:migrate`). `pnpm test:e2e`: Playwright contra el build de producción (`pnpm build && pnpm start` en el puerto 3100, ADR-002; los tests crean cuentas, así que antes, `pnpm db:up` y `pnpm db:migrate`, con `BETTER_AUTH_SECRET` en `.env`) en 4 proyectos: `iphone-webkit` (iPhone 15), `mobile-chromium` (Pixel 7), `mobile-360` (Chromium 360×780) y `desktop` (Chromium 1280×800, solo `/demo`). `pnpm test:e2e:docker`: la misma suite dentro de la imagen oficial `mcr.microsoft.com/playwright:v1.65.1-noble`, para hosts sin las bibliotecas de WebKit (solo Linux: usa la red del host para llegar a la base; no toca el `node_modules` del host; acepta los argumentos de `playwright test`). Calidad: `pnpm lint`, `pnpm format:check`, `pnpm typecheck`. CI: `.github/workflows/ci.yml`, con tres jobs en paralelo de 10 minutos como máximo: `quality` (lint, formato, tipos y `pnpm test`), `integration` (`pnpm db:migrate` + `pnpm test:integration` contra un service `postgres:17.12`) y `e2e` (`pnpm db:migrate` + `pnpm test:e2e` con WebKit y Chromium, contra su propio service `postgres:17.12`). `integration` y `e2e` reciben un `BETTER_AUTH_SECRET` descartable escrito en el workflow y su `BETTER_AUTH_URL`; `quality`, ninguna de las dos |
 | What a skipped test owes | El motivo, en la misma línea del test salteado. |
 
 - El mínimo de la CI son los tres pisos de arriba: la cobertura bajo cualquiera de ellos hace fallar
@@ -69,7 +70,9 @@ Si un número de acá no coincide con el que exige la CI, gana el de la CI y se 
 
 ## Architecture conventions
 
-- **Folder structure:** `src/app/` (rutas, layouts y route handlers delgados), `src/components/`
+- **Folder structure:** `src/app/` (rutas, layouts, route handlers y Server Actions delgados, como
+  `src/app/auth-actions.ts`), `src/proxy.ts` (el proxy de Next 16: solo redirige `/` a `/login` sin
+  cookie de sesión; la verificación real la hace la página), `src/components/`
   (UI; `ui/` = shadcn), `src/lib/` (utilidades puras, sin I/O), `src/server/` (acceso a la base y
   lógica de servidor; cada módulo con `import "server-only"`), `src/server/generated/prisma/`
   (cliente generado, fuera de git). Tests en `tests/{unit,integration,e2e}/`. `scripts/`:

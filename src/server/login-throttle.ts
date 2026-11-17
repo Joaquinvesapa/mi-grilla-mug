@@ -1,14 +1,18 @@
 import "server-only";
 
+import { LOGIN_LOCK_MINUTES } from "@/lib/account-rules";
 import { getDb } from "@/server/db";
 import type { PrismaClient } from "@/server/generated/prisma/client";
 
 /** Attempts per email allowed in one window (FR-10). */
 const LOGIN_MAX_ATTEMPTS = 5;
-/** The window those attempts are counted in. */
-const LOGIN_WINDOW_MS = 15 * 60_000;
+/**
+ * The window those attempts are counted in. FR-10 fixes it at the same 15 minutes as the lock, and
+ * both come from the constant the lock message shows, so the text and the rule cannot drift apart.
+ */
+const LOGIN_WINDOW_MS = LOGIN_LOCK_MINUTES * 60_000;
 /** How long the email stays locked after the 5th failure (AC-13). */
-const LOGIN_LOCK_MS = 15 * 60_000;
+const LOGIN_LOCK_MS = LOGIN_LOCK_MINUTES * 60_000;
 
 export type ReserveResult = { ok: true } | { ok: false; code: "LOGIN_LOCKED" };
 
