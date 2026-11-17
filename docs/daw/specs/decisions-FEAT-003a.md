@@ -57,3 +57,26 @@ decir que se mostró al usuario sin pedirle aprobación previa; cualquier objeci
 - R-10: además del test de integración, el verificador corrió la misma secuencia SQL sin el
   `FOR UPDATE` contra la base local y obtuvo mezcla en 10 de 10 rondas (con el lock, 0 de 10). —
   orquestador — 2026-11-17 — Block 2
+
+## Block 3 — Pantalla de la grilla
+
+- Los componentes de shadcn (`tabs`, `alert-dialog`, `drawer`) se adaptaron como en FEAT-002
+  (primitivos Radix sueltos, `cn` de `@/lib/utils`), sin las variantes `dark:` (tema oscuro único)
+  y sin las clases `animate-in`/`animate-out`, que dependen de `tw-animate-css` (no instalado).
+  Tabs con triggers de 44 px; el drawer se renderiza fuera de `.app-shell`, así que lleva su propio
+  inset inferior. — orquestador — 2026-11-17 — Block 3
+- `ScheduleScreen` y `AppMenu` reciben `saveAction`/`logoutAction` por prop (como los formularios de
+  FEAT-002); `page.tsx` les pasa las reales y `src/components` no importa tipos de `src/app`. —
+  orquestador — 2026-11-17 — Block 3
+- "Salir sin guardar" es un `Button type="submit"` dentro del `<form action={logoutAction}>`, no un
+  `AlertDialogAction` (que cierra el diálogo y desmontaría el form antes del submit); el AlertDialog
+  va anidado dentro del drawer y "Seguir editando" vuelve al menú. — orquestador — 2026-11-17 —
+  Block 3
+- `data-vaul-no-drag` va en un contenedor que envuelve `InstallGuide` y "Cerrar sesión", sin
+  modificar `InstallGuide`. — orquestador — 2026-11-17 — Block 3
+- La marca "sin guardar" es un punto visual con `data-pending` y una descripción accesible "Sin
+  guardar". El borrador se manda ordenado por id; el error se limpia al guardar, al descartar y
+  cuando el borrador vuelve a igualar lo guardado. — orquestador — 2026-11-17 — Block 3
+- `page.tsx` carga grilla y selección en paralelo; una grilla sin días se trata como un fallo de
+  carga (`SCHEDULE_UNAVAILABLE`). El test de la página vive en `tests/unit/app/home-page.test.tsx`.
+  — orquestador — 2026-11-17 — Block 3

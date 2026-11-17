@@ -27,3 +27,8 @@ const MESSAGES: ReadonlyMap<string, string> = new Map(Object.entries(CATALOG));
 export function selectionMessageFor(code: string): string {
   return MESSAGES.get(code) ?? CATALOG.SERVICE_UNAVAILABLE;
 }
+
+/** "1 cambio sin guardar", "3 cambios sin guardar": the pending notice and the sign-out warning. */
+export function pendingChangesLabel(count: number): string {
+  return `${count} ${count === 1 ? "cambio" : "cambios"} sin guardar`;
+}

@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { type SelectionMessageCode, selectionMessageFor } from "@/lib/selection-messages";
+import {
+  pendingChangesLabel,
+  type SelectionMessageCode,
+  selectionMessageFor,
+} from "@/lib/selection-messages";
 
 // `satisfies` makes a code missing from (or extra to) the exported union a compile error.
 const CATALOG = {
@@ -19,5 +23,13 @@ describe("selectionMessageFor", () => {
     for (const unknown of ["", "NOPE", "toString", "__proto__", "P2002"]) {
       expect(selectionMessageFor(unknown)).toBe(CATALOG.SERVICE_UNAVAILABLE);
     }
+  });
+});
+
+describe("pendingChangesLabel", () => {
+  it("cuenta los cambios sin guardar en singular y en plural", () => {
+    expect(pendingChangesLabel(1)).toBe("1 cambio sin guardar");
+    expect(pendingChangesLabel(2)).toBe("2 cambios sin guardar");
+    expect(pendingChangesLabel(12)).toBe("12 cambios sin guardar");
   });
 });
