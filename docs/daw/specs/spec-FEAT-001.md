@@ -6,8 +6,8 @@
 | PRD | docs/daw/prd/prd-FEAT-001.md |
 | Tier | FEATURE |
 | Date | 2026-11-16 |
-| Spec loops | 2 |
-| Loops since last human decision | 2 |
+| Spec loops | 3 |
+| Loops since last human decision | 0 |
 
 ## Summary
 Scaffold de Mi Grilla sobre Next.js 16 (App Router), TypeScript 7, Tailwind 4 + shadcn/ui, Prisma 7 +
@@ -32,7 +32,8 @@ de arquitectura de PLAN.
 `@tailwindcss/postcss` 4.3.5 · `shadcn` 4.23.0 (CLI) + `clsx`, `tailwind-merge`,
 `class-variance-authority`, `@radix-ui/react-slot`, `@radix-ui/react-collapsible`, `lucide-react` ·
 `prisma` + `@prisma/client` + `@prisma/adapter-pg` 7.10.1 (no la 8.0.0-rc) + `pg`, `@types/pg`,
-`dotenv` · `serwist` + `@serwist/turbopack` 9.5.14 + `esbuild` · `vitest` + `@vitest/coverage-v8`
+`dotenv` · `serwist` + `@serwist/turbopack` 9.5.15 (9.5.14 en el plan original; se subió en el
+cierre de CODE por remediación de SAST) + `esbuild` · `vitest` + `@vitest/coverage-v8`
 5.1.0 + `jsdom` + `@testing-library/react` + `@testing-library/jest-dom` · `@playwright/test`
 1.65.1 · `oxlint` 1.94.0 + `oxlint-tsgolint` 7.0.2007 · `oxfmt` 0.79.0 · `yaml` (test del workflow)
 · `server-only`. Node 24 LTS (`.nvmrc`), pnpm 12 (`packageManager`). Las versiones de las
@@ -61,7 +62,7 @@ iris `#c4a7e7` · highlight low `#21202e` / med `#403d52` / high `#524f67`. Role
 | FR-11 | Block 2 |
 | FR-12 | Block 2 |
 | FR-13 | Block 2 |
-| NFR-01 | Block 2, Block 4, Block 5: E2E en 360 y 430 px sin scroll horizontal y `boundingBox` ≥ 44×44 de cada elemento tocable |
+| NFR-01 | Block 2, Block 4: E2E en 360 y 430 px sin scroll horizontal y `boundingBox` ≥ 44×44 de cada elemento tocable |
 | NFR-02 | Block 5: E2E en 1280×800 con `scrollHeight ≤ innerHeight` |
 | NFR-03 | Block 2: E2E Chromium con throttling 4G por CDP contra `next start`, `load` ≤ 3 s |
 | NFR-04 | Block 6: `timeout-minutes` por job, jobs en paralelo, cache de pnpm y browsers; duración medida en el PR |
@@ -152,15 +153,17 @@ Texto de convenciones que se escribe en `AGENTS.md`:
 - Cobertura bajo cualquiera de los pisos (80/70/80) — `pnpm test` termina con error.
 
 **Required tests**
-- [ ] `tests/unit/lib/utils.test.ts` — `cn()` combina y resuelve clases en conflicto de Tailwind.
-- [ ] `tests/unit/lib/utils.test.ts` — `cn()` con valores inválidos (`undefined`, `false`) los
-      ignora sin error.
-- [ ] `pnpm lint`, `pnpm format:check`, `pnpm typecheck`, `pnpm test` y `pnpm build` terminan con
-      código 0.
-- [ ] `pnpm lint` rechaza un import de `@prisma/client` desde `src/components/` con error (archivo
-      de prueba temporal, no se commitea) — verifica la regla de capas.
-- [ ] Con un piso forzado por encima de la cobertura real, `pnpm test` termina con error (prueba
-      temporal, no se commitea) — verifica que los umbrales están conectados (NFR-05).
+- [ ] `test-utils-cn-merge` — `tests/unit/lib/utils.test.ts`: `cn()` combina y resuelve clases en
+      conflicto de Tailwind.
+- [ ] `test-utils-cn-invalid` — `tests/unit/lib/utils.test.ts`: `cn()` con valores inválidos
+      (`undefined`, `false`) los ignora sin error.
+- [ ] `test-quality-commands` — `pnpm lint`, `pnpm format:check`, `pnpm typecheck`, `pnpm test` y
+      `pnpm build` terminan con código 0.
+- [ ] `test-layer-rule` — `pnpm lint` rechaza un import de `@prisma/client` desde `src/components/`
+      con error (archivo de prueba temporal, no se commitea) — verifica la regla de capas.
+- [ ] `test-coverage-floor` — con un piso forzado por encima de la cobertura real, `pnpm test`
+      termina con error (prueba temporal, no se commitea) — verifica que los umbrales están
+      conectados (NFR-05).
 
 **Completion criterion**
 Los cinco comandos terminan en 0, el import prohibido es rechazado por oxlint, y `AGENTS.md` tiene
@@ -209,28 +212,29 @@ nombra a Lollapalooza en ningún lado (DOM, `<title>`, metadata).
   abierto/cerrado de la guía.
 
 **Required tests**
-- [ ] `install-guide.test.tsx` — al tocar "Cómo instalarla" se muestran los 3 pasos; al tocar de
-      nuevo se ocultan.
-- [ ] `pressable.test.ts` — `pointerdown` pone `data-pressed="true"`; `pointercancel` (toque
-      inválido/cancelado) lo quita sin error.
-- [ ] `home.spec.ts` (iphone-webkit, mobile-360) — se ve "Mi Grilla"; ni el DOM ni `document.title`
-      contienen "Lollapalooza" — validates AC-01, AC-13.
-- [ ] `home.spec.ts` (mobile-360 y viewport 430) — `scrollWidth ≤ innerWidth`; cada botón/link con
-      `boundingBox` ≥ 44×44 — validates AC-15, NFR-01.
-- [ ] `home.spec.ts` — la meta viewport contiene `viewport-fit=cover` y el CSSOM tiene en
-      `.app-shell` padding con `env(safe-area-inset-*)` — validates AC-16 (el valor real del notch se
-      verifica en iPhone).
-- [ ] `home.spec.ts` — el CSSOM de `.app-shell` usa `100dvh` y ninguna regla usa `100vh` —
-      validates AC-17 (la barra de Safari se verifica en iPhone).
-- [ ] `home.spec.ts` — `-webkit-tap-highlight-color` calculado es transparente (si WebKit no lo
-      expone en `getComputedStyle`, se verifica la regla en el CSSOM) — validates AC-18.
-- [ ] `home.spec.ts` — en el botón: `user-select: none` y `-webkit-touch-callout: none` — validates
-      AC-19.
-- [ ] `home.spec.ts` — `touch-action: manipulation` en el botón, y el tiempo entre `pointerdown` y
-      `data-pressed="true"` ≤ 100 ms — validates AC-20, NFR-07.
-- [ ] `performance.spec.ts` (Chromium, CDP 4G: 4 Mbps bajada, 3 Mbps subida, 20 ms) — evento `load`
-      de `/` ≤ 3000 ms contra `next start`; con un error de red el test falla con el tiempo medido —
-      validates NFR-03.
+- [ ] `test-install-guide-toggle` — `install-guide.test.tsx`: al tocar "Cómo instalarla" se muestran
+      los 3 pasos; al tocar de nuevo se ocultan.
+- [ ] `test-pressable-state` — `pressable.test.ts`: `pointerdown` pone `data-pressed="true"`;
+      `pointercancel` (toque inválido/cancelado) lo quita sin error.
+- [ ] `test-home-identity` — `home.spec.ts` (iphone-webkit, mobile-360): se ve "Mi Grilla"; ni el
+      DOM ni `document.title` contienen "Lollapalooza" — validates AC-01, AC-13.
+- [ ] `test-home-widths` — `home.spec.ts` (mobile-360 y viewport 430): `scrollWidth ≤ innerWidth`;
+      cada botón/link con `boundingBox` ≥ 44×44 — validates AC-15, NFR-01.
+- [ ] `test-home-safe-area` — `home.spec.ts`: la meta viewport contiene `viewport-fit=cover` y el
+      CSSOM tiene en `.app-shell` padding con `env(safe-area-inset-*)` — validates AC-16 (el valor
+      real del notch se verifica en iPhone).
+- [ ] `test-home-dvh` — `home.spec.ts`: el CSSOM de `.app-shell` usa `100dvh` y ninguna regla usa
+      `100vh` — validates AC-17 (la barra de Safari se verifica en iPhone).
+- [ ] `test-home-tap-highlight` — `home.spec.ts`: `-webkit-tap-highlight-color` calculado es
+      transparente (si WebKit no lo expone en `getComputedStyle`, se verifica la regla en el CSSOM) —
+      validates AC-18.
+- [ ] `test-home-no-select` — `home.spec.ts`: en el botón, `user-select: none` y
+      `-webkit-touch-callout: none` — validates AC-19.
+- [ ] `test-home-press-latency` — `home.spec.ts`: `touch-action: manipulation` en el botón, y el
+      tiempo entre `pointerdown` y `data-pressed="true"` ≤ 100 ms — validates AC-20, NFR-07.
+- [ ] `test-home-load-4g` — `performance.spec.ts` (Chromium, CDP 4G: 4 Mbps bajada, 3 Mbps subida,
+      20 ms): evento `load` de `/` ≤ 3000 ms contra `next start`; con un error de red el test falla
+      con el tiempo medido — validates NFR-03.
 
 **Completion criterion**
 Los tests unitarios y E2E de este bloque pasan en local con `pnpm test` y `pnpm test:e2e`, y la
@@ -245,7 +249,7 @@ cobertura sigue sobre los pisos.
   (se verifica con `prisma generate`; sin `--config` por script). Hace `import "dotenv/config"` y lee
   `DATABASE_URL` como opcional, para que `pnpm install` (con `postinstall: prisma generate`)
   funcione sin la variable.
-- `docker-compose.yml` (new) — `postgres:17`, puerto `127.0.0.1:5432:5432`, `POSTGRES_PASSWORD` leído
+- `docker-compose.yml` (new) — `postgres:17.12` (minor fijado en el Block 6), puerto `127.0.0.1:5432:5432`, `POSTGRES_PASSWORD` leído
   de `.env` (`${POSTGRES_PASSWORD:?}`), sin contraseñas literales.
 - `.env.example` (new) — `DATABASE_URL=postgresql://USER:PASSWORD@127.0.0.1:5432/mi_grilla` y
   `POSTGRES_PASSWORD=` (solo placeholders).
@@ -289,19 +293,24 @@ Implementa FR-04 y FR-09. El route handler es delgado: delega en `src/server/hea
   arrancar; la app no se conecta.
 
 **Required tests**
-- [ ] `health.test.ts` (unit) — probe ok → `{status:"ok",database:"up"}` — validates AC-04.
-- [ ] `health.test.ts` (unit) — probe que rechaza con error → `{status:"error",database:"down"}` y
-      el log tiene `DB_UNREACHABLE` sin el mensaje del error — validates AC-05.
-- [ ] `health.test.ts` (unit) — probe que excede el timeout de 800 ms → `down` y log `DB_TIMEOUT`.
-- [ ] `health.test.ts` (unit) — dos `check()` dentro de 2 s llaman al probe una sola vez (R-02).
-- [ ] `database-url.test.ts` — URL remota sin `sslmode=require` es rechazada; URL inválida
-      (no postgresql) es rechazada; localhost y `postgres` sin TLS se aceptan (R-04).
-- [ ] `tests/integration/health.test.ts` — `GET` contra Postgres real → 200, body exacto y
-      respuesta en ≤ 1000 ms — validates AC-04, AC-14, NFR-06.
-- [ ] `tests/integration/health.test.ts` — `GET` con la URL apuntando a un puerto cerrado → 503 con
-      body exacto `{status:"error",database:"down"}`, sin host, puerto ni usuario de la URL en el
-      body — validates AC-05.
-- [ ] `tests/integration/health.test.ts` — `POST` → 405 (método inválido rechazado).
+- [ ] `test-health-up` — `health.test.ts` (unit): probe ok → `{status:"ok",database:"up"}` —
+      validates AC-04.
+- [ ] `test-health-down` — `health.test.ts` (unit): probe que rechaza con error →
+      `{status:"error",database:"down"}` y el log tiene `DB_UNREACHABLE` sin el mensaje del error —
+      validates AC-05.
+- [ ] `test-health-timeout` — `health.test.ts` (unit): probe que excede el timeout de 800 ms →
+      `down` y log `DB_TIMEOUT`.
+- [ ] `test-health-memo` — `health.test.ts` (unit): dos `check()` dentro de 2 s llaman al probe una
+      sola vez (R-02).
+- [ ] `test-database-url` — `database-url.test.ts`: URL remota sin `sslmode=require` es rechazada;
+      URL inválida (no postgresql) es rechazada; localhost y `postgres` sin TLS se aceptan (R-04).
+- [ ] `test-health-integration-up` — `tests/integration/health.test.ts`: `GET` contra Postgres real
+      → 200, body exacto y respuesta en ≤ 1000 ms — validates AC-04, AC-14, NFR-06.
+- [ ] `test-health-integration-down` — `tests/integration/health.test.ts`: `GET` con la URL
+      apuntando a un puerto cerrado → 503 con body exacto `{status:"error",database:"down"}`, sin
+      host, puerto ni usuario de la URL en el body — validates AC-05.
+- [ ] `test-health-integration-405` — `tests/integration/health.test.ts`: `POST` → 405 (método
+      inválido rechazado).
 
 **Completion criterion**
 `docker compose up -d`, `pnpm test` y `pnpm test:integration` pasan; `pnpm install` en un clon sin
@@ -356,17 +365,19 @@ Implementa FR-02 y FR-03 con Serwist (ADR-002). El SW solo corre con `next build
 - `path` inexistente en `/serwist/[path]` — 404.
 
 **Required tests**
-- [ ] `manifest.test.ts` — `display: "standalone"`, nombre "Mi Grilla", íconos 192/512/maskable, sin
-      "Lollapalooza" — validates AC-02 (parte automatizable).
-- [ ] `pwa.spec.ts` (mobile-chromium) — `registration.scope` es el origen + `/` y la página queda
-      controlada por el SW.
-- [ ] `pwa.spec.ts` (mobile-chromium) — con el SW listo, `context.setOffline(true)` y navegación a
-      `/`: se ve "Sin conexión" con fondo calculado `rgb(25, 23, 36)` (pantalla con estilos), en
-      lugar del error del navegador (fallo de red) — validates AC-03.
-- [ ] `pwa.spec.ts` — `GET /icons/100` devuelve 404 (tamaño inválido rechazado).
-- [ ] `pwa.spec.ts` — `GET /serwist/no-existe.js` devuelve 404 (path inválido rechazado).
-- [ ] `pwa.spec.ts` — con el SW activo y offline, `GET /api/health` falla por red (error) en lugar
-      de devolver una respuesta cacheada (R-06).
+- [ ] `test-manifest` — `manifest.test.ts`: `display: "standalone"`, nombre "Mi Grilla", íconos
+      192/512/maskable, sin "Lollapalooza" — validates AC-02 (parte automatizable).
+- [ ] `test-sw-scope` — `pwa.spec.ts` (mobile-chromium): `registration.scope` es el origen + `/` y la
+      página queda controlada por el SW.
+- [ ] `test-sw-offline` — `pwa.spec.ts` (mobile-chromium): con el SW listo,
+      `context.setOffline(true)` y navegación a `/`, se ve "Sin conexión" con fondo calculado
+      `rgb(25, 23, 36)` (pantalla con estilos), en lugar del error del navegador (fallo de red) —
+      validates AC-03.
+- [ ] `test-icons-404` — `pwa.spec.ts`: `GET /icons/100` devuelve 404 (tamaño inválido rechazado).
+- [ ] `test-serwist-404` — `pwa.spec.ts`: `GET /serwist/no-existe.js` devuelve 404 (path inválido
+      rechazado).
+- [ ] `test-sw-no-api-cache` — `pwa.spec.ts`: con el SW activo y offline, `GET /api/health` falla
+      por red (error) en lugar de devolver una respuesta cacheada (R-06).
 
 **Completion criterion**
 Los tests pasan contra `next start`. La verificación en iPhone real (AC-02, AC-03 instalada) es
@@ -378,11 +389,12 @@ manual en VERIFY (ver "Final verification").
 - `src/app/demo/page.tsx` (new) — página de desktop: título breve y el marco centrado.
 - `src/components/iphone-frame.tsx` (new, `"use client"`) — bisel y Dynamic Island en CSS alrededor
   de un `<iframe src="/" title="Mi Grilla">` de 393×852 px (pantalla de iPhone 15); el marco completo
-  escala con `transform: scale()` calculado con la altura disponible (`ResizeObserver` sobre la
-  ventana), nunca mayor que 1; el iframe no recibe `allow` extra.
+  escala con `transform: scale()` calculado con la altura disponible (`ResizeObserver` sobre el área
+  del marco, debajo del título: un `ResizeObserver` no puede observar `window`), nunca mayor que 1;
+  el iframe no recibe `allow` extra.
 - `next.config.ts` (modified) — `headers()` para todas las rutas: `X-Frame-Options: SAMEORIGIN` y
   `Content-Security-Policy: frame-ancestors 'self'` (R-08).
-- `tests/unit/components/iphone-frame.test.ts` (new) — función pura `computeFrameScale()`.
+- `tests/unit/components/iphone-frame.test.tsx` (new) — función pura `computeFrameScale()`.
 - `tests/e2e/demo.spec.ts` (new)
 
 **Logic**
@@ -394,15 +406,19 @@ Implementa FR-05. `computeFrameScale(availableHeight, frameHeight)` vive en
   1 y se recalcula en el próximo resize, sin error.
 
 **Required tests**
-- [ ] `iphone-frame.test.ts` — con 800 px disponibles el marco escala a menos de 1 y entra; con
-      1200 px la escala es 1.
-- [ ] `iphone-frame.test.ts` — altura inválida (0 o negativa) devuelve escala 1 sin error.
-- [ ] `demo.spec.ts` (desktop 1280×800) — se ve el marco con el iframe; `scrollHeight ≤ innerHeight`
-      y `scrollWidth ≤ innerWidth`; el marco entra entero en el viewport — validates AC-06, NFR-02.
-- [ ] `demo.spec.ts` — dentro del iframe: click en "Cómo instalarla" muestra los pasos, y un scroll
-      con la rueda dentro del iframe cambia su `scrollY` — validates AC-07.
-- [ ] `demo.spec.ts` — `/` responde con `X-Frame-Options: SAMEORIGIN` y `frame-ancestors 'self'`;
-      embeber desde otro origen es rechazado (página de prueba en otro puerto) (R-08).
+- [ ] `test-frame-scale` — `iphone-frame.test.tsx`: con 800 px disponibles el marco escala a menos
+      de 1 y entra; con 1200 px la escala es 1.
+- [ ] `test-frame-scale-invalid` — `iphone-frame.test.tsx`: altura inválida (0 o negativa) devuelve
+      escala 1 sin error.
+- [ ] `test-demo-fits` — `demo.spec.ts` (desktop 1280×800): se ve el marco con el iframe;
+      `scrollHeight ≤ innerHeight` y `scrollWidth ≤ innerWidth`; el marco entra entero en el
+      viewport — validates AC-06, NFR-02.
+- [ ] `test-demo-interactive` — `demo.spec.ts`: dentro del iframe, click en "Cómo instalarla"
+      muestra los pasos, y un scroll con la rueda dentro del iframe cambia su `scrollY` — validates
+      AC-07.
+- [ ] `test-frame-headers` — `demo.spec.ts`: `/` responde con `X-Frame-Options: SAMEORIGIN` y
+      `frame-ancestors 'self'`; embeber desde otro origen es rechazado (página de prueba en otro
+      puerto) (R-08).
 
 **Completion criterion**
 Los tests pasan contra `next start` y `/demo` se ve completa en 1280×800.
@@ -416,9 +432,9 @@ Los tests pasan contra `next start` y `/demo` se ve completa en 1280×800.
   comentario) (R-09, R-10). Jobs en paralelo, cada uno con `timeout-minutes: 10`:
   1. `quality`: `pnpm install --frozen-lockfile` (sin `DATABASE_URL`), `pnpm lint`,
      `pnpm format:check`, `pnpm typecheck`, `pnpm test` (con coverage y umbrales).
-  2. `integration`: service `postgres:17` con credencial de prueba descartable documentada en un
+  2. `integration`: service `postgres:17.12` con credencial de prueba descartable documentada en un
      comentario (no es un secreto), `pnpm db:migrate`, `pnpm test:integration`.
-  3. `e2e`: service `postgres:17`, cache de browsers de Playwright, `pnpm exec playwright install
+  3. `e2e`: service `postgres:17.12`, cache de browsers de Playwright, `pnpm exec playwright install
      --with-deps webkit chromium`, `pnpm test:e2e` (build + start), sube `playwright-report` como
      artefacto si falla.
 - `tests/unit/ci/workflow.test.ts` (new) — parsea `ci.yml` con `yaml`.
@@ -447,21 +463,22 @@ GitHub: se pide la confirmación del usuario en ese momento. Con `main` protegid
 - Un job colgado — `timeout-minutes: 10` lo corta como fallido (timeout, NFR-04).
 
 **Required tests**
-- [ ] `workflow.test.ts` — `on` tiene solo `pull_request` (opened, synchronize, reopened) y `push` a
-      `main`; no existe `pull_request_target`; `permissions.contents` es `read` — validates AC-08,
-      AC-09, AC-10.
-- [ ] `workflow.test.ts` — los tres jobs existen, corren lint, typecheck, unit con coverage,
-      integración y E2E — validates AC-08.
-- [ ] `workflow.test.ts` — cada job tiene `timeout-minutes` ≤ 10 (un job sin timeout es rechazado) —
-      validates NFR-04.
-- [ ] `workflow.test.ts` — toda `uses:` de terceros está fijada por SHA de 40 caracteres (una
-      referencia por tag es rechazada) (R-10).
-- [ ] Evidencia en el PR del ticket — la CI corre al abrirlo y al subirle cambios, y queda en verde
-      con duración ≤ 10 min — validates AC-08, AC-12, NFR-04.
-- [ ] Evidencia de error (manual, con OK del usuario) — un PR descartable con un test roto queda en
-      rojo; otro con la cobertura bajo el piso queda en rojo; se cierran sin mergear — validates AC-11.
-- [ ] Evidencia (manual) — push de una rama sin PR: `gh run list --branch <rama>` no muestra corridas
-      — validates AC-10.
+- [ ] `test-ci-triggers` — `workflow.test.ts`: `on` tiene solo `pull_request` (opened, synchronize,
+      reopened) y `push` a `main`; no existe `pull_request_target`; `permissions.contents` es `read`
+      — validates AC-08, AC-09, AC-10.
+- [ ] `test-ci-jobs` — `workflow.test.ts`: los tres jobs existen, corren lint, typecheck, unit con
+      coverage, integración y E2E — validates AC-08.
+- [ ] `test-ci-timeouts` — `workflow.test.ts`: cada job tiene `timeout-minutes` ≤ 10 (un job sin
+      timeout es rechazado) — validates NFR-04.
+- [ ] `test-ci-pinned-actions` — `workflow.test.ts`: toda `uses:` de terceros está fijada por SHA de
+      40 caracteres (una referencia por tag es rechazada) (R-10).
+- [ ] `test-ci-pr-green` — evidencia en el PR del ticket: la CI corre al abrirlo y al subirle
+      cambios, y queda en verde con duración ≤ 10 min — validates AC-08, AC-12, NFR-04.
+- [ ] `test-ci-pr-red` — evidencia de error (manual, con OK del usuario): un PR descartable con un
+      test roto queda en rojo; otro con la cobertura bajo el piso queda en rojo; se cierran sin
+      mergear — validates AC-11.
+- [ ] `test-ci-no-pr-no-run` — evidencia (manual): push de una rama sin PR,
+      `gh run list --branch <rama>` no muestra corridas — validates AC-10.
 
 **Completion criterion**
 `workflow.test.ts` pasa, el PR de FEAT-001 corre los tres jobs en verde, la protección de `main` está

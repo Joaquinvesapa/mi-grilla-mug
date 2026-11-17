@@ -138,7 +138,9 @@ FEAT-001 agrega todas las dependencias del scaffold, con versiones exactas y el 
   `tailwind-merge`).
 - **Base de datos:** prisma, @prisma/client y @prisma/adapter-pg 7.10.1, más `pg` y `dotenv`. Se
   usa Prisma 7.10.1 y no la 8.0.0-rc, que npm marca como "latest" aunque es una release candidate.
-- **PWA:** serwist y @serwist/turbopack 9.5.14, con `esbuild`.
+- **PWA:** serwist y @serwist/turbopack 9.5.15, con `esbuild`. Se subió desde la 9.5.14 en el
+  cierre de CODE para cerrar GHSA-3g3m-2fjr-6pw4 (`glob`) y GHSA-g3hv-75wg-m249 (`minimatch`), con
+  excepciones puntuales por versión exacta a la ventana de antigüedad de pnpm.
 - **Tests:** vitest 5.1 y playwright 1.65.
 - **Calidad de código:** typescript 7.0.2, oxlint 1.94, oxlint-tsgolint 7.0 y oxfmt 0.79.
 
