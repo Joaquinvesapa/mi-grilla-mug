@@ -33,3 +33,14 @@ decir que se mostró al usuario sin pedirle aprobación previa; cualquier objeci
   curso (R-05). — orquestador — 2026-11-17 — Block 2
 - `NETWORK_ERROR` queda en el catálogo de mensajes sin uso en `src/` (la spec conserva los códigos
   de FEAT-003a). — orquestador — 2026-11-17 — Block 2
+
+## Block 3 — La grilla sin conexión
+
+- `OfflineApp` decide con `useSyncExternalStore` (¿estamos en el navegador?) y un ajuste de estado
+  durante el render que corre una vez, en vez de un efecto: el mismo patrón de `ScheduleScreen`,
+  porque oxlint prohíbe `setState` dentro de un efecto. El resultado pedido (sin destello ni
+  desajuste de hidratación) se mantiene. — orquestador — 2026-11-17 — Block 3
+- `OfflineCard` incluye el `main` completo con "Mi Grilla", para que la pantalla "Sin conexión" se
+  vea igual que antes. — orquestador — 2026-11-17 — Block 3
+- En modo grilla, el título de la pestaña sigue siendo "Sin conexión · Mi Grilla" (`metadata`
+  estática de `/~offline`). — orquestador — 2026-11-17 — Block 3
