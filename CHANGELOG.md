@@ -22,8 +22,19 @@ Todos los cambios notables de Mi Grilla se registran en este archivo. El formato
   el mismo mensaje exista o no la cuenta.
 - [FEAT-002] Pantallas `/login` y `/register` con control para mostrar la contraseña y teclado de
   email sin zoom en el iPhone.
+- [FEAT-003a] La grilla del festival en la pantalla principal: los 3 días y los 91 shows en formato
+  escenarios × horarios, con 3 escenarios a la vista a 360–430 px, scroll horizontal y vertical,
+  encabezados y horas fijos, y los shows de después de medianoche en el día en que empiezan.
+- [FEAT-003a] Selección propia: tocar un show lo marca o desmarca como cambio pendiente; "Guardar"
+  lo guarda en la cuenta y "Descartar" vuelve a lo guardado; los choques entre shows elegidos se
+  marcan, y cerrar sesión con cambios pendientes pide confirmación.
+- [FEAT-003a] La grilla versionada en `data/schedule.json` y el seed `pnpm db:seed`, que la carga en
+  la base (tablas de días, escenarios, shows y selección).
 
 ### Changed
 
 - [FEAT-002] La pantalla principal `/` requiere sesión iniciada; sin sesión lleva a `/login`.
 - [FEAT-002] La CI recibe las variables de Better Auth y el job `e2e` migra la base antes de correr.
+- [FEAT-003a] La pantalla principal deja la presentación ("Muy pronto") y pasa a ser la grilla; el
+  saludo, la guía "Cómo instalarla" y "Cerrar sesión" van en un menú que se abre desde abajo.
+- [FEAT-003a] La CI siembra la grilla (`pnpm db:seed`) en los jobs `integration` y `e2e`.
