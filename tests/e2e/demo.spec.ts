@@ -4,6 +4,7 @@ import type { AddressInfo } from "node:net";
 import { expect, test, type Page } from "@playwright/test";
 
 import { signUp } from "./auth";
+import { gridRegion, openMenu, showBlock } from "./grid";
 
 // Runs only in the `desktop` project (1280×800): /demo is the desktop showcase (playwright.config).
 
@@ -54,10 +55,10 @@ test.describe("/demo con marco de iPhone", () => {
     }).toPass();
   });
 
-  // The wheel half relies on `/` being taller than the 852 px screen once the install guide is
-  // open: with nothing to scroll, the wheel cannot move it. The precondition is asserted below, so
-  // a shorter home fails as that and not as a /demo bug. `/` needs a session: the test signs up
-  // inside the frame first.
+  // `/` is the grid now (FEAT-003a): the document never scrolls, the grid does, on its own. So the
+  // wheel has to move the grid's scroll container inside the frame. The precondition (the grid is
+  // taller than its box) is asserted, so a shorter grid fails as that and not as a /demo bug. `/`
+  // needs a session: the test signs up inside the frame first.
   test("la app del marco responde a clicks y al scroll con la rueda (AC-07)", async ({
     page,
   }, testInfo) => {
@@ -67,32 +68,45 @@ test.describe("/demo con marco de iPhone", () => {
     const appWindow = await (await iframe.elementHandle()).contentFrame();
     expect(appWindow, "no se encontró el frame de la app").not.toBeNull();
     await signUp(appWindow!, testInfo);
-    await expect(app.getByText(/^Hola, /)).toBeVisible();
 
-    const trigger = app.getByRole("button", { name: "Cómo instalarla" });
+    // Clicks: the menu opens with the greeting, and the install guide unfolds inside it.
+    const sheet = await openMenu(app);
+    await expect(sheet.getByText(/^Hola, /)).toBeVisible();
+    const trigger = sheet.getByRole("button", { name: "Cómo instalarla" });
     await expect(trigger).toHaveAttribute("aria-expanded", "false");
     await trigger.click();
     await expect(trigger).toHaveAttribute("aria-expanded", "true");
-    await expect(app.getByRole("listitem")).toHaveCount(3);
+    await expect(sheet.getByRole("listitem")).toHaveCount(3);
+    await page.keyboard.press("Escape");
+    await expect(app.getByRole("dialog")).toHaveCount(0);
 
-    const fit = await appWindow!.evaluate(() => ({
-      scrollHeight: document.documentElement.scrollHeight,
-      innerHeight: window.innerHeight,
+    // A click on a show marks it.
+    const block = showBlock(app, "fri-flow-1800");
+    await block.click();
+    await expect(block).toHaveAttribute("aria-pressed", "true");
+
+    const grid = gridRegion(app, "fri");
+    await expect(grid).toBeVisible();
+    const fit = await grid.evaluate((el) => ({
+      scrollHeight: el.scrollHeight,
+      clientHeight: el.clientHeight,
     }));
     expect(
       fit.scrollHeight,
-      "precondición: / con la guía desplegada tiene que ser más alta que la pantalla para poder scrollear",
-    ).toBeGreaterThan(fit.innerHeight);
-    await appWindow!.evaluate(() => window.scrollTo(0, 0));
-    expect(await appWindow!.evaluate(() => window.scrollY)).toBe(0);
+      "precondición: la grilla tiene que ser más alta que su caja para poder scrollear",
+    ).toBeGreaterThan(fit.clientHeight);
+    // Clicking the block scrolled it into view: start the wheel from the top.
+    await grid.evaluate((el) => el.scrollTo({ top: 0 }));
+    expect(await grid.evaluate((el) => el.scrollTop)).toBe(0);
 
-    const box = await iframe.boundingBox();
+    const box = await grid.boundingBox();
     expect(box).not.toBeNull();
     await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
     await page.mouse.wheel(0, 400);
 
-    await expect.poll(() => appWindow!.evaluate(() => window.scrollY)).toBeGreaterThan(0);
-    // The page around the phone does not move.
+    await expect.poll(() => grid.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+    // Neither the app's document nor the page around the phone moves.
+    expect(await appWindow!.evaluate(() => window.scrollY)).toBe(0);
     expect(await page.evaluate(() => window.scrollY)).toBe(0);
   });
 });

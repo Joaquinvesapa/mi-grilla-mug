@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import { formAlert, signUp, submitLogin, TEST_PASSWORD, uniqueEmail } from "./auth";
+import { gridRegion, openMenu, tapLogout } from "./grid";
 
 const INVALID_CREDENTIALS = "Email o contraseña incorrectos";
 const LOGIN_LOCKED =
@@ -8,8 +9,24 @@ const LOGIN_LOCKED =
 const SESSION_DAYS = 30;
 const TAPPABLE = 'a[href], button, [role="button"], summary, input, select, textarea';
 
-function logoutButton(page: Page) {
-  return page.getByRole("button", { name: "Cerrar sesión" });
+/** The greeting and "Cerrar sesión" live in the menu sheet: it opens it to check both. */
+async function expectSignedInAs(page: Page, name: string) {
+  const sheet = await openMenu(page);
+  await expect(sheet.getByText(`Hola, ${name}`)).toBeVisible();
+  await expect(sheet.getByRole("button", { name: "Cerrar sesión" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+}
+
+/**
+ * Nothing of the protected screen is on the page. Vaul renders the menu only once it is open, so
+ * "Hola," or "Cerrar sesión" are never in the DOM with the menu closed, signed in or not: the
+ * check looks for what `/` always renders with a session — the grid and its show blocks.
+ */
+async function expectNoProtectedScreen(page: Page) {
+  await expect(gridRegion(page)).toHaveCount(0);
+  await expect(page.locator("[data-show-id]")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Menú", exact: true })).toHaveCount(0);
 }
 
 test.describe("registro", () => {
@@ -19,8 +36,11 @@ test.describe("registro", () => {
     const account = await signUp(page, testInfo);
 
     await expect(page).toHaveURL("/");
-    await expect(page.getByText(`Hola, ${account.name}`)).toBeVisible();
-    await expect(logoutButton(page)).toBeVisible();
+    await expect(gridRegion(page)).toBeVisible();
+    // The witness the negative checks below rely on: the server-rendered `/` carries the blocks.
+    const rendered = await page.request.get("/", { maxRedirects: 0 });
+    expect(await rendered.text()).toContain("data-show-id");
+    await expectSignedInAs(page, account.name);
   });
 
   test("test-e2e-register-duplicate-rejected: el mismo email con otras mayúsculas es rechazado (AC-02)", async ({
@@ -65,13 +85,13 @@ test.describe("inicio y cierre de sesión", () => {
     page,
   }, testInfo) => {
     const account = await signUp(page, testInfo);
-    await logoutButton(page).click();
+    await tapLogout(page);
     await expect(page).toHaveURL("/login");
 
     await submitLogin(page, account.email, account.password);
 
     await expect(page).toHaveURL("/");
-    await expect(page.getByText(`Hola, ${account.name}`)).toBeVisible();
+    await expectSignedInAs(page, account.name);
   });
 
   test("test-e2e-login-invalid-identical: un email inexistente y una contraseña incorrecta muestran el mismo texto (AC-07, NFR-04)", async ({
@@ -100,7 +120,7 @@ test.describe("inicio y cierre de sesión", () => {
     context,
   }, testInfo) => {
     const account = await signUp(page, testInfo);
-    await logoutButton(page).click();
+    await tapLogout(page);
     await expect(page).toHaveURL("/login");
     await submitLogin(page, account.email, account.password);
     await expect(page).toHaveURL("/");
@@ -108,12 +128,12 @@ test.describe("inicio y cierre de sesión", () => {
 
     await page.reload();
     await expect(page).toHaveURL("/");
-    await expect(page.getByText(`Hola, ${account.name}`)).toBeVisible();
+    await expectSignedInAs(page, account.name);
 
     const other = await context.newPage();
     await other.goto("/");
     await expect(other).toHaveURL("/");
-    await expect(other.getByText(`Hola, ${account.name}`)).toBeVisible();
+    await expectSignedInAs(other, account.name);
 
     const session = (await context.cookies()).find((cookie) =>
       cookie.name.endsWith("session_token"),
@@ -131,20 +151,18 @@ test.describe("inicio y cierre de sesión", () => {
   }, testInfo) => {
     await signUp(page, testInfo);
 
-    await logoutButton(page).click();
+    await tapLogout(page);
     await expect(page).toHaveURL("/login");
 
     // Back to the history entry of the protected screen (`/`, pushed by the sign-up redirect): it
     // has to end on /login without showing it again (R-17).
     await page.goBack();
     await expect(page).toHaveURL("/login");
-    await expect(page.getByText(/Hola,/)).toHaveCount(0);
-    await expect(logoutButton(page)).toHaveCount(0);
+    await expectNoProtectedScreen(page);
 
     await page.goto("/");
     await expect(page).toHaveURL("/login");
-    await expect(page.getByText(/Hola,/)).toHaveCount(0);
-    await expect(logoutButton(page)).toHaveCount(0);
+    await expectNoProtectedScreen(page);
   });
 
   test("test-e2e-protected-unauthorized: sin sesión, o con una cookie inventada, / redirige a /login (AC-11)", async ({
@@ -153,17 +171,20 @@ test.describe("inicio y cierre de sesión", () => {
     request,
     baseURL,
   }) => {
+    // What `/` renders with a session, server side and with the menu closed, is the grid: its show
+    // blocks carry `data-show-id`. ("Cerrar sesión" is not a witness: Vaul renders it only once the
+    // menu is open.)
     // The proxy answers before rendering anything: a bare 307, with no HTML document. (The page's own
     // `redirect("/login")` is a 307 too, but it comes with a rendered HTML document.)
     const direct = await request.get("/", { maxRedirects: 0 });
     expect(direct.status()).toBe(307);
     expect(new URL(direct.headers()["location"] ?? "", baseURL).pathname).toBe("/login");
     expect(direct.headers()["content-type"], "el 307 sin cookie no es del proxy").toBeUndefined();
-    expect(await direct.text()).not.toContain("Cerrar sesión");
+    expect(await direct.text()).not.toContain("data-show-id");
 
     await page.goto("/");
     await expect(page).toHaveURL("/login");
-    expect(await page.content()).not.toContain("Cerrar sesión");
+    expect(await page.content()).not.toContain("data-show-id");
 
     // A cookie with the right name gets past the proxy: the page itself verifies it, and its
     // redirect comes with a rendered document. If the cookie's name ever changes, the proxy
@@ -178,12 +199,12 @@ test.describe("inicio y cierre de sesión", () => {
       pastProxy.headers()["content-type"],
       "el proxy no dejó pasar la cookie inventada",
     ).toMatch(/^text\/html/);
-    expect(await pastProxy.text()).not.toContain("Cerrar sesión");
+    expect(await pastProxy.text()).not.toContain("data-show-id");
     await context.addCookies([{ ...forged, url: baseURL! }]);
     await page.goto("/");
     await expect(page).toHaveURL("/login");
-    expect(await page.content()).not.toContain("Cerrar sesión");
-    await expect(page.getByText(/Hola,/)).toHaveCount(0);
+    expect(await page.content()).not.toContain("data-show-id");
+    await expectNoProtectedScreen(page);
   });
 
   test("test-e2e-lockout-rejected: después de 5 contraseñas incorrectas, la correcta es rechazada con el aviso de bloqueo (AC-12)", async ({
