@@ -97,3 +97,11 @@ decir que se mostró al usuario sin pedirle aprobación previa; cualquier objeci
 - Límite conocido, fuera de NFR-04: en los shows de 20 minutos (bloques de 44 px, AC-28), nombre y
   horario no entran completos; AC-28 solo exige la altura mínima. — orquestador — 2026-11-17 —
   Block 3
+
+## Cierre de CODE
+
+- SAST: `picomatch` ≤ 4.0.7 (GHSA-fc5q-39xc-vjpf, High, sin versión parcheada) llega solo por
+  devDependencies (`shadcn` 4.23.0 y `vitest`/`vite`); `pnpm audit --prod` da 0. Se acepta como
+  excepción dev-only, registrada a la vista en `docs/daw/security/sast-FEAT-003a.md` (no como
+  supresión, que el catálogo no permite para un High), con revisión en cada cierre de CODE y a más
+  tardar el 2027-03-17. — usuario — 2026-11-17 — cierre de CODE
