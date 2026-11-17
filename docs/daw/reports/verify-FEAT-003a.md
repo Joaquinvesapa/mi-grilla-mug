@@ -27,6 +27,13 @@ integración (fuera del `include`).
 La evidencia TDD por bloque (tests rojos por aserción antes de implementar, y verdes después) quedó
 registrada por las revisiones de CODE en `.daw-work/review-block-{1..4}.md`.
 
+## Evidencia manual (iPhone real)
+
+Probado por el usuario en su iPhone el 2026-11-17, con cuentas nuevas (la base local no tenía
+usuarios: los borra el setup de integración) sobre `pnpm build && pnpm start` por HTTPS. Confirmado
+por el usuario, sin capturas adjuntas: "funciona todo bien". Cubre la verificación final de la spec:
+la grilla abre en el viernes, se marcan y guardan shows, y la marca de choque se ve.
+
 ## Acceptance criteria
 - ✅ AC-01 — `data/schedule.json`, `seedSchedule`, `getSchedule`, `ScheduleGrid`; `test-schedule-data-matches-source`, `test-seed-idempotent`, `test-e2e-grid-all-shows`
 - ✅ AC-02 — `ScheduleGrid` (orden por `position`), `hourMarks`; `test-grid-render`, `test-layout-axis-after-midnight`, `test-e2e-grid-columns`
@@ -84,6 +91,5 @@ Desvíos de la spec registrados en `docs/daw/specs/decisions-FEAT-003a.md`.
 
 ## Para CLOSEOUT
 - Que la CI quede en verde en el PR con los tres jobs (`quality`, `integration`, `e2e`), incluido el paso `pnpm db:seed`.
-- Mirarlo a mano en un iPhone (verificación final de la spec): abre en el viernes, se marca, se guarda y se ve la marca de choque.
 
 Result: PASSED
