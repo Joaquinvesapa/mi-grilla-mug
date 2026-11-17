@@ -1,6 +1,6 @@
 // Mi Grilla — esquema de Prisma.
-// FEAT-001 solo declara el generador y el datasource: no hay modelos. La primera migración llega
-// con el PRD 02. La URL de la base vive en prisma.config.ts (Prisma 7).
+// La URL de la base vive en prisma.config.ts (Prisma 7). Los campos van en camelCase y las tablas y
+// columnas en snake_case (@map / @@map).
 
 generator client {
   provider = "prisma-client"
@@ -9,4 +9,85 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+// Las cuatro tablas que exige Better Auth (ADR-003). Los ids los genera Better Auth.
+
+model User {
+  id            String    @id
+  name          String
+  // Siempre en minúsculas: Better Auth lo normaliza y las reglas de cuenta también (FR-02).
+  email         String    @unique
+  emailVerified Boolean   @default(false) @map("email_verified")
+  image         String?
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  sessions      Session[]
+  accounts      Account[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String    @map("account_id")
+  providerId            String    @map("provider_id")
+  userId                String    @map("user_id")
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Hash scrypt `sal:clave` de Better Auth; nunca la contraseña en claro (NFR-01).
+  password              String?
+  // Sin uso en el MVP (solo email y contraseña), pero Better Auth los exige.
+  accessToken           String?   @map("access_token")
+  refreshToken          String?   @map("refresh_token")
+  idToken               String?   @map("id_token")
+  accessTokenExpiresAt  DateTime? @map("access_token_expires_at")
+  refreshTokenExpiresAt DateTime? @map("refresh_token_expires_at")
+  scope                 String?
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@map("accounts")
+}
+
+// Better Auth la exige aunque el MVP no la use (no hay verificación por email).
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime @map("expires_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@index([identifier])
+  @@map("verifications")
+}
+
+// Tabla propia: bloqueo por email tras 5 fallos en 15 minutos (FR-10). Una fila por email
+// normalizado, exista o no la cuenta.
+model LoginThrottle {
+  email           String    @id
+  // Intentos reservados en la ventana: en vuelo o fallidos.
+  attempts        Int       @default(0)
+  windowStartedAt DateTime  @map("window_started_at")
+  lockedUntil     DateTime? @map("locked_until")
+
+  // Para la purga de ventanas vencidas (R-12).
+  @@index([windowStartedAt])
+  @@map("login_throttles")
 }

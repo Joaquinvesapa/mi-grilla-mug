@@ -1,6 +1,11 @@
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 
+import { logoutAction } from "@/app/auth-actions";
 import { InstallGuide } from "@/components/install-guide";
+import { Button } from "@/components/ui/button";
+import { getAccounts } from "@/server/accounts";
 
 type Feature = {
   id: string;
@@ -30,9 +35,30 @@ const FEATURES: Feature[] = [
   },
 ];
 
-export default function HomePage() {
+// Needs a session (FR-09). The proxy already sent away requests without a cookie; here the session
+// is verified for real, so a made-up, expired or closed-session cookie ends on /login too, before
+// anything protected renders (R-15). Dynamic: it reads the request's cookies, and the service
+// worker never caches it (R-17). The headers are read before getAccounts(), so nothing creates
+// Better Auth while `next build` prerenders.
+export default async function HomePage() {
+  const requestHeaders = await headers();
+  const user = await getAccounts().getCurrentUser(requestHeaders);
+  if (!user) {
+    redirect("/login");
+  }
+
   return (
     <main className="mx-auto flex w-full max-w-md flex-col gap-6 px-5 pt-10 pb-12">
+      <div className="flex items-center justify-between gap-3">
+        <p className="min-w-0 truncate text-muted-foreground">Hola, {user.name}</p>
+        {/* A POST through a Server Action, with Next's origin check: a GET never signs out (R-06). */}
+        <form action={logoutAction} className="shrink-0">
+          <Button type="submit" variant="outline">
+            Cerrar sesión
+          </Button>
+        </form>
+      </div>
+
       <header className="flex flex-col gap-3 pb-2">
         <h1 className="text-5xl font-semibold tracking-tight">
           Mi <span className="text-primary">Grilla</span>

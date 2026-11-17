@@ -343,6 +343,39 @@ describe("CI workflow — jobs (AC-08)", () => {
     expect(report!.with?.path).toBe("playwright-report");
   });
 
+  it("test-workflow-auth-env: integration y e2e tienen BETTER_AUTH_SECRET y BETTER_AUTH_URL, quality ninguna, y e2e migra antes de correr Playwright", () => {
+    const jobs = jobsOf(readWorkflow());
+    const AUTH_URLS: Record<string, string> = {
+      integration: "http://localhost:3000",
+      e2e: "http://127.0.0.1:3100",
+    };
+
+    for (const [name, url] of Object.entries(AUTH_URLS)) {
+      const env = jobs[name]?.env ?? {};
+      const secret = env.BETTER_AUTH_SECRET;
+      expect(typeof secret, `${name}: falta BETTER_AUTH_SECRET`).toBe("string");
+      // Better Auth (and readAuthEnv) refuse a secret under 32 characters.
+      expect(String(secret).length, `${name}: BETTER_AUTH_SECRET corto`).toBeGreaterThanOrEqual(32);
+      // A throwaway value written in the file, never a repository secret: forks run without them.
+      expect(String(secret), name).not.toMatch(/\$\{\{/);
+      expect(env.BETTER_AUTH_URL, `${name}: BETTER_AUTH_URL`).toBe(url);
+    }
+
+    // On purpose: quality never needs the secret, so it must not carry one.
+    const quality = JSON.stringify(jobs.quality ?? {});
+    expect(quality, "quality no debería tener BETTER_AUTH_SECRET").not.toContain(
+      "BETTER_AUTH_SECRET",
+    );
+    expect(quality, "quality no debería tener BETTER_AUTH_URL").not.toContain("BETTER_AUTH_URL");
+
+    const e2eCommands = commandsOf(jobs.e2e ?? {});
+    const migrate = e2eCommands.indexOf("pnpm db:migrate");
+    expect(migrate, "e2e no corre pnpm db:migrate").toBeGreaterThanOrEqual(0);
+    expect(migrate, "e2e migra después de pnpm test:e2e").toBeLessThan(
+      e2eCommands.indexOf("pnpm test:e2e"),
+    );
+  });
+
   it("cada job usa Node de .nvmrc y la cache de pnpm", () => {
     for (const [name, job] of Object.entries(jobsOf(readWorkflow()))) {
       const setupNode = (job.steps ?? []).find((step) =>

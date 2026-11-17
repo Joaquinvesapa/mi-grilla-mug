@@ -3,6 +3,8 @@ import type { AddressInfo } from "node:net";
 
 import { expect, test, type Page } from "@playwright/test";
 
+import { signUp } from "./auth";
+
 // Runs only in the `desktop` project (1280×800): /demo is the desktop showcase (playwright.config).
 
 function appFrame(page: Page) {
@@ -20,9 +22,13 @@ test.describe("/demo con marco de iPhone", () => {
     const iframe = page.locator('iframe[title="Mi Grilla"]');
     await expect(iframe).toBeVisible();
     await expect(iframe).toHaveAttribute("src", "/");
-    await expect(
-      appFrame(page).getByRole("heading", { level: 1, name: "Mi Grilla" }),
-    ).toBeVisible();
+    // Without a session, `/` sends the frame to /login: the brand and the install guide live there.
+    const app = appFrame(page);
+    await expect(app.getByRole("heading", { level: 1, name: "Mi Grilla" })).toBeVisible();
+    await expect(app.getByRole("button", { name: "Cómo instalarla" })).toBeVisible();
+    const appWindow = await (await iframe.elementHandle()).contentFrame();
+    expect(appWindow, "no se encontró el frame de la app").not.toBeNull();
+    expect(new URL(appWindow!.url()).pathname).toBe("/login");
 
     const metrics = await page.evaluate(() => ({
       scrollHeight: document.documentElement.scrollHeight,
@@ -50,10 +56,18 @@ test.describe("/demo con marco de iPhone", () => {
 
   // The wheel half relies on `/` being taller than the 852 px screen once the install guide is
   // open: with nothing to scroll, the wheel cannot move it. The precondition is asserted below, so
-  // a shorter home fails as that and not as a /demo bug.
-  test("la app del marco responde a clicks y al scroll con la rueda (AC-07)", async ({ page }) => {
+  // a shorter home fails as that and not as a /demo bug. `/` needs a session: the test signs up
+  // inside the frame first.
+  test("la app del marco responde a clicks y al scroll con la rueda (AC-07)", async ({
+    page,
+  }, testInfo) => {
     await page.goto("/demo");
     const app = appFrame(page);
+    const iframe = page.locator('iframe[title="Mi Grilla"]');
+    const appWindow = await (await iframe.elementHandle()).contentFrame();
+    expect(appWindow, "no se encontró el frame de la app").not.toBeNull();
+    await signUp(appWindow!, testInfo);
+    await expect(app.getByText(/^Hola, /)).toBeVisible();
 
     const trigger = app.getByRole("button", { name: "Cómo instalarla" });
     await expect(trigger).toHaveAttribute("aria-expanded", "false");
@@ -61,9 +75,6 @@ test.describe("/demo con marco de iPhone", () => {
     await expect(trigger).toHaveAttribute("aria-expanded", "true");
     await expect(app.getByRole("listitem")).toHaveCount(3);
 
-    const iframe = page.locator('iframe[title="Mi Grilla"]');
-    const appWindow = await (await iframe.elementHandle()).contentFrame();
-    expect(appWindow, "no se encontró el frame de la app").not.toBeNull();
     const fit = await appWindow!.evaluate(() => ({
       scrollHeight: document.documentElement.scrollHeight,
       innerHeight: window.innerHeight,
@@ -87,10 +98,11 @@ test.describe("/demo con marco de iPhone", () => {
 });
 
 test.describe("clickjacking (R-08)", () => {
-  test("/ y /demo responden con X-Frame-Options SAMEORIGIN y frame-ancestors 'self'", async ({
+  test("/, /login, /register y /demo responden con X-Frame-Options SAMEORIGIN y frame-ancestors 'self'", async ({
     request,
   }) => {
-    for (const path of ["/", "/demo"]) {
+    // Without a session `/` ends on /login: the headers checked are the page's that is shown.
+    for (const path of ["/", "/login", "/register", "/demo"]) {
       const response = await request.get(path);
       expect(response.status()).toBe(200);
       const headers = response.headers();

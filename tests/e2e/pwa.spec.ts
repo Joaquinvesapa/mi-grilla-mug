@@ -1,9 +1,14 @@
 import { expect, test, type APIResponse, type Page } from "@playwright/test";
 
+import { signUp } from "./auth";
+
 const BASE_RGB = "rgb(25, 23, 36)";
 const SW_URL = "/serwist/sw.js";
-// A URL other than / for the navigation that fails offline: it has to survive the retry.
-const FAILED_URL = "/?desde=sin-conexion";
+// A URL other than / for the navigation that fails offline: it has to survive the retry. Public,
+// so that coming back online lands on a page and not on the redirect `/` answers without a session.
+const FAILED_URL = "/login?desde=sin-conexion";
+// The pages that depend on the session: no cache may keep a copy of them (R-17).
+const SESSION_PAGES = ["/", "/login", "/register"];
 const TAPPABLE = 'a[href], button, [role="button"], summary, input, select, textarea';
 
 /** Width and height of a PNG, read from its IHDR chunk. */
@@ -18,9 +23,12 @@ async function expectPng(response: APIResponse, side: number) {
   expect(pngSize(await response.body())).toEqual({ width: side, height: side });
 }
 
-/** Opens `/` and waits until the service worker is active and controls the page. */
+/**
+ * Opens `/login` (public: without a session `/` redirects there anyway) and waits until the service
+ * worker is active and controls the page.
+ */
 async function openControlledHome(page: Page): Promise<ServiceWorkerRegistrationInfo> {
-  await page.goto("/");
+  await page.goto("/login");
   await expect
     .poll(
       () =>
@@ -219,6 +227,31 @@ test.describe("service worker (FR-02, FR-03)", () => {
   });
 });
 
+test.describe("sesión y caché (R-17)", () => {
+  test("test-e2e-no-cache-auth-pages: después de navegar con sesión, ninguna caché guarda /, /login ni /register", async ({
+    page,
+    context,
+  }, testInfo) => {
+    await openControlledHome(page);
+    await signUp(page, testInfo);
+    // Every session page, through the worker that controls the page, signed in.
+    await page.reload();
+    for (const path of SESSION_PAGES) {
+      await page.goto(path);
+    }
+    await page.goto("/");
+    expect(
+      (await context.cookies()).some((cookie) => cookie.name.endsWith("session_token")),
+      "precondición: la navegación fue con sesión",
+    ).toBe(true);
+
+    const cached = (await readCachedUrls(page)).map((url) => new URL(url).pathname);
+    // Guard: the caches are readable and hold the precache, so an empty result below means something.
+    expect(cached.length, "el precache está vacío").toBeGreaterThan(0);
+    expect(cached.filter((path) => SESSION_PAGES.includes(path))).toEqual([]);
+  });
+});
+
 test.describe("rutas de la PWA", () => {
   test("sirve el service worker con Service-Worker-Allowed: / y /~offline en el precache", async ({
     request,
@@ -256,7 +289,8 @@ test.describe("rutas de la PWA", () => {
     page,
     request,
   }) => {
-    await page.goto("/");
+    // Public: the head is the root layout's, the same on every page.
+    await page.goto("/login");
 
     const manifestLinks = page.locator('link[rel="manifest"]');
     await expect(manifestLinks).toHaveCount(1);

@@ -73,6 +73,10 @@ jobs:
     env:
       # Loopback del runner: sin TLS, como en local (R-04).
       DATABASE_URL: postgresql://mi_grilla:ci-only-password@127.0.0.1:5432/mi_grilla
+      # Secreto de prueba descartable, NO es un secreto: firma cookies de sesiones que solo existen
+      # en la base efímera de este job. Nunca se usa fuera de la CI (R-13).
+      BETTER_AUTH_SECRET: ci-only-better-auth-secret-not-a-real-one
+      BETTER_AUTH_URL: http://localhost:3000
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -107,6 +111,10 @@ jobs:
           --health-retries 15
     env:
       DATABASE_URL: postgresql://mi_grilla:ci-only-password@127.0.0.1:5432/mi_grilla
+      # Secreto de prueba descartable, NO es un secreto (ver el job integration).
+      BETTER_AUTH_SECRET: ci-only-better-auth-secret-not-a-real-one
+      # La URL que sirve `next start` en los E2E (playwright.config.ts).
+      BETTER_AUTH_URL: http://127.0.0.1:3100
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -127,6 +135,8 @@ jobs:
           key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
       # Con la cache, solo instala las bibliotecas del sistema; sin ella, también los navegadores.
       - run: pnpm exec playwright install --with-deps webkit chromium
+      # Las cuentas (FEAT-002) viven en la base: el esquema tiene que estar antes del primer registro.
+      - run: pnpm db:migrate
       # Build de producción + `next start` en el puerto 3100 (ADR-002), los 4 proyectos.
       - run: pnpm test:e2e
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

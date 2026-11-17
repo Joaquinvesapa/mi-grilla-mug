@@ -29,6 +29,16 @@ export default defineConfig({
           environment: "node",
           include: ["tests/integration/**/*.test.{ts,tsx}"],
           setupFiles: ["tests/integration/setup.ts"],
+          // Every file shares one database and empties its tables before each test: one file at a
+          // time, or one file's cleanup wipes the rows another is asserting on.
+          fileParallelism: false,
+          server: {
+            deps: {
+              // Inlined so `vi.mock("next/headers")` reaches the dynamic import inside Better Auth's
+              // nextCookies() plugin; externalized, it would load the real module.
+              inline: ["better-auth"],
+            },
+          },
         },
       },
     ],
