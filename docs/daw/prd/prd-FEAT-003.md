@@ -12,8 +12,8 @@
 
 | Sub-ticket | Title | PRD | ACs | Dependencies | Status |
 |---|---|---|---|---|---|
-| FEAT-003a | Grilla y mi selección con conexión | prd-FEAT-003a.md | AC-01, AC-02, AC-03, AC-04, AC-05, AC-06, AC-07, AC-08, AC-09, AC-10, AC-11, AC-12, AC-13, AC-14, AC-15, AC-16, AC-17, AC-18, AC-19, AC-28 | none | active |
-| FEAT-003b | Grilla y mi selección sin conexión | prd-FEAT-003b.md | AC-20, AC-21, AC-22, AC-23, AC-24, AC-25, AC-26, AC-27 | depends on a | pending |
+| FEAT-003a | Grilla y mi selección con conexión | prd-FEAT-003a.md | AC-01, AC-02, AC-03, AC-04, AC-05, AC-06, AC-07, AC-08, AC-09, AC-10, AC-11, AC-12, AC-13, AC-14, AC-15, AC-16, AC-17, AC-18, AC-19, AC-28 | none | done — PR #4 mergeado a main (aba2328) |
+| FEAT-003b | Grilla y mi selección sin conexión | prd-FEAT-003b.md | AC-20, AC-21, AC-22, AC-23, AC-24, AC-25, AC-26, AC-27 | depends on a | active |
 
 Los 28 criterios de aceptación son los del PRD de DISCOVERY (`prd-DISC-001-03.md`), sin criterios
 agregados en DEFINE.
