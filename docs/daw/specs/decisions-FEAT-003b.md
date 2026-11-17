@@ -44,3 +44,19 @@ decir que se mostró al usuario sin pedirle aprobación previa; cualquier objeci
   vea igual que antes. — orquestador — 2026-11-17 — Block 3
 - En modo grilla, el título de la pestaña sigue siendo "Sin conexión · Mi Grilla" (`metadata`
   estática de `/~offline`). — orquestador — 2026-11-17 — Block 3
+
+## Block 4 — E2E sin conexión
+
+- En WebKit, `page.route`/`context.route` no interceptan el POST de una Server Action cuando el
+  service worker controla la página; para AC-24 y AC-27 la falla se inyecta haciendo que el
+  `fetch` de la página rechace esos POST (`TypeError("Load failed")`, lo que hace Safari sin red).
+  En Chromium se usa `page.route` + `abort`, como dice la spec. — orquestador — 2026-11-17 — Block 4
+- `tests/e2e/pwa.spec.ts` cambia solo para usar el helper compartido `waitForServiceWorker` de
+  `tests/e2e/pwa.ts` (código idéntico movido); sigue verde en los tres proyectos mobile. —
+  orquestador — 2026-11-17 — Block 4
+- NFR-01 en el E2E se mide con `request.timing()` (de `requestStart` a `responseEnd`); si el
+  navegador no da el timing, solo se anota (el p95 lo cubre `test-selection-save-p95`). —
+  orquestador — 2026-11-17 — Block 4
+- Como el bloque es solo E2E sobre código de los bloques 2 y 3, la evidencia de que cada test
+  detecta lo que promete es por mutación del código de producción (restaurado después). —
+  orquestador — 2026-11-17 — Block 4

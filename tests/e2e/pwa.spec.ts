@@ -1,6 +1,7 @@
 import { expect, test, type APIResponse, type Page } from "@playwright/test";
 
 import { signUp } from "./auth";
+import { waitForServiceWorker } from "./pwa";
 
 const BASE_RGB = "rgb(25, 23, 36)";
 const SW_URL = "/serwist/sw.js";
@@ -29,22 +30,7 @@ async function expectPng(response: APIResponse, side: number) {
  */
 async function openControlledHome(page: Page): Promise<ServiceWorkerRegistrationInfo> {
   await page.goto("/login");
-  await expect
-    .poll(
-      () =>
-        page.evaluate(async () => {
-          const registration = await navigator.serviceWorker.getRegistration();
-          return registration?.active?.state ?? "sin service worker activo";
-        }),
-      { message: "el service worker no llegó a activarse", timeout: 20_000 },
-    )
-    .toBe("activated");
-  await expect
-    .poll(() => page.evaluate(() => navigator.serviceWorker.controller?.scriptURL ?? null), {
-      message: "la página no quedó controlada por el service worker",
-      timeout: 10_000,
-    })
-    .toMatch(/\/serwist\/sw\.js$/);
+  await waitForServiceWorker(page);
   return page.evaluate(async () => {
     const registration = await navigator.serviceWorker.getRegistration();
     return {
