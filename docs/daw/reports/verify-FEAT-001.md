@@ -91,4 +91,74 @@ Los desvíos de la spec están aprobados y registrados en `docs/daw/specs/decisi
   aprobación).
 - HEAD `ca3b77f` todavía no está en el remoto (`origin` en `36f09fd`): el PR va a correr sobre él.
 
+Resultado de la ronda 1 según el validador: F-VER-06 sin cumplir, porque los "Required tests" de la
+spec no tenían nombres legibles. Vuelta correctiva VERIFY → CODE → PLAN (2026-11-17, decidida por
+el usuario): la spec nombra ahora cada test con un identificador `test-…` y se alineó con los desvíos
+aprobados (`98d9bcb`); re-cierre de CODE con el mismo código de `ca3b77f`, suite 194/194 y SAST
+re-validados.
+
+Result: PASSED
+
+# Verification FEAT-001 — ronda 2
+
+Verificación de la trazabilidad de los 41 tests que la spec corregida nombra, por
+`daw-module-verifier`. El código no cambió desde `ca3b77f` (`git diff --stat ca3b77f HEAD -- src
+tests package.json` vacío); `pnpm test` 98/98 reconfirmado; los E2E se apoyan en la corrida de la
+ronda 1 (87/87) y en el re-cierre de CODE (87/87). La evidencia manual en iPhone de la ronda 1 sigue
+valiendo.
+
+## Required tests de la spec
+- ✅ test-utils-cn-merge — `tests/unit/lib/utils.test.ts:6`
+- ✅ test-utils-cn-invalid — `tests/unit/lib/utils.test.ts:14`
+- ✅ test-quality-commands — lint, format:check, typecheck, test y build con exit 0 (ronda 1 y re-cierre)
+- ✅ test-layer-rule — oxlint rechaza `@prisma/client` desde `src/components/` (archivo temporal, ronda 1)
+- ✅ test-coverage-floor — un piso forzado por encima de la cobertura real hace terminar `pnpm test` con código 1 (temporal, ronda 1)
+- ✅ test-install-guide-toggle — `tests/unit/components/install-guide.test.tsx:22` y `:36`
+- ✅ test-pressable-state — `tests/unit/components/pressable.test.ts:20` y `:39`
+- ✅ test-home-identity — `tests/e2e/home.spec.ts:36`
+- ✅ test-home-widths — `tests/e2e/home.spec.ts:98` (360 y 430 px)
+- ✅ test-home-safe-area — `tests/e2e/home.spec.ts:115`
+- ✅ test-home-dvh — `tests/e2e/home.spec.ts:135`
+- ✅ test-home-tap-highlight — `tests/e2e/home.spec.ts:165`
+- ✅ test-home-no-select — `tests/e2e/home.spec.ts:196`
+- ✅ test-home-press-latency — `tests/e2e/home.spec.ts:225`
+- ✅ test-home-load-4g — `tests/e2e/performance.spec.ts:42` y `:54`
+- ✅ test-health-up — `tests/unit/server/health.test.ts:33`
+- ✅ test-health-down — `tests/unit/server/health.test.ts:40`
+- ✅ test-health-timeout — `tests/unit/server/health.test.ts:63`
+- ✅ test-health-memo — `tests/unit/server/health.test.ts:94`
+- ✅ test-database-url — `tests/unit/server/database-url.test.ts:37`, `:53`, `:106` (y `:29`, `:44`, `:59`, `:67`, `:113`, `:120`)
+- ✅ test-health-integration-up — `tests/integration/health.test.ts:53`
+- ✅ test-health-integration-down — `tests/integration/health.test.ts:67`
+- ✅ test-health-integration-405 — `tests/integration/health.test.ts:91`
+- ✅ test-manifest — `tests/unit/app/manifest.test.ts:8`, `:25`, `:55`
+- ✅ test-sw-scope — `tests/e2e/pwa.spec.ts:65`
+- ✅ test-sw-offline — `tests/e2e/pwa.spec.ts:72`
+- ✅ test-icons-404 — `tests/e2e/pwa.spec.ts:247`
+- ✅ test-serwist-404 — `tests/e2e/pwa.spec.ts:234`
+- ✅ test-sw-no-api-cache — `tests/e2e/pwa.spec.ts:195`
+- ✅ test-frame-scale — `tests/unit/components/iphone-frame.test.tsx:14` y `:23`
+- ✅ test-frame-scale-invalid — `tests/unit/components/iphone-frame.test.tsx:31` y `:120`
+- ✅ test-demo-fits — `tests/e2e/demo.spec.ts:13`
+- ✅ test-demo-interactive — `tests/e2e/demo.spec.ts:54`
+- ✅ test-frame-headers — `tests/e2e/demo.spec.ts:90` y `:131`
+- ✅ test-ci-triggers — `tests/unit/ci/workflow.test.ts:139` y `:150`
+- ✅ test-ci-jobs — `tests/unit/ci/workflow.test.ts:248`, `:257`, `:296`, `:311`
+- ✅ test-ci-timeouts — `tests/unit/ci/workflow.test.ts:371`
+- ✅ test-ci-pinned-actions — `tests/unit/ci/workflow.test.ts:391`
+- ⏸ test-ci-pr-green — diferido a CLOSEOUT por decisión del usuario (corrida del PR del ticket)
+- ⏸ test-ci-pr-red — diferido a CLOSEOUT por decisión del usuario (PRs descartables, con su OK)
+- ✅ test-ci-no-pr-no-run — `gh run list --branch feat/FEAT-001-plataforma-base` vacío, repetido en la ronda 2
+
+Total: 39 ✅ y 2 ⏸ diferidos con aprobación (test-ci-pr-green, test-ci-pr-red); ninguno falta.
+
+La spec corregida coincide con el código: `iphone-frame.test.tsx`, `ResizeObserver` sobre el área
+(`src/components/iphone-frame.tsx:36-45`), la fila de NFR-01 (`home.spec.ts:98`, `pwa.spec.ts:284`),
+`postgres:17.12` (`docker-compose.yml:7`, `ci.yml:59` y `:95`) y Serwist 9.5.15 (`package.json`).
+
+## Warnings de la ronda 2 (no bloquean)
+- ⚠️ La spec (línea 339) todavía justifica la ruta `NetworkOnly` con "en serwist 9.5.14"; la versión
+  fijada es 9.5.15 y `test-sw-offline` pasó con ella. Texto a corregir en la próxima revisión de la
+  spec.
+
 Result: PASSED
