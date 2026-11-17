@@ -125,24 +125,36 @@ test.describe("service worker (FR-02, FR-03)", () => {
   test('"Reintentar" recarga la URL que falló, no la manda a /', async ({ page, context }) => {
     await openControlledHome(page);
     // Swallow the `online` event, so that the reload under test is the button's and not the
-    // automatic one. Installed before the page's own scripts, so it is the first listener to run.
+    // automatic one, and count it. Installed before the page's own scripts, so it is the first
+    // listener to run.
     await page.addInitScript(() =>
-      window.addEventListener("online", (event) => event.stopImmediatePropagation(), {
-        capture: true,
-      }),
+      window.addEventListener(
+        "online",
+        (event) => {
+          event.stopImmediatePropagation();
+          const counter = window as unknown as { __onlineSwallowed?: number };
+          counter.__onlineSwallowed = (counter.__onlineSwallowed ?? 0) + 1;
+        },
+        { capture: true },
+      ),
     );
     await context.setOffline(true);
     await page.goto(FAILED_URL);
     await expect(page.getByRole("heading", { level: 1, name: "Sin conexión" })).toBeVisible();
     const retry = page.getByRole("button", { name: "Reintentar" });
-    // The click needs React's handler: wait until hydration has attached it to the button.
-    await expect
-      .poll(() => retry.evaluate((el) => Object.keys(el).some((key) => key.startsWith("__react"))))
-      .toBe(true);
+    // The click needs React's handler: OfflineRetry marks the button once it has mounted.
+    await expect(retry).toHaveAttribute("data-ready", "true");
     // Mark this document, to tell whether it goes away before the click.
     await page.evaluate(() => Object.assign(window, { __offlineScreen: true }));
     await context.setOffline(false);
-    await page.waitForTimeout(500);
+    // The signal is back once the swallowed `online` event has fired in this document.
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () => (window as unknown as { __onlineSwallowed?: number }).__onlineSwallowed ?? 0,
+        ),
+      )
+      .toBe(1);
     expect(
       await page.evaluate(() => "__offlineScreen" in window),
       "la pantalla se recargó sola antes del clic",

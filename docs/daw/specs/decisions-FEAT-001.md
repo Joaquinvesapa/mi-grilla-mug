@@ -190,3 +190,60 @@ aprobó — fecha — bloque.
   después de `elementHandle()` y el título del test de headers (`:90`) nombra solo `/` aunque
   revisa también `/demo` (cosméticos, para el Block 6); (f) `tests/unit/components/pressable.test.ts`
   (Block 2) sigue usando `createElement` en un `.ts`. — usuario — 2026-11-17 — Block 5
+
+## Block 6 — CI, protección de `main` y documentación
+
+- Se resolvieron en este bloque los pendientes registrados "para antes de que la CI los corra":
+  Block 4 (f) y Block 5 (e). Por eso el bloque toca `src/components/offline-retry.tsx`,
+  `tests/unit/components/offline-retry.test.tsx`, `tests/e2e/pwa.spec.ts` y
+  `tests/e2e/demo.spec.ts`, que no están en los "Files" del Block 6 de la spec. — usuario —
+  2026-11-17 — Block 6
+- `OfflineRetry` pone `data-ready="true"` con `setAttribute` sobre un ref, dentro del mismo effect
+  que engancha el listener de `online`. No usa estado porque oxlint falla con
+  `react(set-state-in-effect)`, y el ref garantiza que la marca aparece con el listener ya activo.
+  Es una marca para el E2E que también viaja en el HTML de producción: no lleva datos y React no la
+  reconcilia. — usuario — 2026-11-17 — Block 6
+- El E2E de "Reintentar" ya no tiene `waitForTimeout(500)`: espera con un poll a que se dispare el
+  evento `online` que el test intercepta, y así prueba que no hay recarga sin una pausa fija. —
+  usuario — 2026-11-17 — Block 6
+- CI: el job `e2e` recibe `DATABASE_URL` pero no corre `db:migrate`, porque la spec no lo pide y
+  FEAT-001 no tiene migraciones; `PRISMA_HIDE_UPDATE_MESSAGE: "1"` va a nivel de workflow (resuelve
+  Block 3 (c)); `persist-credentials: false` en cada checkout; el artefacto `playwright-report` se
+  conserva 7 días; `cancel-in-progress` solo en PRs, para que dos merges seguidos no cancelen la
+  corrida de `main` que verifica AC-09; la cache de navegadores usa como clave la versión de
+  `@playwright/test`, no el lockfile entero. — usuario — 2026-11-17 — Block 6
+- Actions fijadas por SHA del commit (no del objeto tag): checkout v7.0.1, pnpm/action-setup v6.1.1
+  (tag anotado, desreferenciado), setup-node v7.1.0, cache v6.1.0, upload-artifact v7.0.2. `yaml`
+  2.9.1 en dev, versión exacta. — usuario — 2026-11-17 — Block 6
+- Tests más allá de los requeridos en `workflow.test.ts`: `concurrency`, ningún job con más
+  permisos ni `needs`, `setup-node` con `.nvmrc` y cache de pnpm, que cada `pnpm <script>` exista en
+  `package.json`, que cada `uses:` tenga la versión comentada, `persist-credentials: false` y que
+  ningún `run:` interpole `${{ github.event.* }}` (R-09); y que ningún job ni step tenga
+  `continue-on-error` ni `if` (salvo `if: failure()` en el upload), porque un job o step salteado
+  cuenta como aprobado para un check requerido (AC-11). — usuario — 2026-11-17 — Block 6
+- Postgres fijado en `postgres:17.12` (último minor de la 17 en Docker Hub el 2026-11-17) en los
+  dos services de la CI, en `docker-compose.yml` y en `AGENTS.md`, con un test que exige que la CI
+  y compose usen la misma imagen (resuelve Block 3 (b)). La spec dice `postgres:17` y el minor
+  fijado sigue siendo Postgres 17; el volumen local se reutilizó (ya corría la 17.12). La key de
+  la cache de navegadores sale de `devDependencies['@playwright/test']` en `package.json`. —
+  usuario — 2026-11-17 — Block 6
+- README: los comandos van en lista y no en tabla, porque oxfmt rellena las tablas a ancho fijo. —
+  usuario — 2026-11-17 — Block 6
+- Pendientes registrados: (a) el E2E del camino HTTP real de `/api/health` (routing,
+  `force-dynamic`, HEAD) que el Block 3 prometió para el Block 6 no está ni en la spec ni en este
+  bloque: queda pendiente, por decisión del usuario; (b) el job `e2e` no corre `pnpm db:migrate`:
+  agregarlo con el PRD 02, cuando existan migraciones (decisión del usuario); (c) ADR-002 todavía habla de configurar Serwist en
+  `next.config.ts` (Block 4 (d) abierto); (d) `actionlint` no se corrió (no está instalado y el
+  permiso para correrlo con Docker se denegó): la sintaxis del workflow la cubren el test de YAML
+  y la revisión manual, y la confirma la primera corrida en el PR; (e) la duración ≤ 10 min
+  (NFR-04) y el arranque de WebKit en ubuntu-latest solo se confirman en el PR real. — usuario —
+  2026-11-17 — Block 6
+- Pendientes de la ronda 2 (el usuario eligió anotarlos y commitear): (f) el grupo de
+  `concurrency` es por ref: con tres merges seguidos a `main`, GitHub cancela la corrida que espera
+  en el slot "pending" (la del medio) aunque `cancel-in-progress` sea false; se arregla agrupando
+  los push por `github.sha`, y el título del test "en main nunca se cancela" promete más de lo que
+  da; (g) si `@playwright/test` sale de `devDependencies`, el step `playwright-version` escribe
+  `undefined` sin fallar y la key de cache queda fija (el test no lo detecta); (h) el test de
+  concurrency compara el texto exacto de la expresión y un reformateo inocuo lo rompe; (i)
+  `AGENTS.md` nombra `postgres:17.12` sin un test que lo ate a la CI (lo cubre "gana la CI"). —
+  usuario — 2026-11-17 — Block 6

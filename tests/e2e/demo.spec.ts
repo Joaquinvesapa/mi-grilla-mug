@@ -62,7 +62,7 @@ test.describe("/demo con marco de iPhone", () => {
     await expect(app.getByRole("listitem")).toHaveCount(3);
 
     const iframe = page.locator('iframe[title="Mi Grilla"]');
-    const appWindow = await (await iframe.elementHandle())!.contentFrame();
+    const appWindow = await (await iframe.elementHandle()).contentFrame();
     expect(appWindow, "no se encontró el frame de la app").not.toBeNull();
     const fit = await appWindow!.evaluate(() => ({
       scrollHeight: document.documentElement.scrollHeight,
@@ -87,7 +87,7 @@ test.describe("/demo con marco de iPhone", () => {
 });
 
 test.describe("clickjacking (R-08)", () => {
-  test("/ responde con X-Frame-Options SAMEORIGIN y frame-ancestors 'self'", async ({
+  test("/ y /demo responden con X-Frame-Options SAMEORIGIN y frame-ancestors 'self'", async ({
     request,
   }) => {
     for (const path of ["/", "/demo"]) {
@@ -140,7 +140,7 @@ test.describe("clickjacking (R-08)", () => {
       // Control: a frameable page in the same setup does render, so the check below is not vacuous.
       await expect(page.frameLocator("#control").getByText("control listo")).toBeVisible();
 
-      const app = await (await page.locator("#app").elementHandle())!.contentFrame();
+      const app = await (await page.locator("#app").elementHandle()).contentFrame();
       expect(app, "el iframe no tiene frame").not.toBeNull();
       await expect(app!.getByRole("heading", { level: 1, name: "Mi Grilla" })).toHaveCount(0);
       expect(await app!.evaluate(() => document.title)).not.toBe("Mi Grilla");

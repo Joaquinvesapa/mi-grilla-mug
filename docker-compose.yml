@@ -3,7 +3,8 @@
 # El puerto queda atado a 127.0.0.1: la base no se expone a la red (R-04).
 services:
   postgres:
-    image: postgres:17
+    # La misma imagen que los services de .github/workflows/ci.yml.
+    image: postgres:17.12
     restart: unless-stopped
     environment:
       POSTGRES_USER: mi_grilla

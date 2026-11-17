@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { OfflineRetry } from "@/components/offline-retry";
@@ -42,6 +43,19 @@ describe("OfflineRetry", () => {
     unmount();
     window.dispatchEvent(new Event("online"));
 
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it('se marca con data-ready="true" recién al montarse (hidratado y escuchando la señal)', () => {
+    // On the server, before hydration, there is no handler yet: no mark.
+    expect(renderToStaticMarkup(<OfflineRetry onReload={vi.fn()} />)).not.toContain("data-ready");
+
+    const reload = vi.fn();
+    render(<OfflineRetry onReload={reload} />);
+
+    expect(getRetry()).toHaveAttribute("data-ready", "true");
+    // What the mark promises: the `online` listener is already attached.
+    window.dispatchEvent(new Event("online"));
     expect(reload).toHaveBeenCalledTimes(1);
   });
 
