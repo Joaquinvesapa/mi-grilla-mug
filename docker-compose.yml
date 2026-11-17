@@ -1,0 +1,24 @@
+# Postgres local para desarrollo y tests de integración.
+# La contraseña se lee de `.env` (ver `.env.example`); sin ella, `docker compose` se niega a arrancar.
+# El puerto queda atado a 127.0.0.1: la base no se expone a la red (R-04).
+services:
+  postgres:
+    # La misma imagen que los services de .github/workflows/ci.yml.
+    image: postgres:17.12
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: mi_grilla
+      POSTGRES_DB: mi_grilla
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Definí POSTGRES_PASSWORD en .env (ver .env.example)}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mi_grilla -d mi_grilla"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+volumes:
+  postgres-data:

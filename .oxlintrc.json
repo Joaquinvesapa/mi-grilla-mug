@@ -1,0 +1,50 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "react", "nextjs", "import"],
+  "options": {
+    "typeAware": true
+  },
+  "categories": {
+    "correctness": "error"
+  },
+  "rules": {
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          {
+            "group": [
+              "@prisma/**",
+              "@/server/generated",
+              "@/server/generated/**",
+              "**/server/generated",
+              "**/server/generated/**",
+              "**/generated/prisma",
+              "**/generated/prisma/**"
+            ],
+            "message": "Only src/server/ may import Prisma or the generated client. Use a function from src/server/ instead."
+          }
+        ]
+      }
+    ],
+    "typescript/no-explicit-any": "error"
+  },
+  "overrides": [
+    {
+      "files": ["src/server/**"],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    }
+  ],
+  "ignorePatterns": [
+    ".agents/",
+    ".daw/",
+    ".claude/",
+    "docs/",
+    "src/server/generated/",
+    "skills-lock.json",
+    ".next/",
+    "coverage/"
+  ]
+}
