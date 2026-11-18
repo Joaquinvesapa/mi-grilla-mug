@@ -88,3 +88,19 @@ decir que se mostró al usuario sin pedirle aprobación previa; cualquier objeci
 - Para VERIFY, con VoiceOver: hay un `role="alert"` dentro de la región `polite`, que algunos
   lectores pueden anunciar dos veces. Además, el primer "Generando…" puede no anunciarse porque la
   región se monta junto con la hoja. — orquestador — 2026-11-18 — Block 3
+
+## Block 4 — E2E del fondo
+
+- `tests/e2e/offline.ts` exporta, además de los 4 helpers de la spec, los que necesitan
+  (`notice`, `expectChosen`, `readDeviceCopy`, `signUpControlled`). — orquestador — 2026-11-18 —
+  Block 4
+- En el camino de compartir, el E2E también fuerza `matchMedia("(pointer: coarse)")` (delegando
+  los métodos a la lista real), porque `canShareFile` lo exige. — orquestador — 2026-11-18 —
+  Block 4
+- El E2E verifica lo dibujado leyendo píxeles con la geometría de la spec, que el test replica a
+  propósito, como oráculo independiente, sin importar `src/`. Lo protege una guarda que corre o
+  rechaza las sondas que caen sobre líneas de hora o bloques vecinos. AC-09 se comprueba con dos
+  sondas que solo existen el sábado o el viernes. — orquestador — 2026-11-18 — Block 4
+- En este host, WebKit corre con el mismo `docker run` de `scripts/test-e2e-docker.sh` pero sin
+  `--user`, porque con Docker rootless falla el script. Arreglar el script queda para un ticket
+  aparte. — orquestador — 2026-11-18 — Block 4
