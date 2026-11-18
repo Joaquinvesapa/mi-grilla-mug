@@ -16,3 +16,18 @@ export const SUBTLE = "#908caa";
 
 /** Rosé Pine highlight med: borders and the wallpaper's hour lines. */
 export const HIGHLIGHT_MED = "#403d52";
+
+/** Rosé Pine gold: Samsung's stage and Friday's day color. */
+export const GOLD = "#f6c177";
+
+/** Rosé Pine rose: Alternative's stage and Saturday's day color. */
+export const ROSE = "#ebbcba";
+
+/** Rosé Pine pine: Perry's stage and Sunday's day color. Dark: text on it is TEXT, never BASE. */
+export const PINE = "#31748f";
+
+/** Rosé Pine iris: Kidzapalooza's stage color. */
+export const IRIS = "#c4a7e7";
+
+/** Rosé Pine love: reserved for «En vivo» (the now-line, the live button, playing dots). */
+export const LOVE = "#eb6f92";
