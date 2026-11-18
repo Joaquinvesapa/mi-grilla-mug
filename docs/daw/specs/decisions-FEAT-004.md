@@ -104,3 +104,21 @@ decir que se mostró al usuario sin pedirle aprobación previa; cualquier objeci
 - En este host, WebKit corre con el mismo `docker run` de `scripts/test-e2e-docker.sh` pero sin
   `--user`, porque con Docker rootless falla el script. Arreglar el script queda para un ticket
   aparte. — orquestador — 2026-11-18 — Block 4
+
+## Corrección desde VERIFY (ronda 1)
+
+- `wallpaperFileName` devuelve `mi-grilla.png` si después de normalizar no queda nada (F-VER-04).
+  — orquestador — 2026-11-18 — corrección VERIFY
+- `WALLPAPER_GUIDE_STEPS` pasa a ser `{ share, download }`, con 4 pasos cada uno: solo cambia el
+  paso 1 (con descarga, la imagen está en Descargas/Archivos y hay que pasarla a Fotos). El estado
+  `done` guarda por qué camino se entregó. Es una desviación de forma de la spec, que nombraba una
+  sola lista, y la pidió VERIFY (W-2). — orquestador — 2026-11-18 — corrección VERIFY
+- El paso del zoom dice dónde está el ajuste («⋯» en el editor del fondo) y el mensaje de
+  `SHARE_FAILED` ofrece mantener apretada la vista previa. Los textos de iOS («Zoom de
+  perspectiva», «Guardar imagen», «Agregar») se confirman en el iPhone real en VERIFY. El paso 1 de
+  descarga es largo: si no se entiende en el iPhone, se acorta. — orquestador — 2026-11-18 —
+  corrección VERIFY
+- Dejan de exportarse `HEADER_HEIGHT`, `TIME_FONT_SIZE`, `AXIS_TOP`, `AXIS_BOTTOM` y los tipos
+  internos del layout, de la entrega y del botón: nadie los importaba. Las constantes siguen en el
+  módulo con los valores de la spec. Esto reemplaza la decisión del Block 1 que exportaba
+  `AXIS_TOP`/`AXIS_BOTTOM`. — orquestador — 2026-11-18 — corrección VERIFY

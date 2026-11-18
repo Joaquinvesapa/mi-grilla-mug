@@ -29,11 +29,12 @@ import {
   WALLPAPER_DONE_LABEL,
   WALLPAPER_GUIDE_STEPS,
   WALLPAPER_SHEET_TITLE,
+  type WallpaperDelivery,
   wallpaperMessageFor,
   wallpaperPreviewAlt,
 } from "@/lib/wallpaper-messages";
 
-export type WallpaperButtonProps = {
+type WallpaperButtonProps = {
   /** The day on screen. */
   day: FestivalDay;
   stages: readonly Stage[];
@@ -61,7 +62,7 @@ type SheetState =
       /** The share sheet is open: one at a time. */
       busy: boolean;
     }
-  | { status: "done"; preview: Preview }
+  | { status: "done"; preview: Preview; delivery: WallpaperDelivery }
   | { status: "failed"; code: string };
 
 // `downloadWallpaper` has no code of its own: anything outside the catalog gets the generic text.
@@ -168,7 +169,7 @@ export function WallpaperButton({ day, stages, shows, selectedIds }: WallpaperBu
       return;
     }
     if (result.ok) {
-      setSheet({ status: "done", preview: state.preview });
+      setSheet({ status: "done", preview: state.preview, delivery: "share" });
     } else if (result.code === "SHARE_CANCELLED") {
       // The person closed the system sheet: nothing went wrong, the image is still here.
       setSheet({ ...state, alert: null, busy: false });
@@ -187,7 +188,7 @@ export function WallpaperButton({ day, stages, shows, selectedIds }: WallpaperBu
       return;
     }
     // The browser does not say when the file is written: the click is the end (FR-12).
-    setSheet({ status: "done", preview: state.preview });
+    setSheet({ status: "done", preview: state.preview, delivery: "download" });
   }
 
   function deliver() {
@@ -275,7 +276,7 @@ export function WallpaperButton({ day, stages, shows, selectedIds }: WallpaperBu
 
             {sheet.status === "done" ? (
               <ol className="flex flex-col gap-3">
-                {WALLPAPER_GUIDE_STEPS.map((step, index) => (
+                {WALLPAPER_GUIDE_STEPS[sheet.delivery].map((step, index) => (
                   <li key={step} className="flex gap-3 rounded-lg bg-background/60 p-4">
                     <span
                       aria-hidden="true"

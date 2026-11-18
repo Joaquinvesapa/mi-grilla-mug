@@ -469,6 +469,91 @@ describe("wallpaperLayout", () => {
   it("test-wallpaper-empty-day-error: a day without shows throws RangeError", () => {
     expect(() => layoutOf("fri", new Set(), [])).toThrow(RangeError);
   });
+
+  it("test-wallpaper-cramped-block-no-time: a block squeezed by the next show drops the time, and with no room at all drops the name too", () => {
+    // Built on purpose (no real show is this close): Friday, Kidzapalooza 16:00–16:45 split in two
+    // shows, the second starting `gap` after the first, so the first is capped by it.
+    function split(gap: string): WallpaperLayout["blocks"][number] {
+      const shows = showsOf("fri").flatMap((item) =>
+        item.id === "fri-kidzapalooza-1600"
+          ? [
+              {
+                ...item,
+                id: "cramped-a",
+                artist: "Uno",
+                endsAt: posterTimeToInstant("2026-03-13", gap).toISOString(),
+              },
+              {
+                ...item,
+                id: "cramped-b",
+                startsAt: posterTimeToInstant("2026-03-13", gap).toISOString(),
+              },
+            ]
+          : [item],
+      );
+      const block = layoutOf("fri", new Set(), shows).blocks.find(
+        (candidate) => candidate.showId === "cramped-a",
+      );
+      expect(block).toBeDefined();
+      return block!;
+    }
+
+    // 20 min (≈ 47.9 px − 4 px of gap ≈ 43.9 px): room for one line of artist, not for the time.
+    const oneLine = split("16:20");
+    expect(oneLine.height).toBeCloseTo((20 * (2572 - 849)) / 720 - 4, 6);
+    expect(oneLine.time).toBeNull();
+    expect(oneLine.lines.map((line) => line.text)).toStrictEqual(["Uno"]);
+    expectInside(oneLine, measureText);
+
+    // 3 min (≈ 7.2 px − 4 px ≈ 3.2 px): not even one line fits (`maxLines` = 0).
+    const empty = split("16:03");
+    expect(empty.height).toBeCloseTo((3 * (2572 - 849)) / 720 - 4, 6);
+    expect(empty.time).toBeNull();
+    expect(empty.lines).toStrictEqual([]);
+  });
+
+  it("test-wallpaper-vertical-scale: on the 3 days every block starts at 849 + minutes from the axis start × scale and its height is its duration at scale (≥ 70, capped by the next show)", () => {
+    const AXIS_START_Y = 849;
+    const AXIS_END_Y = 2572;
+    for (const dayId of DAY_IDS) {
+      const shows = showsOf(dayId);
+      const layout = layoutOf(dayId);
+      const byId = new Map(shows.map((item) => [item.id, item]));
+
+      // The axis: from the whole hour at or before the first start to the one at or after the last
+      // end. On the 3 days it is 13:00 to 01:00 (720 min).
+      const hour = 3_600_000;
+      const axisStart = Math.floor(Math.min(...shows.map((s) => Date.parse(s.startsAt))) / hour);
+      const axisEnd = Math.ceil(Math.max(...shows.map((s) => Date.parse(s.endsAt))) / hour);
+      const axisMinutes = (axisEnd - axisStart) * 60;
+      expect(axisMinutes, dayId).toBe(720);
+      const scale = (AXIS_END_Y - AXIS_START_Y) / axisMinutes;
+      const yAt = (instant: number): number =>
+        AXIS_START_Y + ((instant - axisStart * hour) / 60_000) * scale;
+
+      expect(layout.blocks).toHaveLength(shows.length);
+      for (const block of layout.blocks) {
+        const item = byId.get(block.showId);
+        expect(item, block.showId).toBeDefined();
+        if (!item) {
+          continue;
+        }
+        const start = Date.parse(item.startsAt);
+        expect(block.y, block.showId).toBeCloseTo(yAt(start), 6);
+
+        const nextStart = shows
+          .filter((other) => other.stageId === item.stageId && Date.parse(other.startsAt) > start)
+          .map((other) => Date.parse(other.startsAt))
+          .sort((a, b) => a - b)[0];
+        const limit = Math.min(
+          AXIS_END_Y,
+          nextStart === undefined ? AXIS_END_Y : yAt(nextStart) - 4,
+        );
+        const expected = Math.min(Math.max(minutes(item) * scale, 70), limit - block.y);
+        expect(block.height, block.showId).toBeCloseTo(expected, 6);
+      }
+    }
+  });
 });
 
 describe("wallpaperFileName", () => {
@@ -476,5 +561,17 @@ describe("wallpaperFileName", () => {
     expect(wallpaperFileName(dayOf("fri"))).toBe("mi-grilla-viernes.png");
     expect(wallpaperFileName(dayOf("sat"))).toBe("mi-grilla-sabado.png");
     expect(wallpaperFileName(dayOf("sun"))).toBe("mi-grilla-domingo.png");
+  });
+
+  it("test-wallpaper-file-name-invalid: spaces, signs, capitals and accents are normalized to [a-z0-9-], and a name without letters or digits gives mi-grilla.png", () => {
+    expect(wallpaperFileName({ name: "Día Extra" })).toBe("mi-grilla-dia-extra.png");
+    expect(wallpaperFileName({ name: "  VIERNES  13/03 " })).toBe("mi-grilla-viernes-13-03.png");
+    expect(wallpaperFileName({ name: "¡Sábado!" })).toBe("mi-grilla-sabado.png");
+    expect(wallpaperFileName({ name: "Ñandú & Cía." })).toBe("mi-grilla-nandu-cia.png");
+    expect(wallpaperFileName({ name: "../../etc/passwd" })).toBe("mi-grilla-etc-passwd.png");
+    // Nothing left after normalizing: never an empty segment ("mi-grilla-.png").
+    for (const name of ["¡¿?!", "", "   ", "---", "日本"]) {
+      expect(wallpaperFileName({ name }), JSON.stringify(name)).toBe("mi-grilla.png");
+    }
   });
 });

@@ -18,10 +18,10 @@ export const SAFE_TOP = 699;
 /** The bottom 8 % (flashlight and camera), rounded up (FR-07). */
 export const SAFE_BOTTOM = 224;
 /** Day title, brand and stage names, at the top of the usable band. */
-export const HEADER_HEIGHT = 150;
+const HEADER_HEIGHT = 150;
 /** The artist's name: at least 28 px (NFR-02). */
 export const ARTIST_FONT_SIZE = 28;
-export const TIME_FONT_SIZE = 22;
+const TIME_FONT_SIZE = 22;
 /**
  * A 30-minute show is never shorter than this (NFR-02). The wallpaper's minimum (70 px of a
  * 2796 px image), not the on-screen grid's (`MIN_BLOCK_HEIGHT` of `schedule-layout.ts`, 44 px).
@@ -31,8 +31,8 @@ export const MIN_BLOCK_HEIGHT = 70;
 export const DIMMED_OPACITY = 0.3;
 
 /** Where the time axis starts and ends: the band below the header. */
-export const AXIS_TOP = SAFE_TOP + HEADER_HEIGHT;
-export const AXIS_BOTTOM = WALLPAPER_HEIGHT - SAFE_BOTTOM;
+const AXIS_TOP = SAFE_TOP + HEADER_HEIGHT;
+const AXIS_BOTTOM = WALLPAPER_HEIGHT - SAFE_BOTTOM;
 /** The stage columns (and the hour lines) span from here to `GRID_RIGHT`. */
 export const GRID_LEFT = 120;
 export const GRID_RIGHT = WALLPAPER_WIDTH - 24;
@@ -62,13 +62,13 @@ export type MeasureText = (text: string, font: string) => number;
 
 export type WallpaperText = { text: string; x: number; y: number; font: string; color: string };
 
-export type WallpaperStageLabel = WallpaperText & { stageId: string };
+type WallpaperStageLabel = WallpaperText & { stageId: string };
 
 /** A whole hour: its line at `y` (from `GRID_LEFT` to `GRID_RIGHT`) and its label in the gutter. */
-export type WallpaperHourMark = { label: string; y: number; text: WallpaperText };
+type WallpaperHourMark = { label: string; y: number; text: WallpaperText };
 
 /** A show: a `FOAM` rectangle, at full opacity if `lit` and at `DIMMED_OPACITY` if not. */
-export type WallpaperBlock = {
+type WallpaperBlock = {
   showId: string;
   x: number;
   y: number;
@@ -372,7 +372,10 @@ export function wallpaperLayout(input: WallpaperInput): WallpaperLayout {
   };
 }
 
-/** `mi-grilla-viernes.png`: the day's name in lowercase, without accents (FR-11). */
+/**
+ * `mi-grilla-viernes.png`: the day's name in lowercase, without accents, reduced to `[a-z0-9-]`
+ * (FR-11). A name with nothing left after that gives `mi-grilla.png`, never `mi-grilla-.png`.
+ */
 export function wallpaperFileName(day: Pick<FestivalDay, "name">): string {
   const slug = day.name
     .normalize("NFD")
@@ -380,5 +383,5 @@ export function wallpaperFileName(day: Pick<FestivalDay, "name">): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
-  return `mi-grilla-${slug}.png`;
+  return slug ? `mi-grilla-${slug}.png` : "mi-grilla.png";
 }

@@ -198,7 +198,7 @@ describe("WallpaperButton", () => {
     expect(share$).toHaveBeenCalledTimes(1);
     expect(share$.mock.calls[0]![0].name).toBe(FILE_NAME);
     expect(download$).not.toHaveBeenCalled();
-    expect(guideItems(sheet)).toStrictEqual([...WALLPAPER_GUIDE_STEPS]);
+    expect(guideItems(sheet)).toStrictEqual([...WALLPAPER_GUIDE_STEPS.share]);
     // The preview stays, to long-press it as a fallback.
     expect(within(sheet).getByRole("img", { name: PREVIEW_ALT })).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
@@ -216,7 +216,7 @@ describe("WallpaperButton", () => {
     expect(download$).toHaveBeenCalledTimes(1);
     expect(download$).toHaveBeenCalledWith(BLOB, FILE_NAME);
     expect(share$).not.toHaveBeenCalled();
-    expect(guideItems(sheet)).toStrictEqual([...WALLPAPER_GUIDE_STEPS]);
+    expect(guideItems(sheet)).toStrictEqual([...WALLPAPER_GUIDE_STEPS.download]);
   });
 
   it("test-wallpaper-button-share-cancelled: si la persona cierra la hoja del sistema, sin alerta ni guía y sigue Guardar en Fotos", async () => {
@@ -250,7 +250,7 @@ describe("WallpaperButton", () => {
     await press(sheet, DOWNLOAD_IMAGE_LABEL);
 
     expect(download$).toHaveBeenCalledWith(BLOB, FILE_NAME);
-    expect(guideItems(sheet)).toStrictEqual([...WALLPAPER_GUIDE_STEPS]);
+    expect(guideItems(sheet)).toStrictEqual([...WALLPAPER_GUIDE_STEPS.download]);
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
@@ -318,7 +318,7 @@ describe("WallpaperButton", () => {
     await press(sheet, DOWNLOAD_IMAGE_LABEL);
 
     expect(download$).toHaveBeenCalledTimes(2);
-    expect(guideItems(sheet)).toStrictEqual([...WALLPAPER_GUIDE_STEPS]);
+    expect(guideItems(sheet)).toStrictEqual([...WALLPAPER_GUIDE_STEPS.download]);
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 

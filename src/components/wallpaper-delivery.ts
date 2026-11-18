@@ -3,9 +3,7 @@
 // everywhere else. No "use client" of its own: only `wallpaper-button.tsx` imports it. The browser's
 // error message never leaves this file: callers get a code (R-04).
 
-export type ShareWallpaperResult =
-  | { ok: true }
-  | { ok: false; code: "SHARE_CANCELLED" | "SHARE_FAILED" };
+type ShareWallpaperResult = { ok: true } | { ok: false; code: "SHARE_CANCELLED" | "SHARE_FAILED" };
 
 const PNG = "image/png";
 

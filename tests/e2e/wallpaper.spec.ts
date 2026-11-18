@@ -40,7 +40,8 @@ const SHEET_TITLE = "Fondo de pantalla";
 const SAVE_TO_PHOTOS = "Guardar en Fotos";
 const DOWNLOAD_IMAGE = "Descargar imagen";
 const DONE_LABEL = "Listo. Así lo ponés de fondo:";
-const SHARE_FAILED_MESSAGE = "No pudimos abrir la opción de guardar en Fotos. Descargá la imagen.";
+const SHARE_FAILED_MESSAGE =
+  "No pudimos abrir la opción de guardar en Fotos. Descargá la imagen o mantené apretada la vista previa para guardarla en Fotos.";
 const GUIDE_STEPS = 4;
 
 const WIDTH = 1290;
