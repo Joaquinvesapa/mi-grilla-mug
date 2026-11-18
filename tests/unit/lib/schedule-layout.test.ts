@@ -7,8 +7,10 @@ import { formatClock, posterTimeToInstant } from "@/lib/festival-time";
 import {
   blockGeometry,
   dayAxis,
+  heightWithFriends,
   hourMarks,
   MIN_BLOCK_HEIGHT,
+  MIN_BLOCK_HEIGHT_WITH_FRIENDS,
   PX_PER_MINUTE,
 } from "@/lib/schedule-layout";
 import type { Show } from "@/lib/schedule-types";
@@ -95,5 +97,19 @@ describe("schedule-layout", () => {
     expect(MIN_BLOCK_HEIGHT).toBe(44);
     expect(blockGeometry(show("13:00", "13:15"), axis).height).toBe(44);
     expect(blockGeometry(show("13:00", "13:30"), axis).height).toBe(60);
+  });
+
+  it("test-grid-friend-height: with friends a block measures at least 60 px, never past the next show of its stage", () => {
+    expect(MIN_BLOCK_HEIGHT_WITH_FRIENDS).toBe(60);
+    // Sunday's 20-minute Kidzapalooza shows: 40 px, with the next one 10 minutes later.
+    expect(heightWithFriends({ top: 100, height: 44 }, 160)).toBe(60);
+    expect(heightWithFriends({ top: 100, height: 40 }, 160)).toBe(60);
+    // The next show caps it: it never covers the following block.
+    expect(heightWithFriends({ top: 100, height: 44 }, 150)).toBe(50);
+    // A block already taller keeps its height.
+    expect(heightWithFriends({ top: 0, height: 120 }, 140)).toBe(120);
+    // No show after it: no cap.
+    expect(heightWithFriends({ top: 100, height: 44 }, undefined)).toBe(60);
+    expect(heightWithFriends({ top: 100, height: 90 }, undefined)).toBe(90);
   });
 });

@@ -343,6 +343,8 @@ export function ScheduleScreen({
               selectedIds={draft}
               pendingIds={pending}
               clashIds={clashes}
+              // Provisional: no group yet. FEAT-006c Block 4 wires the chosen group's picks here.
+              friendPicks={new Map()}
               onToggle={toggle}
             />
             {/* The draft, as on screen: unsaved marks and a pending selection included (FR-09). */}

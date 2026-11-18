@@ -53,3 +53,19 @@ export function blockGeometry(show: Timed, axis: DayAxis): { top: number; height
     height: Math.max(duration * PX_PER_MINUTE, MIN_BLOCK_HEIGHT),
   };
 }
+
+/** A block with a row of friends' initials needs room for it under the time line (FEAT-006c). */
+export const MIN_BLOCK_HEIGHT_WITH_FRIENDS = 60;
+
+/**
+ * The height of a block that carries friends' initials: at least 60 px, so the row fits under the
+ * time line without hiding it, but never past `nextTop`, where the next show of the same stage
+ * starts. Without a next show (`undefined`) there is no cap.
+ */
+export function heightWithFriends(
+  geometry: { top: number; height: number },
+  nextTop: number | undefined,
+): number {
+  const height = Math.max(geometry.height, MIN_BLOCK_HEIGHT_WITH_FRIENDS);
+  return nextTop === undefined ? height : Math.min(height, nextTop - geometry.top);
+}

@@ -5,7 +5,16 @@ import { type CSSProperties, useId } from "react";
 
 import { usePressed } from "@/components/pressable";
 import { formatClock } from "@/lib/festival-time";
-import { blockGeometry, dayAxis, hourMarks, PX_PER_MINUTE } from "@/lib/schedule-layout";
+import { extraFriendsLabel, friendsPickedLabel } from "@/lib/group-messages";
+import { type FriendPicks, indicatorParts } from "@/lib/group-picks";
+import {
+  blockGeometry,
+  type DayAxis,
+  dayAxis,
+  heightWithFriends,
+  hourMarks,
+  PX_PER_MINUTE,
+} from "@/lib/schedule-layout";
 import type { FestivalDay, Show, Stage } from "@/lib/schedule-types";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +29,8 @@ export type ScheduleGridProps = {
   pendingIds: ReadonlySet<string>;
   /** Chosen shows that share at least one minute with another chosen one (FR-14). */
   clashIds: ReadonlySet<string>;
+  /** For each show, the friends of the chosen group who picked it; empty with no group (FR-02). */
+  friendPicks: ReadonlyMap<string, FriendPicks[]>;
   onToggle: (showId: string) => void;
 };
 
@@ -34,6 +45,22 @@ const AXIS_TAIL_PX = 16;
  * bottom margin + 8 px. Tied to that size: changing the button means changing this.
  */
 export const LIVE_BUTTON_CLEARANCE_PX = 80;
+
+/** Where the next show of the same stage starts, by show id; the last one of a stage has none. */
+function nextTops(shows: readonly Show[], axis: DayAxis): Map<string, number> {
+  const byStart = [...shows].sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt));
+  const next = new Map<string, number>();
+  for (const [index, show] of byStart.entries()) {
+    const start = Date.parse(show.startsAt);
+    const following = byStart
+      .slice(index + 1)
+      .find((other) => other.stageId === show.stageId && Date.parse(other.startsAt) > start);
+    if (following) {
+      next.set(show.id, blockGeometry(following, axis).top);
+    }
+  }
+  return next;
+}
 
 function timeRange(show: Show): string {
   return `${formatClock(new Date(show.startsAt))} – ${formatClock(new Date(show.endsAt))}`;
@@ -51,6 +78,7 @@ export function ScheduleGrid({
   selectedIds,
   pendingIds,
   clashIds,
+  friendPicks,
   onToggle,
 }: ScheduleGridProps) {
   const columns = [...stages].sort((a, b) => a.position - b.position);
@@ -66,6 +94,7 @@ export function ScheduleGrid({
 
   const axis = dayAxis(shows);
   const marks = hourMarks(axis);
+  const nextTopOf = nextTops(shows, axis);
   const bodyHeight = ((axis.end.getTime() - axis.start.getTime()) / MINUTE_MS) * PX_PER_MINUTE;
   // The blocks keep their geometry: only the columns grow, below the last hour mark.
   const columnHeight = bodyHeight + AXIS_TAIL_PX + LIVE_BUTTON_CLEARANCE_PX;
@@ -133,6 +162,8 @@ export function ScheduleGrid({
                   key={show.id}
                   show={show}
                   geometry={blockGeometry(show, axis)}
+                  nextTop={nextTopOf.get(show.id)}
+                  friends={friendPicks.get(show.id) ?? []}
                   selected={selectedIds.has(show.id)}
                   pending={pendingIds.has(show.id)}
                   clash={clashIds.has(show.id)}
@@ -149,21 +180,44 @@ export function ScheduleGrid({
 type ShowBlockProps = {
   show: Show;
   geometry: { top: number; height: number };
+  /** Where the next show of the stage starts: a taller block for friends never reaches it. */
+  nextTop: number | undefined;
+  /** The friends who picked this show; empty with no group. */
+  friends: readonly FriendPicks[];
   selected: boolean;
   pending: boolean;
   clash: boolean;
   onToggle: (showId: string) => void;
 };
 
-function ShowBlock({ show, geometry, selected, pending, clash, onToggle }: ShowBlockProps) {
+function ShowBlock({
+  show,
+  geometry,
+  nextTop,
+  friends,
+  selected,
+  pending,
+  clash,
+  onToggle,
+}: ShowBlockProps) {
   const pressed = usePressed<HTMLButtonElement>();
   const clashId = useId();
   const pendingId = useId();
+  const friendsId = useId();
+  const withFriends = friends.length > 0;
+  const { initials, extra } = indicatorParts(friends);
   // The marks describe the block; its name stays "Artista … horario", so a screen reader announces
   // the show first and no block answers to the names of other buttons ("Guardar").
-  const describedBy = [clash ? clashId : null, pending ? pendingId : null]
+  const describedBy = [
+    clash ? clashId : null,
+    pending ? pendingId : null,
+    withFriends ? friendsId : null,
+  ]
     .filter(Boolean)
     .join(" ");
+  // The row of initials goes under the time line, which is never hidden: a short block grows to
+  // 60 px for it, up to where the next show of the stage starts.
+  const height = withFriends ? heightWithFriends(geometry, nextTop) : geometry.height;
 
   return (
     <button
@@ -177,7 +231,7 @@ function ShowBlock({ show, geometry, selected, pending, clash, onToggle }: ShowB
       // under 44 px (NFR-03). The 1 px inset and 4 px padding only narrow it: at 360 px they leave
       // the name 92 px, which is what "Partysani Klezmer Band" and "Las Canciones de Ainé" need to
       // fit in 2 lines at 13 px semibold (NFR-04).
-      style={{ top: geometry.top, height: geometry.height }}
+      style={{ top: geometry.top, height }}
       className={cn(
         "absolute inset-x-px flex flex-col items-start gap-0.5 overflow-hidden rounded-md border px-1 py-1 text-left transition-[background-color,border-color,transform] duration-100 ease-out outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 data-[pressed=true]:scale-[0.97]",
         selected
@@ -200,7 +254,13 @@ function ShowBlock({ show, geometry, selected, pending, clash, onToggle }: ShowB
       {/* Whitespace between the parts: a flex container does not draw it, but it keeps the
           words apart in the accessible name ("DJO 18:00 – 19:00"). */}{" "}
       {show.subtitle ? (
-        <span className="w-full text-[12px] leading-tight [overflow-wrap:anywhere] hyphens-auto opacity-80">
+        <span
+          className={cn(
+            "w-full text-[12px] leading-tight [overflow-wrap:anywhere] hyphens-auto opacity-80",
+            // One line, so the time line and the initials keep their room.
+            withFriends && "line-clamp-1",
+          )}
+        >
           {show.subtitle}
         </span>
       ) : null}{" "}
@@ -220,6 +280,19 @@ function ShowBlock({ show, geometry, selected, pending, clash, onToggle }: ShowB
           />
         ) : null}
       </span>
+      {withFriends ? (
+        // Decorative: the description names the friends, so the initials are not read twice.
+        <span data-friend-picks aria-hidden="true" className="flex w-full gap-0.5">
+          {initials.map((initial, index) => (
+            <FriendChip key={index} selected={selected}>
+              {initial}
+            </FriendChip>
+          ))}
+          {extra > 0 ? (
+            <FriendChip selected={selected}>{extraFriendsLabel(extra)}</FriendChip>
+          ) : null}
+        </span>
+      ) : null}
       {clash ? (
         <span id={clashId} hidden>
           Choca con otro show elegido
@@ -230,6 +303,28 @@ function ShowBlock({ show, geometry, selected, pending, clash, onToggle }: ShowB
           Sin guardar
         </span>
       ) : null}
+      {withFriends ? (
+        <span id={friendsId} hidden>
+          {friendsPickedLabel(friends.map((friend) => friend.name))}
+        </span>
+      ) : null}
     </button>
+  );
+}
+
+/**
+ * One friend's initials, or "+N". Rosé Pine's overlay on an unchosen block; on a chosen one, the
+ * foam darkened by the base, which keeps the dark text legible. Never iris.
+ */
+function FriendChip({ selected, children }: { selected: boolean; children: string }) {
+  return (
+    <span
+      className={cn(
+        "tabular rounded-sm px-1 text-[12px] leading-4 font-semibold",
+        selected ? "bg-rp-base/25" : "bg-rp-overlay text-foreground",
+      )}
+    >
+      {children}
+    </span>
   );
 }
