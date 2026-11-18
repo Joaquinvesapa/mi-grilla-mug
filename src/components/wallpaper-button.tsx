@@ -95,6 +95,11 @@ const PREVIEW_MAX_HEIGHT = "max-h-[45dvh]";
 const OPTION_CLASS =
   "w-full touch-manipulation select-none aria-disabled:pointer-events-none aria-disabled:opacity-50 aria-pressed:ring-2 aria-pressed:ring-ring aria-pressed:ring-offset-2 aria-pressed:ring-offset-background";
 
+// The primary action's box (FEAT-007, the user's decision): `sticky bottom-0` inside the body that
+// scrolls, on the drawer's own surface and bled to the body's edges (`-mx-5 px-5`), with the
+// bottom padding the body no longer has. The safe area is the drawer's, not padded again here.
+const ACTION_BOX_CLASS = "sticky bottom-0 z-10 -mx-5 flex flex-col bg-card px-5 pt-2 pb-6";
+
 /** What `renderWallpaper` gets for `option`: the group only with "Con amigos" and a known id. */
 function drawingOf(
   input: Snapshot,
@@ -345,7 +350,9 @@ export function WallpaperButton({
         </Button>
       </DrawerTrigger>
       <DrawerContent aria-describedby={undefined}>
-        <div className="mx-auto flex min-h-0 w-full max-w-md flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-5 pt-2 pb-6">
+        {/* No bottom padding here: the action's box below carries it, and the drawer pads the
+            home indicator under both (mobile-native, fix 7). */}
+        <div className="mx-auto flex min-h-0 w-full max-w-md flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-5 pt-2">
           <DrawerHeader className="p-0 group-data-[vaul-drawer-direction=bottom]/drawer-content:text-left">
             <DrawerTitle className="text-xl">{WALLPAPER_SHEET_TITLE}</DrawerTitle>
           </DrawerHeader>
@@ -448,7 +455,10 @@ export function WallpaperButton({
               </ol>
             ) : null}
 
-            <div className="flex flex-col">
+            {/* Stuck to the bottom of the scrolling body, opaque as the drawer, always mounted: the
+                question, the select and the preview scroll above it, so the action is always on
+                screen — with a group too — and swapping its button never moves anything. */}
+            <div className={ACTION_BOX_CLASS}>
               {generating ? (
                 <Button type="button" size="lg" className="w-full select-none" disabled aria-busy>
                   <LoaderCircle

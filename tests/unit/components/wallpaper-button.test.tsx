@@ -907,4 +907,46 @@ describe("WallpaperButton con grupos", () => {
     expect(options(sheet).personal).toHaveAttribute("aria-pressed", "false");
     expect(options(sheet).group).toHaveAttribute("aria-pressed", "false");
   });
+
+  it("test-wallpaper-sheet-action-sticky: la acción principal queda fija abajo del cuerpo con scroll, opaca y sin doblar la safe area, generando, lista y tras un fallo, con grupo y sin grupo", async () => {
+    /** The action's box: the same element in every state, stuck to the bottom of the body. */
+    function expectSticky(button: HTMLElement): HTMLElement {
+      const box = button.parentElement!;
+      // jsdom has no layout: the stickiness is read from the classes.
+      expect(box).toHaveClass("sticky", "bottom-0", "bg-card");
+      // Inside the body that scrolls, so the preview and the question scroll above it.
+      const body = box.closest(".overflow-y-auto");
+      expect(body).not.toBeNull();
+      expect(body).toHaveClass("overscroll-contain");
+      // The drawer already pads the home indicator: neither the box nor the body pads it again.
+      expect(box.className).not.toContain("safe-area-inset-bottom");
+      expect(body!.className).not.toContain("safe-area-inset-bottom");
+      // Still out of the sheet's drag, and 44 px or more.
+      expect(button.closest("[data-vaul-no-drag]")).not.toBeNull();
+      expect(button).toHaveClass("h-12");
+      return box;
+    }
+
+    // With a group: generating, failed (Reintentar) and ready keep the same box, no jump.
+    const finish = deferredRender();
+    renderButton(new Set(["fri-flow-1800"]), [LOLLA, FACU], LOLLA.id);
+    let sheet = await openSheet();
+    await press(sheet, WITH_FRIENDS_OPTION_LABEL);
+    const box = expectSticky(within(sheet).getByRole("button", { name: GENERATING_LABEL }));
+    await finish({ ok: false, code: "ENCODE_FAILED" });
+    expect(expectSticky(within(sheet).getByRole("button", { name: RETRY_LABEL }))).toBe(box);
+    await press(sheet, RETRY_LABEL);
+    await finish();
+    expect(expectSticky(within(sheet).getByRole("button", { name: DOWNLOAD_IMAGE_LABEL }))).toBe(
+      box,
+    );
+    cleanup();
+
+    // The personal one, without groups, is stuck the same way.
+    render$.mockReset();
+    render$.mockResolvedValue(OK);
+    renderButton();
+    sheet = await openSheet();
+    expectSticky(within(sheet).getByRole("button", { name: DOWNLOAD_IMAGE_LABEL }));
+  });
 });

@@ -41,3 +41,9 @@ Formato: decisión — quién la aprobó — fecha — fase o bloque.
     spec ("Con amigos" primario, "Grilla sola" outline) no muestran cuál está elegida.
   - `GroupPicker` acorta el nombre del grupo (`truncate`, `min-w-0`) para no desbordar la hoja a
     360 px; el selector de la grilla se ve igual con nombres que entran.
+- Con grupo, la pregunta y el selector empujaban el botón principal ("Guardar en Fotos" /
+  "Descargar imagen", "Reintentar") debajo del borde de la hoja (11 % visible en un iPhone 15). El
+  botón principal queda fijo abajo de la hoja (`position: sticky` dentro del cuerpo con scroll, con
+  la safe area de abajo), siempre visible, y la vista previa y la pregunta scrollean arriba; vale
+  también para el fondo personal (opción 2 de 3: las otras eran achicar la vista previa o dejarlo
+  con scroll). — el usuario — 2026-11-18 — CODE, hallazgo del Block 4 (cambio en el Block 3).
