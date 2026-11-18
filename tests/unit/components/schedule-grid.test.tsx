@@ -506,14 +506,17 @@ describe("ScheduleGrid: color por escenario, ahora y shows pasados", () => {
     expect(headers[0]!.className).not.toContain("text-(--stage)");
   });
 
-  it("test-grid-block-colors: elegido relleno del escenario con --on-stage en negrita; no elegido con borde al 45 %", () => {
+  it("test-grid-block-colors: elegido relleno del escenario con --on-stage en semibold; no elegido con borde al 45 %", () => {
     const { container } = renderFriday({ selected: ["fri-flow-1800"] });
 
     const chosen = blockOf(container, "fri-flow-1800");
     expect(chosen.style.getPropertyValue("--stage")).toBe("#9ccfd8");
     expect(chosen.style.getPropertyValue("--on-stage")).toBe("#191724");
     expect(chosen).toHaveClass("bg-(--stage)", "text-(--on-stage)");
-    expect(chosen.querySelector("span > span")).toHaveClass("font-bold");
+    // Semibold, like the unchosen name (≥ 600 per S1): bold glyphs are wider and pushed "Partysani
+    // Klezmer Band" to 3 lines at 360 px (NFR-04).
+    expect(chosen.querySelector("span > span")).toHaveClass("font-semibold");
+    expect(chosen.querySelector("span > span")).not.toHaveClass("font-bold");
 
     const plain = blockOf(container, "fri-samsung-1700");
     expect(plain.style.getPropertyValue("--stage")).toBe("#f6c177");
@@ -552,7 +555,11 @@ describe("ScheduleGrid: color por escenario, ahora y shows pasados", () => {
     expect(edge).toHaveAttribute("aria-hidden", "true");
     expect(edge.className).toContain("repeating-linear-gradient");
     expect(edge.className).toContain("var(--on-stage)");
-    expect(edge).toHaveClass("w-[5px]");
+    // NFR-04: the edge is an overlay inside the block's 4 px padding (3 px wide) and the clash
+    // adds no left padding, so the name keeps the same 92 px as without a clash.
+    expect(edge).toHaveClass("w-[3px]");
+    expect(block).not.toHaveClass("pl-2.5");
+    expect(block).toHaveClass("px-1");
     const tag = block.querySelector<HTMLElement>("[data-clash-tag]")!;
     expect(tag).toHaveAttribute("aria-hidden", "true");
     expect(tag.querySelector("svg")).not.toHaveClass("text-rp-base");

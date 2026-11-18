@@ -302,18 +302,17 @@ function ShowBlock({
             ],
         // Unsaved: a dashed outline, which takes no room from the name or the time line.
         pending && "border-dashed",
-        // Room for the hatched edge.
-        clash && "pl-2.5",
       )}
       {...pressed}
     >
       {clash ? (
         // A hatched left edge in the text color of the fill: status never by color alone, and not
-        // the gold warning triangle of before, which now reads as Samsung.
+        // the gold warning triangle of before, which now reads as Samsung. An overlay inside the
+        // 4 px padding: it takes no width from the name (NFR-04).
         <span
           aria-hidden="true"
           data-clash-edge
-          className="absolute inset-y-0 left-0 w-[5px] bg-[repeating-linear-gradient(45deg,var(--on-stage)_0_2px,transparent_2px_4px)] opacity-60"
+          className="absolute inset-y-0 left-0 w-[3px] bg-[repeating-linear-gradient(45deg,var(--on-stage)_0_2px,transparent_2px_4px)] opacity-60"
         />
       ) : null}
       {playing ? (
@@ -327,7 +326,6 @@ function ShowBlock({
         <span
           className={cn(
             "min-w-0 flex-1 text-[13px] leading-tight font-semibold tracking-[-0.01em] [overflow-wrap:anywhere] hyphens-auto",
-            selected && "font-bold",
             !selected && past && "text-muted-foreground",
             // Room for the live dot at the top right, as a float the first lines wrap around.
             playing && "before:float-right before:h-3 before:w-3 before:content-['']",
