@@ -54,3 +54,7 @@ Todos los cambios notables de Mi Grilla se registran en este archivo. El formato
 - [FEAT-003a] La CI siembra la grilla (`pnpm db:seed`) en los jobs `integration` y `e2e`.
 - [FEAT-003b] Sin conexión, "Cerrar sesión" queda deshabilitado con su motivo, y la pantalla "Sin
   conexión" muestra la grilla guardada en el celular cuando la hay.
+- [FIX-001] En un PR, el job `e2e` de la CI corre solo el proyecto `iphone-webkit` (82 casos en vez
+  de 254); al mergear a `main` sigue corriendo los 4 proyectos.
+- [FIX-001] `AGENTS.md` fija cuándo se corren los E2E en DAW: solo el E2E del bloque en CODE, la
+  suite completa al cierre de CODE, y en VERIFY la misma corrida si el código no cambió.
