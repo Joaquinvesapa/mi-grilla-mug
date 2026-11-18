@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   getCurrentUser: vi.fn(),
   getSchedule: vi.fn(),
   getSelection: vi.fn(),
+  listGroupPicks: vi.fn(),
   redirect: vi.fn((path: string) => {
     throw new Error(`NEXT_REDIRECT ${path}`);
   }),
@@ -22,6 +23,7 @@ vi.mock("@/server/accounts", () => ({
 }));
 vi.mock("@/server/schedule", () => ({ getSchedule: mocks.getSchedule }));
 vi.mock("@/server/selection", () => ({ getSelection: mocks.getSelection }));
+vi.mock("@/server/groups", () => ({ listGroupPicks: mocks.listGroupPicks }));
 vi.mock("@/app/auth-actions", () => ({ logoutAction: vi.fn() }));
 vi.mock("@/app/selection-actions", () => ({ saveSelectionAction: vi.fn() }));
 // The screen itself is real in the other tests; here only what the page hands it matters.
@@ -39,12 +41,20 @@ vi.mock("@/components/schedule-screen", async (importOriginal) => {
 const { default: HomePage } = await import("@/app/page");
 
 const USER = { id: "user-1", name: "Ana", email: "ana@mail.com" };
+const GROUPS = [
+  {
+    id: "11111111-1111-4111-8111-111111111111",
+    name: "Los del colegio",
+    friends: [{ name: "Beto Gómez", initials: "BG", showIds: ["fri-flow-1800"] }],
+  },
+];
 
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.getCurrentUser.mockResolvedValue(USER);
   mocks.getSchedule.mockResolvedValue({ ok: true, schedule: SCHEDULE });
   mocks.getSelection.mockResolvedValue({ ok: true, showIds: ["fri-flow-1800"] });
+  mocks.listGroupPicks.mockResolvedValue({ ok: true, groups: GROUPS });
 });
 
 afterEach(cleanup);
@@ -135,11 +145,36 @@ describe("HomePage", () => {
     });
   });
 
+  it("test-home-page-groups: lee los grupos del usuario de la sesión y se los pasa a la pantalla", async () => {
+    await renderPage();
+
+    expect(mocks.listGroupPicks).toHaveBeenCalledWith("user-1");
+    expect(screenSpy.mock.calls[0]?.[0]).toMatchObject({ groups: GROUPS });
+    expect(screen.getByRole("combobox", { name: "Grupo" })).toHaveValue(GROUPS[0]!.id);
+  });
+
+  it("test-home-page-picks-unavailable: con listGroupPicks no disponible la grilla se muestra sin selector, rechazado sin romper la página", async () => {
+    mocks.listGroupPicks.mockResolvedValue({ ok: false, code: "SERVICE_UNAVAILABLE" });
+
+    await renderPage();
+
+    expect(screenSpy.mock.calls[0]?.[0]).toMatchObject({ groups: null });
+    expect(screen.getByRole("region", { name: /^Grilla del/ })).toBeInTheDocument();
+    expect(document.querySelector('[data-show-id="fri-flow-1800"]')).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.queryByRole("combobox", { name: "Grupo" })).not.toBeInTheDocument();
+    expect(document.querySelector("[data-friend-picks]")).toBeNull();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
   it("sin sesión redirige a /login sin cargar la grilla", async () => {
     mocks.getCurrentUser.mockResolvedValue(null);
 
     await expect(HomePage()).rejects.toThrow("NEXT_REDIRECT /login");
     expect(mocks.getSchedule).not.toHaveBeenCalled();
     expect(mocks.getSelection).not.toHaveBeenCalled();
+    expect(mocks.listGroupPicks).not.toHaveBeenCalled();
   });
 });

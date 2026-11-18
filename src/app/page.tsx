@@ -8,6 +8,7 @@ import { ScheduleScreen } from "@/components/schedule-screen";
 import { festivalDayFor } from "@/lib/festival-time";
 import { selectionMessageFor } from "@/lib/selection-messages";
 import { getAccounts } from "@/server/accounts";
+import { listGroupPicks } from "@/server/groups";
 import { getSchedule } from "@/server/schedule";
 import { getSelection } from "@/server/selection";
 
@@ -24,8 +25,13 @@ export default async function HomePage() {
     redirect("/login");
   }
 
-  // The grid comes from the in-process memo; the selection is always read for this user (R-12).
-  const [schedule, selection] = await Promise.all([getSchedule(), getSelection(user.id)]);
+  // The grid comes from the in-process memo; the selection and the groups are always read for this
+  // user (R-12, FEAT-006c R-01), all three at once (NFR-01).
+  const [schedule, selection, picks] = await Promise.all([
+    getSchedule(),
+    getSelection(user.id),
+    listGroupPicks(user.id),
+  ]);
 
   if (!schedule.ok || !selection.ok || schedule.schedule.days.length === 0) {
     // Only the screen's own message: what failed and why stays in the server log (R-05).
@@ -49,6 +55,9 @@ export default async function HomePage() {
       userName={user.name}
       userId={user.id}
       mode="online"
+      // Groups that could not be loaded cost only the groups: the grid shows without the picker,
+      // and the device copy keeps the ones it had (FEAT-006c).
+      groups={picks.ok ? picks.groups : null}
       saveAction={saveSelectionAction}
       logoutAction={logoutAction}
     />

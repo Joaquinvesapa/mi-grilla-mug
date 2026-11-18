@@ -12,13 +12,28 @@ import {
 
 import { AppBar } from "@/components/app-menu";
 import { DayPicker } from "@/components/day-picker";
-import { clearPending, readPending, writePending, writeSnapshot } from "@/components/device-store";
+import {
+  clearPending,
+  readGroupChoice,
+  readPending,
+  readSnapshot,
+  writeGroupChoice,
+  writePending,
+  writeSnapshot,
+} from "@/components/device-store";
+import { GroupPicker } from "@/components/group-picker";
 import { LiveButton } from "@/components/live-button";
 import { OfflinePendingNotice } from "@/components/offline-pending-notice";
 import { PendingBar } from "@/components/pending-bar";
 import { ScheduleGrid } from "@/components/schedule-grid";
 import { WallpaperButton } from "@/components/wallpaper-button";
 import { findClashes } from "@/lib/clashes";
+import {
+  type GroupChoice,
+  type GroupPicks,
+  picksByShow,
+  resolveGroupChoice,
+} from "@/lib/group-picks";
 import type { Schedule } from "@/lib/schedule-types";
 import { selectionMessageFor } from "@/lib/selection-messages";
 
@@ -37,6 +52,15 @@ function isServer(): boolean {
   return false;
 }
 
+/**
+ * The groups the device copy keeps when the page could not load them: the copy's own, if it is
+ * this user's, and none otherwise — another account's friends never pass to this one (R-06).
+ */
+function groupsKeptFor(userId: string): readonly GroupPicks[] {
+  const snapshot = readSnapshot();
+  return snapshot?.userId === userId ? snapshot.groups : [];
+}
+
 /** `saveSelectionAction`'s shape, so tests can pass a fake one (as the account forms do). */
 export type SaveSelection = (showIds: string[], expectedUserId: string) => Promise<SaveResult>;
 
@@ -51,6 +75,12 @@ export type ScheduleScreenProps = {
   userId: string;
   /** `online`: rendered by `/` with a verified session, so it refreshes the device copy. */
   mode: "online" | "offline";
+  /**
+   * The user's groups with their friends' picks, the most recent first (FEAT-006c): from
+   * `listGroupPicks`, or from the device copy without signal. `null` when the page could not load
+   * them: the grid shows without the picker and the copy keeps the groups it had.
+   */
+  groups: GroupPicks[] | null;
   saveAction: SaveSelection;
   logoutAction: () => void | Promise<void>;
 };
@@ -87,6 +117,7 @@ export function ScheduleScreen({
   userName,
   userId,
   mode,
+  groups,
   saveAction,
   logoutAction,
 }: ScheduleScreenProps) {
@@ -108,6 +139,16 @@ export function ScheduleScreen({
   const syncBlocked = useRef(false);
   // What the server last confirmed for this user: the only selection the device copy holds.
   const confirmed = useRef<readonly string[]>(savedShowIds);
+  // The groups every write of the device copy carries: the page's, or, when it could not load
+  // them, the ones the copy already had for this user (set on mount, below).
+  const copyGroups = useRef<readonly GroupPicks[]>(groups ?? []);
+  /** The group chosen on this device; `undefined` until it is read, in the browser (FR-04). */
+  const [groupChoice, setGroupChoice] = useState<GroupChoice | undefined>(undefined);
+
+  // The group on screen: `undefined` without groups (no picker), `null` for "Sin grupo".
+  const shownGroupId = groups ? resolveGroupChoice(groups, groupChoice) : undefined;
+  const shownGroup = groups?.find((group) => group.id === shownGroupId);
+  const friendPicks = useMemo(() => picksByShow(shownGroup), [shownGroup]);
 
   const pending = useMemo(() => difference(draft, saved), [draft, saved]);
   const clashes = useMemo(() => findClashes(schedule.shows, draft), [schedule.shows, draft]);
@@ -142,14 +183,13 @@ export function ScheduleScreen({
     confirmed.current = showIds;
     // A failure is ignored on purpose: the screen with a connection does not depend on the copy,
     // and the next visit to `/` writes it again.
-    // `groups: []` until the screen gets the user's groups (FEAT-006c, Block 4).
     writeSnapshot({
       version: 1,
       userId,
       userName,
       schedule,
       savedShowIds: [...showIds],
-      groups: [],
+      groups: [...copyGroups.current],
     });
   }
 
@@ -215,6 +255,8 @@ export function ScheduleScreen({
   const [adopted, setAdopted] = useState(false);
   if (inBrowser && !adopted) {
     setAdopted(true);
+    // The group this user chose last time, read once like the pending selection (FR-04).
+    setGroupChoice(readGroupChoice(userId));
     const stored = readPending(userId);
     if (stored) {
       const ids = new Set(stored.showIds);
@@ -230,6 +272,12 @@ export function ScheduleScreen({
       rememberConfirmed(savedShowIds);
     }
   });
+
+  // Which groups the copy carries, before any write of it below (effects run in order): the page's
+  // when it has them; otherwise, once in the browser, what the copy already holds for this user.
+  useEffect(() => {
+    copyGroups.current = groups ?? groupsKeptFor(userId);
+  }, [groups, userId]);
 
   // Sync on mount and every time the signal comes back (FR-03).
   useEffect(() => {
@@ -253,6 +301,16 @@ export function ScheduleScreen({
       }
       return next;
     });
+  }
+
+  /** The picker only changes the view and what this device remembers: nothing goes to the server. */
+  function chooseGroup(groupId: string | null) {
+    // Only one of the groups on screen, or "Sin grupo": nothing else is written (R-05).
+    if (groupId !== null && !groups?.some((group) => group.id === groupId)) return;
+    // STORAGE_UNAVAILABLE is ignored on purpose: the chosen group is shown anyway, it is only not
+    // remembered for the next visit. `device-store` reports it; nothing is swallowed here.
+    writeGroupChoice(userId, groupId);
+    setGroupChoice({ groupId });
   }
 
   function discard() {
@@ -315,6 +373,13 @@ export function ScheduleScreen({
         </p>
       ) : null}
       {onDevice ? <OfflinePendingNotice /> : null}
+      {groups && shownGroupId !== undefined ? (
+        // Its own row under the bar, inside the fixed screen: the safe areas stay the bar's, and
+        // it takes no gesture from the grid (mobile-native, gestures).
+        <div className="shrink-0 px-4 pb-2">
+          <GroupPicker groups={groups} value={shownGroupId} onChange={chooseGroup} />
+        </div>
+      ) : null}
       <DayPicker
         days={schedule.days}
         value={dayId}
@@ -343,8 +408,8 @@ export function ScheduleScreen({
               selectedIds={draft}
               pendingIds={pending}
               clashIds={clashes}
-              // Provisional: no group yet. FEAT-006c Block 4 wires the chosen group's picks here.
-              friendPicks={new Map()}
+              // The chosen group's friends on each show; empty with "Sin grupo" (FR-02, FR-03).
+              friendPicks={friendPicks}
               onToggle={toggle}
             />
             {/* The draft, as on screen: unsaved marks and a pending selection included (FR-09). */}

@@ -21,5 +21,16 @@ Supuestos que declararon los implementadores, revisados por el orquestador y mos
   key) y corta nombres largos antes de contar puntos de código; los máximos salen de
   `MAX_GROUPS_PER_USER` y `MAX_GROUP_MEMBERS - 1` — implementer y revisión de arquitectura —
   2026-11-18 — Block 2
+- `heightWithFriends(geometry, nextTop: number | undefined)`: el show siguiente es el primero del
+  mismo escenario que empieza estrictamente después; sin siguiente no hay tope. El selector recibe
+  solo `id` y `name` y conserva el ancho `w-fit` del `native-select` de shadcn; en un bloque elegido
+  el chip hereda `text-primary-foreground` — implementer, aceptado por las dos revisiones —
+  2026-11-18 — Block 3
+- La fila del selector es `shrink-0 px-4 pb-2` dentro de `app-fixed-screen`, debajo del AppBar (y
+  del aviso de pendiente) y antes de los días. El ref de grupos de la copia se actualiza en un
+  efecto sobre `[groups, userId]` declarado antes del efecto de montaje (un test falla si se
+  invierte). La rama de `chooseGroup` que rechaza un id ajeno queda como defensa en profundidad sin
+  test: el selector ya filtra los valores desconocidos (Block 3) — implementer, aceptado por las dos
+  revisiones — 2026-11-18 — Block 4
 - El worktree usa su propia base local (`mi_grilla_feat006c`): `mi_grilla_test` la comparte otra
   sesión y una corrida de integración se pisó con la suya — orquestador — 2026-11-18 — Block 1

@@ -67,6 +67,7 @@ describe("LiveButton", () => {
         userName="Ana"
         userId="user-ana"
         mode="offline"
+        groups={[]}
         saveAction={vi.fn(async () => ({ ok: true as const }))}
         logoutAction={vi.fn(async () => {})}
       />,
