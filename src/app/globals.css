@@ -178,3 +178,16 @@
     font-variant-numeric: tabular-nums;
   }
 }
+
+/*
+ * The "En vivo" sheet opens in 250 ms, not Vaul's 500 ms, so it is done within the 300 ms of
+ * NFR-01 (FEAT-005a). Outside any @layer and with !important on purpose: Vaul injects its own CSS
+ * unlayered ([data-vaul-drawer] { animation-duration: .5s; transition: transform .5s … }), which
+ * beats any layered rule, and on release it writes `transition: transform .5s` inline, which only
+ * !important beats. While dragging Vaul sets `transition: none` inline, so the sheet still follows
+ * the finger 1:1 (gestures). The attribute is only on that sheet: other sheets keep Vaul's timing.
+ */
+[data-live-panel] {
+  animation-duration: 250ms !important;
+  transition-duration: 250ms !important;
+}

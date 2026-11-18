@@ -44,6 +44,10 @@ Todos los cambios notables de Mi Grilla se registran en este archivo. El formato
   selección pendiente de sincronizar, y se genera también sin conexión.
 - [FEAT-004] En el iPhone se guarda en Fotos con la hoja de compartir; en una computadora se
   descarga como `mi-grilla-<día>.png`. Después, una guía de 4 pasos para ponerlo de fondo.
+- [FEAT-005a] Botón "En vivo" abajo a la derecha de la grilla: abre un panel con lo que suena ahora
+  y lo que sigue en cada escenario, con los escenarios de tus shows elegidos primero, con la hora
+  real de Argentina y actualizado solo cada minuto mientras está abierto. Fuera de horario dice
+  cuándo es el próximo show o que el festival terminó. Funciona también sin conexión.
 - [FEAT-006a] Grupos: crear uno con nombre (quien lo crea lo administra), ver la lista "Grupos" y la
   pantalla de cada grupo con sus integrantes, sus iniciales y la marca de administrador. Hasta 20
   integrantes por grupo y 10 grupos por cuenta.
