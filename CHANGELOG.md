@@ -30,6 +30,12 @@ Todos los cambios notables de Mi Grilla se registran en este archivo. El formato
   marcan, y cerrar sesión con cambios pendientes pide confirmación.
 - [FEAT-003a] La grilla versionada en `data/schedule.json` y el seed `pnpm db:seed`, que la carga en
   la base (tablas de días, escenarios, shows y selección).
+- [FEAT-003b] La grilla y la selección se ven sin conexión en un celular donde ya se vieron con
+  conexión: la app guarda una copia en el dispositivo, que se borra al cerrar sesión o al entrar
+  otra cuenta.
+- [FEAT-003b] "Guardar" sin conexión deja la selección guardada en el celular, con un aviso, y se
+  sincroniza sola con la cuenta al abrir la app con conexión o al volver la señal; si otra cuenta
+  entra en ese celular, no la ve ni se le sincroniza.
 
 ### Changed
 
@@ -38,3 +44,5 @@ Todos los cambios notables de Mi Grilla se registran en este archivo. El formato
 - [FEAT-003a] La pantalla principal deja la presentación ("Muy pronto") y pasa a ser la grilla; el
   saludo, la guía "Cómo instalarla" y "Cerrar sesión" van en un menú que se abre desde abajo.
 - [FEAT-003a] La CI siembra la grilla (`pnpm db:seed`) en los jobs `integration` y `e2e`.
+- [FEAT-003b] Sin conexión, "Cerrar sesión" queda deshabilitado con su motivo, y la pantalla "Sin
+  conexión" muestra la grilla guardada en el celular cuando la hay.
