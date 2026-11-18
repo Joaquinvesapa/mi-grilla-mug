@@ -6,8 +6,15 @@
 | PRD | docs/daw/prd/prd-FEAT-005a.md |
 | Tier | FEATURE |
 | Date | 2026-11-18 |
-| Spec loops | 2 |
-| Loops since last human decision | 2 |
+| Spec loops | 3 |
+| Loops since last human decision | 0 |
+
+## Vuelta 3 (VERIFY → PLAN, decisión del usuario, 2026-11-18)
+
+Corrección de forma: cada test de **Required tests** abre ahora con un identificador `test-…`,
+porque F-VER-06 (`validate_verify.py`) solo reconoce nombres con esa forma y no leía ninguno de los
+nombres descriptivos. El nombre descriptivo sigue a continuación y es el nombre real del test en el
+código. No cambian bloques, archivos, lógica ni AC.
 
 ## Summary
 "En vivo" se calcula todo en el navegador, sin servidor ni dependencias nuevas. Una función pura
@@ -164,25 +171,25 @@ Implementa FR-03 a FR-08, FR-10, FR-11 y FR-13 con las reglas de "Decisiones apl
 - `now` inválido: `RangeError`, sin resultado parcial.
 
 **Required tests**
-- [ ] `live-now: a las 22:30 del viernes, ahora y sigue de los 5 escenarios` — validates AC-04
-- [ ] `live-now: a las 23:30 Tyler ya no suena y Peggy Gou sí` — validates AC-05
-- [ ] `live-now: el sábado 00:30 suena Peggy Gou, del viernes` — validates AC-06
-- [ ] `live-now: con Turf elegido, Alternative primero y el resto en orden` — validates AC-07
-- [ ] `live-now: sin elegidos sonando, orden de la app` — validates AC-08
-- [ ] `live-now: marca de elegido en el actual y en el siguiente` — validates AC-09
-- [ ] `live-now: sábado 10:00 es idle con Tobika hoy a las 13:45` — validates AC-11
-- [ ] `live-now: sábado 02:00 es idle con el próximo show el sábado, no hoy` — validates AC-11 (G5)
-- [ ] `live-now: antes del festival es idle con el primer show del viernes` — validates AC-11
-- [ ] `live-now: desde las 00:35 del lunes es over` — validates AC-12
-- [ ] `live-now: con TZ=Europe/Madrid da lo mismo que en Argentina` — validates AC-14 (G11:
+- [ ] `test-live-now-a-las-22-30-del-viernes-ahora-y-sigue-de-los-5` — `live-now: a las 22:30 del viernes, ahora y sigue de los 5 escenarios` — validates AC-04
+- [ ] `test-live-now-a-las-23-30-tyler-ya-no-suena-y-peggy-gou-si` — `live-now: a las 23:30 Tyler ya no suena y Peggy Gou sí` — validates AC-05
+- [ ] `test-live-now-el-sabado-00-30-suena-peggy-gou-del-viernes` — `live-now: el sábado 00:30 suena Peggy Gou, del viernes` — validates AC-06
+- [ ] `test-live-now-con-turf-elegido-alternative-primero-y-el` — `live-now: con Turf elegido, Alternative primero y el resto en orden` — validates AC-07
+- [ ] `test-live-now-sin-elegidos-sonando-orden-de-la-app` — `live-now: sin elegidos sonando, orden de la app` — validates AC-08
+- [ ] `test-live-now-marca-de-elegido-en-el-actual-y-en-el` — `live-now: marca de elegido en el actual y en el siguiente` — validates AC-09
+- [ ] `test-live-now-sabado-10-00-es-idle-con-tobika-hoy-a-las-13` — `live-now: sábado 10:00 es idle con Tobika hoy a las 13:45` — validates AC-11
+- [ ] `test-live-now-sabado-02-00-es-idle-con-el-proximo-show-el` — `live-now: sábado 02:00 es idle con el próximo show el sábado, no hoy` — validates AC-11 (G5)
+- [ ] `test-live-now-antes-del-festival-es-idle-con-el-primer-show` — `live-now: antes del festival es idle con el primer show del viernes` — validates AC-11
+- [ ] `test-live-now-desde-las-00-35-del-lunes-es-over` — `live-now: desde las 00:35 del lunes es over` — validates AC-12
+- [ ] `test-live-now-con-tz-europe-madrid-da-lo-mismo-que-en` — `live-now: con TZ=Europe/Madrid da lo mismo que en Argentina` — validates AC-14 (G11:
   `vi.stubEnv("TZ", …)` y restaurar)
-- [ ] `live-now: cada minuto de viernes 13:00 a lunes 06:00 coincide con el oráculo` — validates
+- [ ] `test-live-now-cada-minuto-de-viernes-13-00-a-lunes-06-00` — `live-now: cada minuto de viernes 13:00 a lunes 06:00 coincide con el oráculo` — validates
   AC-23
-- [ ] `live-now: un id inválido en la selección se ignora` — sad path (R-01)
-- [ ] `live-now: un show con instante inválido se ignora` — sad path (R-02)
-- [ ] `live-now: now inválido lanza RangeError` — sad path
-- [ ] `festival-time: festivalDayAt devuelve el día o null fuera del festival` — validates AC-06
-- [ ] `live-messages: textos de idle hoy, otro día y minutos` — validates AC-11
+- [ ] `test-live-now-un-id-invalido-en-la-seleccion-se-ignora` — `live-now: un id inválido en la selección se ignora` — sad path (R-01)
+- [ ] `test-live-now-un-show-con-instante-invalido-se-ignora` — `live-now: un show con instante inválido se ignora` — sad path (R-02)
+- [ ] `test-live-now-now-invalido-lanza-rangeerror` — `live-now: now inválido lanza RangeError` — sad path
+- [ ] `test-festival-time-festivaldayat-devuelve-el-dia-o-null` — `festival-time: festivalDayAt devuelve el día o null fuera del festival` — validates AC-06
+- [ ] `test-live-messages-textos-de-idle-hoy-otro-dia-y-minutos` — `live-messages: textos de idle hoy, otro día y minutos` — validates AC-11
 
 **Completion criterion**
 Los tests de Block 1 pasan con la grilla real de `data/schedule.json`, el oráculo de AC-23 no
@@ -205,11 +212,11 @@ hora (FR-14).
 - Sin condiciones de error propias: lee `Date.now()`, que no falla.
 
 **Required tests**
-- [ ] `use-now: con el panel abierto, de 23:29:30 a 23:30 se actualiza en ≤ 60 s` — validates AC-13
-- [ ] `use-now: inactivo no agenda temporizadores` — validates AC-13
-- [ ] `use-now: al desactivar o desmontar no quedan temporizadores` — validates AC-13 (R-05)
-- [ ] `use-now: al volver visible relee la hora` — validates AC-13
-- [ ] `use-now: solo la hora real, sin forma de cambiarla` — validates AC-15
+- [ ] `test-use-now-con-el-panel-abierto-de-23-29-30-a-23-30-se` — `use-now: con el panel abierto, de 23:29:30 a 23:30 se actualiza en ≤ 60 s` — validates AC-13
+- [ ] `test-use-now-inactivo-no-agenda-temporizadores` — `use-now: inactivo no agenda temporizadores` — validates AC-13
+- [ ] `test-use-now-al-desactivar-o-desmontar-no-quedan` — `use-now: al desactivar o desmontar no quedan temporizadores` — validates AC-13 (R-05)
+- [ ] `test-use-now-al-volver-visible-relee-la-hora` — `use-now: al volver visible relee la hora` — validates AC-13
+- [ ] `test-use-now-solo-la-hora-real-sin-forma-de-cambiarla` — `use-now: solo la hora real, sin forma de cambiarla` — validates AC-15
 
 **Completion criterion**
 Los tests de Block 2 pasan con fake timers de Vitest y `vi.getTimerCount()` es 0 después de
@@ -265,22 +272,22 @@ Implementa FR-01, FR-02, FR-03, FR-04, FR-07 a FR-12, FR-15 y FR-16.
   R-02) y no se rompe la pantalla.
 
 **Required tests**
-- [ ] `live-button: el botón está abajo a la derecha, fuera del scroll de la grilla` — validates
+- [ ] `test-live-button-el-boton-esta-abajo-a-la-derecha-fuera-del` — `live-button: el botón está abajo a la derecha, fuera del scroll de la grilla` — validates
   AC-01
-- [ ] `live-button: tocar En vivo abre el diálogo "En vivo"` — validates AC-02
-- [ ] `live-button: Cerrar cierra el panel y la selección queda igual` — validates AC-03
-- [ ] `schedule-screen: abrir y cerrar el panel no cambia el día ni los cambios pendientes` —
+- [ ] `test-live-button-tocar-en-vivo-abre-el-dialogo-en-vivo` — `live-button: tocar En vivo abre el diálogo "En vivo"` — validates AC-02
+- [ ] `test-live-button-cerrar-cierra-el-panel-y-la-seleccion-queda` — `live-button: Cerrar cierra el panel y la selección queda igual` — validates AC-03
+- [ ] `test-schedule-screen-abrir-y-cerrar-el-panel-no-cambia-el` — `schedule-screen: abrir y cerrar el panel no cambia el día ni los cambios pendientes` —
   validates AC-03
-- [ ] `live-panel: muestra ahora y sigue de los 5 escenarios a las 22:30` — validates AC-04
-- [ ] `live-panel: Alternative primero con Turf elegido` — validates AC-07, AC-08
-- [ ] `live-panel: ícono de elegido en ahora y en sigue` — validates AC-09
-- [ ] `schedule-screen: el panel usa el draft sin guardar` — validates AC-10
-- [ ] `live-panel: idle y over` — validates AC-11, AC-12
-- [ ] `live-button: con el panel abierto se actualiza al cambiar el minuto` — validates AC-13
-- [ ] `schedule-screen: en modo offline el botón también está` — validates AC-20
-- [ ] `schedule-grid: las columnas suman el espacio libre del botón` — validates AC-21
-- [ ] `live-button: el botón y Cerrar miden al menos 44 × 44` — validates AC-24
-- [ ] `live-panel: un show con instante inválido en la grilla se ignora sin romper el panel` — sad
+- [ ] `test-live-panel-muestra-ahora-y-sigue-de-los-5-escenarios-a` — `live-panel: muestra ahora y sigue de los 5 escenarios a las 22:30` — validates AC-04
+- [ ] `test-live-panel-alternative-primero-con-turf-elegido` — `live-panel: Alternative primero con Turf elegido` — validates AC-07, AC-08
+- [ ] `test-live-panel-icono-de-elegido-en-ahora-y-en-sigue` — `live-panel: ícono de elegido en ahora y en sigue` — validates AC-09
+- [ ] `test-schedule-screen-el-panel-usa-el-draft-sin-guardar` — `schedule-screen: el panel usa el draft sin guardar` — validates AC-10
+- [ ] `test-live-panel-idle-y-over` — `live-panel: idle y over` — validates AC-11, AC-12
+- [ ] `test-live-button-con-el-panel-abierto-se-actualiza-al` — `live-button: con el panel abierto se actualiza al cambiar el minuto` — validates AC-13
+- [ ] `test-schedule-screen-en-modo-offline-el-boton-tambien-esta` — `schedule-screen: en modo offline el botón también está` — validates AC-20
+- [ ] `test-schedule-grid-las-columnas-suman-el-espacio-libre-del` — `schedule-grid: las columnas suman el espacio libre del botón` — validates AC-21
+- [ ] `test-live-button-el-boton-y-cerrar-miden-al-menos-44-44` — `live-button: el botón y Cerrar miden al menos 44 × 44` — validates AC-24
+- [ ] `test-live-panel-un-show-con-instante-invalido-en-la-grilla` — `live-panel: un show con instante inválido en la grilla se ignora sin romper el panel` — sad
   path (R-02)
 
 **Completion criterion**
@@ -323,16 +330,16 @@ presupuesto de 10 min del job `e2e` (G14). El swipe para cerrar espera ≥ 500 m
 - Sin condiciones de error propias: los tests usan la app; el caso sin conexión es AC-20.
 
 **Required tests**
-- [ ] `live: el botón sigue visible con scroll en x e y` — validates AC-01
-- [ ] `live: abrir y cerrar de las 3 formas sin perder scroll ni pendientes` — validates AC-02, AC-03
-- [ ] `live: 22:30 del viernes con Turf sin guardar` — validates AC-04, AC-10
-- [ ] `live: de 23:29 a 23:30 cambia solo` — validates AC-13
-- [ ] `live: con zona de Madrid muestra hora de Argentina` — validates AC-14
-- [ ] `live: en / no hay control de hora` — validates AC-15
-- [ ] `live: sin conexión muestra lo mismo` — validates AC-20
-- [ ] `live: al final del scroll ningún show queda debajo del botón` — validates AC-21
-- [ ] `live: el panel abre en ≤ 300 ms` — validates AC-22
-- [ ] `live: a 360 px, tamaños y sin scroll horizontal` — validates AC-24
+- [ ] `test-live-el-boton-sigue-visible-con-scroll-en-x-e-y` — `live: el botón sigue visible con scroll en x e y` — validates AC-01
+- [ ] `test-live-abrir-y-cerrar-de-las-3-formas-sin-perder-scroll` — `live: abrir y cerrar de las 3 formas sin perder scroll ni pendientes` — validates AC-02, AC-03
+- [ ] `test-live-22-30-del-viernes-con-turf-sin-guardar` — `live: 22:30 del viernes con Turf sin guardar` — validates AC-04, AC-10
+- [ ] `test-live-de-23-29-a-23-30-cambia-solo` — `live: de 23:29 a 23:30 cambia solo` — validates AC-13
+- [ ] `test-live-con-zona-de-madrid-muestra-hora-de-argentina` — `live: con zona de Madrid muestra hora de Argentina` — validates AC-14
+- [ ] `test-live-en-no-hay-control-de-hora` — `live: en / no hay control de hora` — validates AC-15
+- [ ] `test-live-sin-conexion-muestra-lo-mismo` — `live: sin conexión muestra lo mismo` — validates AC-20
+- [ ] `test-live-al-final-del-scroll-ningun-show-queda-debajo-del` — `live: al final del scroll ningún show queda debajo del botón` — validates AC-21
+- [ ] `test-live-el-panel-abre-en-300-ms` — `live: el panel abre en ≤ 300 ms` — validates AC-22
+- [ ] `test-live-a-360-px-tamanos-y-sin-scroll-horizontal` — `live: a 360 px, tamaños y sin scroll horizontal` — validates AC-24
 
 **Completion criterion**
 `pnpm test:e2e tests/e2e/live.spec.ts --project=iphone-webkit` pasa en el bloque; en el cierre de
