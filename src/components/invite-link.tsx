@@ -4,15 +4,6 @@ import { useActionState, useState, useSyncExternalStore } from "react";
 
 import type { RegenerateInviteState } from "@/app/group-actions";
 import { FormAlert } from "@/components/form-feedback";
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   ASK_THE_ADMIN,
@@ -23,7 +14,6 @@ import {
   LINK_EXPIRED,
   LINK_REGENERATED,
   NO_ACTIVE_LINK,
-  REGENERATE_CONFIRM,
 } from "@/lib/group-messages";
 
 export type InviteLinkProps = {
@@ -83,10 +73,11 @@ async function copyToClipboard(url: string): Promise<boolean> {
  * The group's invite link (FR-04, FR-05): the URL, when it expires and "Compartir link", which opens
  * the system share sheet within the tap and, without one, copies the link. Until the browser knows
  * its origin (the server render) there is no URL and nothing to share, so a relative URL is never
- * shown or shared. The admin also gets "Generar link nuevo", which asks first because it cuts off
- * the link already shared (R-14); the dialog stays, with "Generar" disabled, until the answer comes.
- * An expired link, or none at all, is not offered for sharing: the admin generates a new one
- * (without asking, there is nothing to cut off) and everyone else is told who to ask.
+ * shown or shared. The admin also gets "Generar link nuevo", which sends at once without asking
+ * even though it cuts off the link already shared (R-14, a risk the user accepted in the spec's
+ * round 3); the button stays disabled until the answer comes, so it cannot be sent twice.
+ * An expired link, or none at all, is not offered for sharing: the admin generates a new one the
+ * same way and everyone else is told who to ask.
  */
 export function InviteLink({
   groupId,
@@ -98,14 +89,8 @@ export function InviteLink({
 }: InviteLinkProps) {
   const origin = useOrigin();
   const [notice, setNotice] = useState<CopyNotice>(null);
-  const [confirming, setConfirming] = useState(false);
   const [state, formAction, pending] = useActionState<RegenerateView, FormData>(
-    async (_prev, formData) => {
-      const result = await regenerateAction({ ok: true }, formData);
-      // Closed with the answer, not on the tap: while it is sent "Generar" cannot be sent twice.
-      setConfirming(false);
-      return result;
-    },
+    async (_prev, formData) => regenerateAction({ ok: true }, formData),
     null,
   );
 
@@ -169,19 +154,7 @@ export function InviteLink({
         </>
       )}
 
-      {isAdmin && active ? (
-        <Button
-          type="button"
-          variant="outline"
-          size="lg"
-          disabled={pending}
-          aria-busy={pending}
-          onClick={() => setConfirming(true)}
-        >
-          Generar link nuevo
-        </Button>
-      ) : null}
-      {isAdmin && !active ? (
+      {isAdmin ? (
         <form action={formAction}>
           <input type="hidden" name="groupId" value={groupId} />
           <Button
@@ -203,26 +176,6 @@ export function InviteLink({
         </p>
       ) : null}
       <FormAlert message={state?.ok === false ? state.error : null} />
-
-      <AlertDialog open={confirming} onOpenChange={setConfirming}>
-        <AlertDialogContent size="sm">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Generar link nuevo</AlertDialogTitle>
-            <AlertDialogDescription>{REGENERATE_CONFIRM}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={pending}>Cancelar</AlertDialogCancel>
-            {/* A plain submit, not AlertDialogAction: closing the dialog on click would unmount
-                the form before the browser submits it. */}
-            <form action={formAction} className="contents">
-              <input type="hidden" name="groupId" value={groupId} />
-              <Button type="submit" disabled={pending} aria-busy={pending}>
-                Generar
-              </Button>
-            </form>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </section>
   );
 }

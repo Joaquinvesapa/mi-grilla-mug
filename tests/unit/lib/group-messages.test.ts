@@ -18,7 +18,6 @@ import {
   memberCountLabel,
   NO_ACTIVE_LINK,
   NO_GROUPS,
-  REGENERATE_CONFIRM,
 } from "@/lib/group-messages";
 
 // `satisfies` makes a code missing from (or extra to) the exported union a compile error.
@@ -75,7 +74,6 @@ describe("group-messages", () => {
     expect(LINK_EXPIRED).toBe("El link venció");
     expect(NO_ACTIVE_LINK).toBe("No hay un link activo");
     expect(ASK_THE_ADMIN).toBe("Pedile a quien administra el grupo un link nuevo.");
-    expect(REGENERATE_CONFIRM).toBe("El link actual deja de funcionar. ¿Generar uno nuevo?");
     expect(LINK_REGENERATED).toBe("Link nuevo generado");
     expect(inviteShareText("Los del Lolla")).toStrictEqual({
       title: "Los del Lolla · Mi Grilla",

@@ -79,8 +79,6 @@ export const LINK_EXPIRED = "El link venció";
 export const NO_ACTIVE_LINK = "No hay un link activo";
 /** For a member who is not the admin, when there is no link to share. */
 export const ASK_THE_ADMIN = "Pedile a quien administra el grupo un link nuevo.";
-/** "Generar link nuevo" asks first: the link already shared stops working (R-14). */
-export const REGENERATE_CONFIRM = "El link actual deja de funcionar. ¿Generar uno nuevo?";
 export const LINK_REGENERATED = "Link nuevo generado";
 /** `/invitacion/[token]` (FR-06): the preview's lead-in, its button and its own load error. */
 export const INVITATION_LEAD = "Te invitaron a sumarte a";

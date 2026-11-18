@@ -98,3 +98,15 @@ decir que se mostró al usuario sin pedirle aprobación previa; cualquier objeci
   defecto de Next, en inglés y fuera del tema (no filtra nada: AC-29 se cumple), y el nombre accesible
   de cada tarjeta de "Grupos" queda "Los del Lolla , 2 integrantes" con un espacio antes de la coma.
   — orquestador — 2026-11-18 — Block 4
+
+## Vuelta 3 — decisiones del usuario en VERIFY (2026-11-18)
+
+- **"Generar link nuevo" ya no pide confirmación.** El usuario no confirmó el `AlertDialog` de R-14:
+  el botón envía la acción al tocarlo, queda deshabilitado con `aria-busy` mientras envía y R-14
+  pasa a riesgo aceptado. Reemplaza la decisión "Generar link nuevo pide confirmación" de PLAN y la
+  frase "el diálogo se cierra con la respuesta" del Block 2, que quedan como registro histórico. Se
+  borró `REGENERATE_CONFIRM` de `group-messages.ts`. — usuario — 2026-11-18 — Block 2
+- **Confirmadas:** la clave del token derivada de `BETTER_AUTH_SECRET` (rotarlo invalida los links)
+  y que un integrante con un link vencido de su grupo vaya al grupo. — usuario — 2026-11-18
+- **AC-13** se cumple con la lista "Grupos" actual (iniciales y cantidad) más la pantalla de cada
+  grupo; **AC-29**: la parte de las selecciones se prueba en FEAT-006c. — usuario — 2026-11-18

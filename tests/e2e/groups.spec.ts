@@ -7,7 +7,6 @@ import {
   LINK_REGENERATED,
   memberCountLabel,
   NO_GROUPS,
-  REGENERATE_CONFIRM,
 } from "@/lib/group-messages";
 
 import { signUp, submitLogin } from "./auth";
@@ -147,12 +146,10 @@ test.describe("grupos (FEAT-006a)", () => {
     await expect(inviteCard(member).getByRole("button", { name: "Compartir link" })).toBeVisible();
     await expect(member.getByRole("button", { name: "Generar link nuevo" })).toHaveCount(0);
 
-    // AC-05: the admin generates a new link, after confirming.
+    // AC-05: the admin generates a new link with one tap, nothing asks first (R-14, accepted risk).
     await page.getByRole("button", { name: "Generar link nuevo" }).click();
-    const dialog = page.getByRole("alertdialog");
-    await expect(dialog).toContainText(REGENERATE_CONFIRM);
-    await dialog.getByRole("button", { name: "Generar", exact: true }).click();
     await expect(page.getByText(LINK_REGENERATED)).toBeVisible();
+    await expect(page.getByRole("alertdialog")).toHaveCount(0);
     await expect.poll(() => readInviteLink(page)).not.toBe(oldLink);
     const newLink = await readInviteLink(page);
 

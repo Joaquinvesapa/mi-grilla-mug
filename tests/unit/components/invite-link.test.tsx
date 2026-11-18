@@ -118,20 +118,14 @@ describe("InviteLink", () => {
     expect(link).toHaveClass("select-all");
   });
 
-  it("invite-link: el administrador ve Generar link nuevo con confirmación y el integrante común no", async () => {
+  it("invite-link: el administrador genera un link nuevo sin confirmación y el integrante común no lo ve", async () => {
     const { regenerateAction } = renderLink({ isAdmin: true });
 
+    // R-14 is an accepted risk (spec, round 3): the tap sends it, nothing asks first.
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Generar link nuevo" }));
     });
-    const dialog = screen.getByRole("alertdialog");
-    expect(dialog).toHaveTextContent("El link actual deja de funcionar. ¿Generar uno nuevo?");
-    // Asking does not replace anything yet.
-    expect(regenerateAction).not.toHaveBeenCalled();
-
-    await act(async () => {
-      fireEvent.click(within(dialog).getByRole("button", { name: "Generar" }));
-    });
+    expect(screen.queryByRole("alertdialog")).toBeNull();
     expect(regenerateAction).toHaveBeenCalledTimes(1);
     expect(regenerateAction.mock.calls[0]?.[1].get("groupId")).toBe(GROUP_ID);
 
@@ -163,7 +157,7 @@ describe("InviteLink", () => {
     expect(screen.getByText("No hay un link activo")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Compartir link" })).toBeNull();
     expect(screen.queryByText(/Pedile a quien administra/)).toBeNull();
-    // No link to cut off: generating one does not ask first.
+    // Generating never asks first (R-14 accepted in spec round 3), with or without a link.
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Generar link nuevo" }));
     });
@@ -177,12 +171,15 @@ describe("InviteLink", () => {
       ok: false,
       error: "Solo quien administra el grupo puede generar un link nuevo.",
     }));
-    renderLink({ invite: null, isAdmin: true, regenerateAction });
+    renderLink({ isAdmin: true, regenerateAction });
 
+    // With an active link too: the tap sends it directly and the answer is shown.
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Generar link nuevo" }));
     });
 
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    expect(regenerateAction).toHaveBeenCalledTimes(1);
     expect(screen.getByRole("alert")).toHaveTextContent(
       "Solo quien administra el grupo puede generar un link nuevo.",
     );
@@ -219,20 +216,16 @@ describe("InviteLink", () => {
     );
     renderLink({ isAdmin: true, regenerateAction });
 
+    const generate = screen.getByRole("button", { name: "Generar link nuevo" });
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Generar link nuevo" }));
+      fireEvent.click(generate);
     });
-    const dialog = screen.getByRole("alertdialog");
-    await act(async () => {
-      fireEvent.click(within(dialog).getByRole("button", { name: "Generar" }));
-    });
+    expect(screen.queryByRole("alertdialog")).toBeNull();
 
-    // Still sending: the dialog stays, and a second tap cannot send it again.
-    const confirm = within(screen.getByRole("alertdialog")).getByRole("button", {
-      name: "Generar",
-    });
-    expect(confirm).toBeDisabled();
-    fireEvent.click(confirm);
+    // Still sending: the button is disabled, and a second tap cannot send it again.
+    expect(generate).toBeDisabled();
+    expect(generate).toHaveAttribute("aria-busy", "true");
+    fireEvent.click(generate);
     expect(regenerateAction).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("status")).toBeNull();
 
@@ -240,8 +233,8 @@ describe("InviteLink", () => {
       finish({ ok: true });
     });
 
-    expect(screen.queryByRole("alertdialog")).toBeNull();
     expect(screen.getByRole("status")).toHaveTextContent("Link nuevo generado");
+    expect(screen.getByRole("button", { name: "Generar link nuevo" })).toBeEnabled();
   });
 
   it("invite-link: link vencido con administrador no ofrece compartir y Generar no pide confirmación", async () => {
