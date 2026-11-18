@@ -6,7 +6,7 @@
 | Origen | docs/daw/prd/prd-DISC-001-01.md (DISCOVERY DISC-001, PRD 01 de 7) |
 | Tracker | none |
 | Date | 2026-11-16 |
-| PRD loops | 1 |
+| PRD loops | 2 |
 | Loops since last human decision | 0 |
 
 ## Context and Problem
@@ -61,7 +61,9 @@ parte es configuración y la base no tiene sentido a medias.
 - FR-06: La corrida automática de los tests unitarios, los de integración y los E2E se dispara en
   dos momentos: cuando se abre un pull request o se le suben cambios, y cuando un pull request se
   mergea a `main`. Un push a una rama que no tiene pull request no dispara nada (decisión del
-  usuario, 2026-11-16).
+  usuario, 2026-11-16). En un pull request, los E2E corren solo en el navegador del iPhone; al
+  mergear a `main` corren en todos los navegadores y tamaños de pantalla (decisión del usuario,
+  2026-11-17, FIX-001).
 - FR-07: El resultado de esa corrida automática aparece en el pull request o en el commit de `main`
   correspondiente, como aprobado o fallido.
 - FR-08: El proyecto incluye al menos un test E2E que abre la aplicación en un viewport de iPhone y
@@ -114,9 +116,11 @@ parte es configuración y la base no tiene sentido a medias.
 - AC-07 (FR-05): WHILE la demo está abierta, THE aplicación dentro del marco SHALL responder a
   clicks y scroll igual que en un celular.
 - AC-08 (FR-06): WHEN se abre un pull request o se le suben cambios, THE corrida automática SHALL
-  ejecutar los tests unitarios, los de integración y los E2E sobre ese pull request.
+  ejecutar los tests unitarios, los de integración y los E2E en el navegador del iPhone sobre ese
+  pull request.
 - AC-09 (FR-06): WHEN un pull request se mergea a `main`, THE corrida automática SHALL volver a
-  ejecutar los tests unitarios, los de integración y los E2E sobre el `main` resultante.
+  ejecutar los tests unitarios, los de integración y los E2E en todos los navegadores y tamaños de
+  pantalla sobre el `main` resultante.
 - AC-10 (FR-06): IF se hace push a una rama que no tiene un pull request abierto, THEN THE corrida
   automática SHALL no ejecutarse.
 - AC-11 (FR-07): IF algún test falla o la cobertura de líneas queda debajo del 80 %, THEN THE

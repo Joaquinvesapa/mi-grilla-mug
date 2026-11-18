@@ -13,6 +13,12 @@ const PINNED_USES = /^[^@\s]+@[0-9a-f]{40}$/;
 const PINNED_POSTGRES = /^postgres:17\.\d+$/;
 /** On `push` to main the run is never cancelled: two merges in a row each get a full run. */
 const CANCEL_ONLY_PULL_REQUESTS = "${{ github.event_name == 'pull_request' }}";
+const PLAYWRIGHT_CONFIG_PATH = resolve(process.cwd(), "playwright.config.ts");
+/** The e2e step: the projects come from the step's env, never interpolated into `run:` (FIX-001). */
+const E2E_COMMAND = "pnpm test:e2e $E2E_PROJECTS";
+/** A PR runs only the iPhone project; a push to main runs the four (FIX-001, FR-01/FR-02). */
+const E2E_PROJECTS_EXPR =
+  "${{ github.event_name == 'pull_request' && '--project=iphone-webkit' || '' }}";
 const PLAYWRIGHT_CACHE_KEY =
   /^playwright-\$\{\{\s*runner\.os\s*\}\}-\$\{\{\s*steps\.([\w-]+)\.outputs\.([\w-]+)\s*\}\}$/;
 
@@ -143,6 +149,31 @@ function jobsSeedingOutOfOrder(workflow: Workflow, suites: Record<string, string
       return migrate < 0 || seed < 0 || run < 0 || !(migrate < seed && seed < run);
     })
     .map(([name]) => name);
+}
+
+/** The `name:` of every Playwright project in playwright.config.ts. */
+function playwrightProjectNames(): string[] {
+  const config = readFileSync(PLAYWRIGHT_CONFIG_PATH, "utf8");
+  return [...config.matchAll(/^\s*name:\s*"([^"]+)"/gm)].map((match) => match[1] ?? "");
+}
+
+/**
+ * Why the e2e job does not pick its Playwright projects by event, or null when it does: the step
+ * that runs E2E_COMMAND carries `env.E2E_PROJECTS === E2E_PROJECTS_EXPR`, and every
+ * `--project=<name>` in that value is a project of playwright.config.ts.
+ */
+function e2eProjectsProblem(workflow: Workflow, projectNames: string[]): string | null {
+  const step = (jobsOf(workflow).e2e?.steps ?? []).find((s) => s.run?.trim() === E2E_COMMAND);
+  if (!step) return `falta el step \`${E2E_COMMAND}\` en el job e2e`;
+  const env = (step.env ?? {}) as Record<string, unknown>;
+  const value = env.E2E_PROJECTS;
+  if (value !== E2E_PROJECTS_EXPR) {
+    return `E2E_PROJECTS faltante o con otra expresión: ${JSON.stringify(value)}`;
+  }
+  const invalid = [...String(value).matchAll(/--project=([\w-]+)/g)]
+    .map((match) => match[1] ?? "")
+    .filter((name) => !projectNames.includes(name));
+  return invalid.length > 0 ? `proyecto inválido en E2E_PROJECTS: ${invalid.join(", ")}` : null;
 }
 
 function composePostgresImage(): unknown {
@@ -334,7 +365,7 @@ describe("CI workflow — jobs (AC-08)", () => {
       expect.arrayContaining([
         "pnpm install --frozen-lockfile",
         "pnpm exec playwright install --with-deps webkit chromium",
-        "pnpm test:e2e",
+        E2E_COMMAND,
       ]),
     );
 
@@ -389,14 +420,14 @@ describe("CI workflow — jobs (AC-08)", () => {
     const migrate = e2eCommands.indexOf("pnpm db:migrate");
     expect(migrate, "e2e no corre pnpm db:migrate").toBeGreaterThanOrEqual(0);
     expect(migrate, "e2e migra después de pnpm test:e2e").toBeLessThan(
-      e2eCommands.indexOf("pnpm test:e2e"),
+      e2eCommands.indexOf(E2E_COMMAND),
     );
   });
 
   it("test-workflow-seed-step: integration y e2e corren pnpm db:seed después de pnpm db:migrate y antes de la suite; un workflow sin el paso es rechazado", () => {
     const SUITES: Record<string, string> = {
       integration: "pnpm test:integration",
-      e2e: "pnpm test:e2e",
+      e2e: E2E_COMMAND,
     };
 
     // Guard: a job without the seed, or with it out of order, is rejected.
@@ -428,6 +459,43 @@ describe("CI workflow — jobs (AC-08)", () => {
 
     expect(jobsSeedingOutOfOrder(readWorkflow(), SUITES)).toEqual([]);
     expect(scripts["db:seed"]).toBe("node prisma/seed.ts");
+  });
+
+  it("test-workflow-e2e-projects-by-event: en un PR el job e2e corre solo iphone-webkit y en main los 4 proyectos; E2E_PROJECTS faltante, con otra expresión o con un proyecto inválido es rechazado", () => {
+    const projects = playwrightProjectNames();
+    expect(projects).toEqual(["iphone-webkit", "mobile-chromium", "mobile-360", "desktop"]);
+
+    const withStep = (step: Step): Workflow => ({ jobs: { e2e: { steps: [step] } } });
+    const otherProject = E2E_PROJECTS_EXPR.replace("iphone-webkit", "iphone-safari");
+    // Guard: missing, different and invalid-project variants are rejected, the right one is not.
+    expect(e2eProjectsProblem(withStep({ run: "pnpm test:e2e" }), projects)).toMatch(
+      /falta el step/,
+    );
+    expect(e2eProjectsProblem(withStep({ run: E2E_COMMAND }), projects)).toMatch(/faltante/);
+    expect(
+      e2eProjectsProblem(
+        withStep({ run: E2E_COMMAND, env: { E2E_PROJECTS: "--project=iphone-webkit" } }),
+        projects,
+      ),
+    ).toMatch(/otra expresión/);
+    expect(
+      e2eProjectsProblem(withStep({ run: E2E_COMMAND, env: { E2E_PROJECTS: otherProject } }), [
+        ...projects,
+      ]),
+    ).toMatch(/otra expresión/);
+    expect(
+      e2eProjectsProblem(withStep({ run: E2E_COMMAND, env: { E2E_PROJECTS: E2E_PROJECTS_EXPR } }), [
+        "mobile-chromium",
+      ]),
+    ).toMatch(/proyecto inválido en E2E_PROJECTS: iphone-webkit/);
+    expect(
+      e2eProjectsProblem(
+        withStep({ run: E2E_COMMAND, env: { E2E_PROJECTS: E2E_PROJECTS_EXPR } }),
+        projects,
+      ),
+    ).toBeNull();
+
+    expect(e2eProjectsProblem(readWorkflow(), projects)).toBeNull();
   });
 
   it("cada job usa Node de .nvmrc y la cache de pnpm", () => {
