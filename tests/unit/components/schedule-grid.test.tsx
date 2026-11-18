@@ -370,4 +370,103 @@ describe("ScheduleGrid", () => {
     expect(empty.container.querySelector("[data-friend-picks]")).toBeNull();
     expect(blockOf(empty.container, "fri-flow-1800")).toHaveAccessibleName("DJO 18:00 – 19:00");
   });
+
+  it("test-grid-short-name-clamp: un bloque corto con amigos recorta el nombre a 1 línea y conserva el nombre accesible completo", () => {
+    const first = {
+      ...sundayShort("sun-kidzapalooza-1800", "18:00", "18:20"),
+      artist: "¡Qué Lío, Hugo!",
+    };
+    const second = sundayShort("sun-kidzapalooza-1830", "18:30", "18:50");
+    const { container } = render(
+      <ScheduleGrid
+        day={SUNDAY}
+        stages={STAGES}
+        shows={[first, second]}
+        selectedIds={new Set()}
+        pendingIds={new Set()}
+        clashIds={new Set()}
+        friendPicks={new Map([[first.id, [friend("Ana Pérez", "AP")]]])}
+        onToggle={() => {}}
+      />,
+    );
+
+    const short = blockOf(container, first.id);
+    // 60 px: under the 76 px the name needs in 2 lines with the time line and the initials.
+    expect(short.style.height).toBe("60px");
+    const name = short.querySelector(":scope > span > span");
+    expect(name).toHaveTextContent("¡Qué Lío, Hugo!");
+    expect(name).toHaveClass("line-clamp-1");
+    // The clamp is only visual: the accessible name is still the whole name and the time.
+    expect(short).toHaveAccessibleName("¡Qué Lío, Hugo! 18:00 – 18:20");
+    expect(within(short).getByText("18:00 – 18:20")).toBeVisible();
+    // The next one has no friends: its name is not clamped.
+    const next = blockOf(container, second.id);
+    expect(next.querySelector(":scope > span > span")).not.toHaveClass("line-clamp-1");
+  });
+
+  it("test-grid-short-name-clamp: con amigos, un bloque de 75 px recorta el nombre y uno de 76 px no", () => {
+    const at = (minutes: number): Show => {
+      const start = posterTimeToInstant(SUNDAY.date, "18:00");
+      return {
+        ...sundayShort(`sun-kidzapalooza-${minutes}`, "18:00", "18:20"),
+        // 2 px per minute: 37.5 minutes measure 75 px, 38 minutes 76 px.
+        endsAt: new Date(start.getTime() + minutes * 60_000).toISOString(),
+      };
+    };
+    const nameOf = (minutes: number) => {
+      const show = at(minutes);
+      const { container } = render(
+        <ScheduleGrid
+          day={SUNDAY}
+          stages={STAGES}
+          shows={[show]}
+          selectedIds={new Set()}
+          pendingIds={new Set()}
+          clashIds={new Set()}
+          friendPicks={new Map([[show.id, [friend("Ana Pérez", "AP")]]])}
+          onToggle={() => {}}
+        />,
+      );
+      const block = blockOf(container, show.id);
+      return { height: block.style.height, name: block.querySelector(":scope > span > span") };
+    };
+
+    const short = nameOf(37.5);
+    expect(short.height).toBe("75px");
+    expect(short.name).toHaveClass("line-clamp-1");
+    cleanup();
+    const tall = nameOf(38);
+    expect(tall.height).toBe("76px");
+    expect(tall.name).not.toHaveClass("line-clamp-1");
+  });
+
+  it("test-grid-tall-name-unclamped: un bloque con amigos y altura suficiente, o sin amigos, no recorta el nombre", () => {
+    const { container } = renderFriday({
+      friendPicks: new Map([
+        // 45 minutes: 90 px, enough for the name in 2 lines.
+        ["fri-kidzapalooza-1500", [friend("Ana Pérez", "AP")]],
+        ["fri-flow-1800", [friend("Bruno", "B")]],
+      ]),
+    });
+
+    for (const id of ["fri-kidzapalooza-1500", "fri-flow-1800", "fri-samsung-1700"]) {
+      const name = blockOf(container, id).querySelector(":scope > span > span");
+      expect(name).not.toHaveClass("line-clamp-1");
+    }
+    expect(blockOf(container, "fri-flow-1800")).toHaveAccessibleName("DJO 18:00 – 19:00");
+  });
+
+  it("test-grid-time-line-height: la línea del horario tiene leading-tight y no hereda el alto de línea del body", () => {
+    const { container } = renderFriday({
+      friendPicks: new Map([["fri-flow-1800", [friend("Ana Pérez", "AP")]]]),
+    });
+
+    const lines = container.querySelectorAll("[data-time-line]");
+    expect(lines.length).toBeGreaterThan(0);
+    for (const line of lines) {
+      // 12 px × 1.25 = 15 px: the line itself carries the 12 px, or its strut keeps the inherited
+      // 16 px and measures 20 px even with leading-tight.
+      expect(line).toHaveClass("text-[12px]", "leading-tight");
+    }
+  });
 });

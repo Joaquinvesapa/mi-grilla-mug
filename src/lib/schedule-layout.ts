@@ -58,6 +58,13 @@ export function blockGeometry(show: Timed, axis: DayAxis): { top: number; height
 export const MIN_BLOCK_HEIGHT_WITH_FRIENDS = 60;
 
 /**
+ * A block with friends' initials shows the name in 2 lines only from this height on: padding 8 +
+ * name in 2 lines 32.5 (13 px × 1.25) + gap 2 + time line 15 + gap 2 + initials row 16 ≈ 75.5 px.
+ * Under it, the name is clamped to 1 line so the time line and the row still fit (FEAT-006c).
+ */
+export const NAME_TWO_LINES_MIN_HEIGHT_WITH_FRIENDS = 76;
+
+/**
  * The height of a block that carries friends' initials: at least 60 px, so the row fits under the
  * time line without hiding it, but never past `nextTop`, where the next show of the same stage
  * starts. Without a next show (`undefined`) there is no cap.

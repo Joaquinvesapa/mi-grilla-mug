@@ -13,6 +13,7 @@ import {
   dayAxis,
   heightWithFriends,
   hourMarks,
+  NAME_TWO_LINES_MIN_HEIGHT_WITH_FRIENDS,
   PX_PER_MINUTE,
 } from "@/lib/schedule-layout";
 import type { FestivalDay, Show, Stage } from "@/lib/schedule-types";
@@ -218,6 +219,9 @@ function ShowBlock({
   // The row of initials goes under the time line, which is never hidden: a short block grows to
   // 60 px for it, up to where the next show of the stage starts.
   const height = withFriends ? heightWithFriends(geometry, nextTop) : geometry.height;
+  // Too short for the name in 2 lines plus the time line and the row: the name takes 1 line, with
+  // "…". Only visual: the accessible name keeps the whole name.
+  const clampName = withFriends && height < NAME_TWO_LINES_MIN_HEIGHT_WITH_FRIENDS;
 
   return (
     <button
@@ -247,7 +251,12 @@ function ShowBlock({
             ("Desen-chufados"); overflow-wrap:anywhere stays as the fallback where the browser has
             no dictionary. The slightly tight tracking is the other margin NFR-04 needs. The name
             has the row to itself: no mark takes width from it. */}
-        <span className="min-w-0 flex-1 text-[13px] leading-tight font-semibold tracking-[-0.01em] [overflow-wrap:anywhere] hyphens-auto">
+        <span
+          className={cn(
+            "min-w-0 flex-1 text-[13px] leading-tight font-semibold tracking-[-0.01em] [overflow-wrap:anywhere] hyphens-auto",
+            clampName && "line-clamp-1",
+          )}
+        >
           {show.artist}
         </span>
       </span>
@@ -264,7 +273,9 @@ function ShowBlock({
           {show.subtitle}
         </span>
       ) : null}{" "}
-      <span data-time-line className="relative w-full">
+      {/* Its own line height, 12 px × 1.25 = 15 px: otherwise its strut keeps the body's 16 px and
+          24 px and leaves no room for the initials in a 60 px block. */}
+      <span data-time-line className="relative w-full text-[12px] leading-tight">
         <span className="tabular text-[12px] leading-tight tracking-[-0.03em] opacity-80">
           {timeRange(show)}
         </span>
