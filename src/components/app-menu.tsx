@@ -1,6 +1,7 @@
 "use client";
 
 import { Menu } from "lucide-react";
+import Link from "next/link";
 import { useId, useState } from "react";
 
 import { clearSnapshot } from "@/components/device-store";
@@ -41,8 +42,8 @@ function forgetDeviceCopy() {
 }
 
 /**
- * The menu button and the sheet it opens from the bottom: the greeting, how to install the app and
- * "Cerrar sesión". The sheet is Vaul's, so it follows the finger and closes with a swipe down or a
+ * The menu button and the sheet it opens from the bottom: the greeting, "Grupos", how to install
+ * the app and "Cerrar sesión". The sheet is Vaul's, so it follows the finger and closes with a swipe down or a
  * tap outside (gestures); the buttons inside are `data-vaul-no-drag`, so a tap never starts a drag.
  *
  * Without a connection "Cerrar sesión" is disabled with its reason below: the logout could not
@@ -72,6 +73,9 @@ export function AppMenu({ userName, logoutAction, pendingCount }: AppMenuProps) 
           </DrawerHeader>
 
           <div data-vaul-no-drag className="flex flex-col gap-3">
+            <Button asChild variant="outline" size="lg" className="w-full">
+              <Link href="/grupos">Grupos</Link>
+            </Button>
             <InstallGuide />
             {mustConfirm ? (
               <Button

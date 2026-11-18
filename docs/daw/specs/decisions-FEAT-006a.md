@@ -50,3 +50,22 @@ decir que se mostró al usuario sin pedirle aprobación previa; cualquier objeci
 - Desvío de procedimiento: el implementador escribió el primer cambio de `schema.prisma` por shell
   en vez de Edit/Write; el contenido final se revisó en el diff. — orquestador — 2026-11-18 —
   Block 1
+
+## Block 2 — Pantallas "Grupos" y detalle del grupo
+
+- Con el link vencido o sin link (`invite: null`), `InviteLink` no ofrece compartir: muestra "El link
+  venció" o "No hay un link activo"; el administrador ve "Generar link nuevo" (sin confirmación,
+  porque no hay link que cortar) y los demás "Pedile a quien administra el grupo un link nuevo." —
+  orquestador — 2026-11-18 — Block 2
+- `InviteLink` recibe `now` desde la página (hora de la petición) y decide "vencido" con
+  `now >= expiresAt`, el mismo borde del servicio. Mientras no hay `window.location.origin` (render
+  del servidor) no muestra la URL y "Compartir link" queda deshabilitado. — orquestador —
+  2026-11-18 — Block 2
+- `createGroupAction` devuelve `{ error, name }` para conservar lo escrito; si `navigator.share` falla
+  con algo que no es `AbortError`, se intenta copiar. Regenerar anuncia "Link nuevo generado" en un
+  `role="status"`; el diálogo se cierra con la respuesta y deshabilita "Generar" y "Cancelar"
+  mientras envía. — orquestador — 2026-11-18 — Block 2
+- Los textos de las pantallas viven en `src/lib/group-messages.ts`; el título de la pestaña del
+  grupo es fijo ("Grupo · Mi Grilla") para no filtrar el nombre en la metadata; en `/grupos` cada
+  tarjeta se lee "Nombre, N integrantes" con las iniciales en `aria-hidden`. — orquestador —
+  2026-11-18 — Block 2

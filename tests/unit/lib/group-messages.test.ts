@@ -1,10 +1,24 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  ASK_THE_ADMIN,
+  CREATE_GROUP_BUTTON,
   formatInviteExpiry,
+  GROUP_LOAD_FAILED,
+  GROUP_NAME_LABEL,
   type GroupMessageCode,
   groupMessageFor,
+  GROUPS_LOAD_FAILED,
+  inviteShareText,
   joinGroupMessageFor,
+  LINK_COPIED,
+  LINK_COPY_FAILED,
+  LINK_EXPIRED,
+  LINK_REGENERATED,
+  memberCountLabel,
+  NO_ACTIVE_LINK,
+  NO_GROUPS,
+  REGENERATE_CONFIRM,
 } from "@/lib/group-messages";
 
 // `satisfies` makes a code missing from (or extra to) the exported union a compile error.
@@ -48,5 +62,26 @@ describe("group-messages", () => {
     expect(formatInviteExpiry(new Date("2026-03-14T03:00:00.000Z"))).toBe(
       "Vence el sábado 14/03 a las 00:00",
     );
+  });
+
+  it("group-messages: los textos de las pantallas de grupos", () => {
+    expect(GROUPS_LOAD_FAILED).toBe("No pudimos cargar tus grupos. Probá de nuevo en un rato.");
+    expect(GROUP_LOAD_FAILED).toBe("No pudimos cargar el grupo. Probá de nuevo en un rato.");
+    expect(NO_GROUPS).toBe("Todavía no estás en ningún grupo");
+    expect(GROUP_NAME_LABEL).toBe("Nombre del grupo");
+    expect(CREATE_GROUP_BUTTON).toBe("Crear grupo");
+    expect(LINK_COPIED).toBe("Link copiado");
+    expect(LINK_COPY_FAILED).toBe("No pudimos copiarlo: mantené apretado el link para copiarlo");
+    expect(LINK_EXPIRED).toBe("El link venció");
+    expect(NO_ACTIVE_LINK).toBe("No hay un link activo");
+    expect(ASK_THE_ADMIN).toBe("Pedile a quien administra el grupo un link nuevo.");
+    expect(REGENERATE_CONFIRM).toBe("El link actual deja de funcionar. ¿Generar uno nuevo?");
+    expect(LINK_REGENERATED).toBe("Link nuevo generado");
+    expect(inviteShareText("Los del Lolla")).toStrictEqual({
+      title: "Los del Lolla · Mi Grilla",
+      text: 'Sumate a "Los del Lolla" en Mi Grilla.',
+    });
+    expect(memberCountLabel(1)).toBe("1 integrante");
+    expect(memberCountLabel(3)).toBe("3 integrantes");
   });
 });

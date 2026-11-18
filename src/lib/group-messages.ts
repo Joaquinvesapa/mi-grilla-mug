@@ -61,3 +61,34 @@ export function formatInviteExpiry(date: Date): string {
   const part = (type: Intl.DateTimeFormatPartTypes): string => parts.get(type) ?? "";
   return `Vence el ${part("weekday")} ${part("day")}/${part("month")} a las ${part("hour")}:${part("minute")}`;
 }
+
+// The screens' own texts ("Grupos", the group's screen and its invite link), kept here with the
+// catalog so every group text lives in one place.
+
+/** `/grupos` when the list cannot be read. */
+export const GROUPS_LOAD_FAILED = "No pudimos cargar tus grupos. Probá de nuevo en un rato.";
+/** `/grupos/[groupId]` when the group cannot be read (not someone else's: that is a 404). */
+export const GROUP_LOAD_FAILED = "No pudimos cargar el grupo. Probá de nuevo en un rato.";
+export const NO_GROUPS = "Todavía no estás en ningún grupo";
+export const GROUP_NAME_LABEL = "Nombre del grupo";
+export const CREATE_GROUP_BUTTON = "Crear grupo";
+export const LINK_COPIED = "Link copiado";
+export const LINK_COPY_FAILED = "No pudimos copiarlo: mantené apretado el link para copiarlo";
+export const LINK_EXPIRED = "El link venció";
+/** No link, or one that cannot be opened (a rotated secret). */
+export const NO_ACTIVE_LINK = "No hay un link activo";
+/** For a member who is not the admin, when there is no link to share. */
+export const ASK_THE_ADMIN = "Pedile a quien administra el grupo un link nuevo.";
+/** "Generar link nuevo" asks first: the link already shared stops working (R-14). */
+export const REGENERATE_CONFIRM = "El link actual deja de funcionar. ¿Generar uno nuevo?";
+export const LINK_REGENERATED = "Link nuevo generado";
+
+/** The title and text the system share sheet gets with the link. */
+export function inviteShareText(groupName: string): { title: string; text: string } {
+  return { title: `${groupName} · Mi Grilla`, text: `Sumate a "${groupName}" en Mi Grilla.` };
+}
+
+/** "1 integrante", "3 integrantes". */
+export function memberCountLabel(count: number): string {
+  return `${count} ${count === 1 ? "integrante" : "integrantes"}`;
+}
