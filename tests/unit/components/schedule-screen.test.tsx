@@ -750,6 +750,7 @@ describe("ScheduleScreen y el fondo de pantalla", () => {
     expect(input.shows.map((show) => show.id)).toStrictEqual(["sat-flow-1800"]);
   });
 
+  /** With groups the sheet opens on «Grilla sola»: «Con amigos» is a second drawing. */
   async function pressWithFriends() {
     await act(async () => {
       fireEvent.click(
@@ -758,18 +759,24 @@ describe("ScheduleScreen y el fondo de pantalla", () => {
     });
   }
 
+  /** The group's drawing: the second one, after the personal one drawn on opening. */
+  function groupInput() {
+    expect(renderWallpaper).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(renderWallpaper).mock.calls[0]![0]).not.toHaveProperty("group");
+    return vi.mocked(renderWallpaper).mock.calls[1]![0];
+  }
+
   it("test-schedule-screen-wallpaper-groups: el fondo recibe los grupos y el grupo del selector de la grilla", async () => {
     storeChoice(USER_ID, FACU_ID);
     renderScreen({ groups: GROUPS });
     await settle();
     expect(picker()).toHaveValue(FACU_ID);
 
+    // With groups the sheet opens on «Grilla sola» and draws it at once (color-en-vivo, S7).
     await openWallpaper();
-    // With groups the sheet asks first: nothing is drawn yet.
-    expect(renderWallpaper).not.toHaveBeenCalled();
     await pressWithFriends();
 
-    const input = wallpaperInput();
+    const input = groupInput();
     expect(input.group?.name).toBe("Facu y amigos");
     expect([...(input.group?.friendsByShow.keys() ?? [])]).toStrictEqual(["fri-perrys-1815"]);
   });
@@ -782,7 +789,7 @@ describe("ScheduleScreen y el fondo de pantalla", () => {
     await openWallpaper();
     await pressWithFriends();
 
-    expect(wallpaperInput().group?.name).toBe("Los del colegio");
+    expect(groupInput().group?.name).toBe("Los del colegio");
   });
 
   it("test-schedule-screen-wallpaper-groups: en modo offline, con los grupos de la copia del dispositivo, el fondo ofrece el del grupo", async () => {
@@ -794,7 +801,7 @@ describe("ScheduleScreen y el fondo de pantalla", () => {
     await openWallpaper();
     await pressWithFriends();
 
-    const input = wallpaperInput();
+    const input = groupInput();
     expect(input.group?.name).toBe("Facu y amigos");
     expect([...input.selectedIds]).toStrictEqual(["fri-flow-1800"]);
   });

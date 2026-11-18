@@ -68,8 +68,6 @@ type Preview = { blob: Blob; url: string; file: File; dayName: string; groupName
 
 type SheetState =
   | { status: "idle" }
-  /** With groups: waiting for "Grilla sola" or "Con amigos", nothing drawn yet. */
-  | { status: "choosing" }
   | { status: "generating" }
   | {
       status: "ready";
@@ -146,8 +144,9 @@ function revokePreview(url: { current: string | null }): void {
  * and the buttons are `data-vaul-no-drag`, and the body scrolls inside it without dragging the
  * sheet or the page (mobile-native, fixes 3 and 6).
  *
- * In a group (FEAT-007), the sheet opens asking "Grilla sola" or "Con amigos" and draws nothing
- * until one is pressed (FR-01); both stay on screen, so the other one is a tap away. "Con amigos"
+ * In a group (FEAT-007), the sheet opens with "Grilla sola" chosen and drawn (color-en-vivo, S7),
+ * exactly as without groups; both options stay on screen, the chosen one filled, so "Con amigos"
+ * is a tap away and switching redraws. "Con amigos"
  * starts with the grid picker's group (or the most recent one, `wallpaperGroupDefault`, FR-02) and,
  * with two or more groups, a select changes it. Without groups — or when the page could not load
  * them — it draws the personal one on opening, as before (FR-03).
@@ -237,14 +236,10 @@ export function WallpaperButton({
       };
       setSnapshot(copy);
       setSheetGroupId(wallpaperGroupDefault(copy.groups, copy.groupId));
-      if (copy.groups.length === 0) {
-        // No groups, or the page could not load them: the personal one, as in FEAT-004 (FR-03).
-        setOption("personal");
-        void generate(copy, "personal");
-      } else {
-        setOption(null);
-        setSheet({ status: "choosing" });
-      }
+      // Always "Grilla sola" first, with or without groups (FR-03; color-en-vivo, S7): drawn on
+      // opening, so the preview is never an empty placeholder. "Con amigos" is a tap away.
+      setOption("personal");
+      void generate(copy, "personal");
     } else {
       generation.current += 1;
       revokePreview(previewUrl);
@@ -367,7 +362,7 @@ export function WallpaperButton({
                 <div className="grid grid-cols-2 gap-2">
                   <Button
                     type="button"
-                    variant="outline"
+                    variant={option === "personal" ? "default" : "outline"}
                     size="lg"
                     aria-pressed={option === "personal"}
                     aria-disabled={generating || undefined}
@@ -378,6 +373,7 @@ export function WallpaperButton({
                   </Button>
                   <Button
                     type="button"
+                    variant={option === "group" ? "default" : "outline"}
                     size="lg"
                     aria-pressed={option === "group"}
                     aria-disabled={generating || undefined}
