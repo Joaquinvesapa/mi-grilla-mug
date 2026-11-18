@@ -10,6 +10,7 @@ import {
   MAX_GROUP_MEMBERS,
   MAX_GROUPS_PER_USER,
   normalizeGroupName,
+  USER_ID_PATTERN,
 } from "@/lib/group-rules";
 import { getDb } from "@/server/db";
 import type { PrismaClient } from "@/server/generated/prisma/client";
@@ -26,7 +27,14 @@ export type GroupMember = { name: string; initials: string; isAdmin: boolean };
 
 export type GroupSummary = { id: string; name: string; members: GroupMember[] };
 
-export type GroupDetail = GroupSummary & {
+/**
+ * A member as the group's own screen sees it: with the id it removes them by, which only the members
+ * of the same group receive (`listGroups` never exposes it), and whether it is the session's user.
+ */
+export type GroupDetailMember = GroupMember & { userId: string; isSelf: boolean };
+
+export type GroupDetail = Omit<GroupSummary, "members"> & {
+  members: GroupDetailMember[];
   isAdmin: boolean;
   /** `null` when the link cannot be opened (a rotated secret): the admin generates a new one. */
   invite: { token: string; expiresAt: Date } | null;
@@ -48,6 +56,23 @@ export type RegenerateInviteResult =
   | { ok: true }
   | { ok: false; code: "NOT_FOUND" | "NOT_ADMIN" }
   | Unavailable;
+
+export type RenameGroupResult =
+  | { ok: true }
+  | { ok: false; code: "INVALID_NAME" | "NOT_FOUND" | "NOT_ADMIN" }
+  | Unavailable;
+
+export type RemoveMemberResult =
+  | { ok: true }
+  | { ok: false; code: "NOT_FOUND" | "NOT_ADMIN" | "MEMBER_NOT_FOUND" }
+  | Unavailable;
+
+export type DeleteGroupResult =
+  | { ok: true }
+  | { ok: false; code: "NOT_FOUND" | "NOT_ADMIN" }
+  | Unavailable;
+
+export type LeaveGroupResult = { ok: true } | { ok: false; code: "NOT_FOUND" } | Unavailable;
 
 export type InvitePreviewResult =
   | { ok: true; groupId: string; name: string; memberCount: number; alreadyMember: boolean }
@@ -76,6 +101,14 @@ export type GroupsService = {
   listGroups(userId: string): Promise<ListGroupsResult>;
   getGroup(userId: string, groupId: unknown): Promise<GetGroupResult>;
   regenerateInvite(userId: string, groupId: unknown): Promise<RegenerateInviteResult>;
+  renameGroup(userId: string, groupId: unknown, name: unknown): Promise<RenameGroupResult>;
+  removeMember(
+    userId: string,
+    groupId: unknown,
+    memberUserId: unknown,
+  ): Promise<RemoveMemberResult>;
+  deleteGroup(userId: string, groupId: unknown): Promise<DeleteGroupResult>;
+  leaveGroup(userId: string, groupId: unknown): Promise<LeaveGroupResult>;
   getInvitePreview(userId: string, token: unknown): Promise<InvitePreviewResult>;
   joinGroup(userId: string, token: unknown): Promise<JoinGroupResult>;
 };
@@ -87,6 +120,8 @@ const GROUP_FULL = { ok: false, code: "GROUP_FULL" } as const;
 const INVALID_INVITE = { ok: false, code: "INVALID_INVITE" } as const;
 const NOT_FOUND = { ok: false, code: "NOT_FOUND" } as const;
 const NOT_ADMIN = { ok: false, code: "NOT_ADMIN" } as const;
+const MEMBER_NOT_FOUND = { ok: false, code: "MEMBER_NOT_FOUND" } as const;
+const OK = { ok: true } as const;
 
 /** Thrown inside a transaction when the session's user row is gone, so it rolls back. Never leaves here. */
 class MissingUserError extends Error {}
@@ -102,6 +137,10 @@ function isGroupId(value: unknown): value is string {
 
 function isToken(value: unknown): value is string {
   return typeof value === "string" && INVITE_TOKEN_PATTERN.test(value);
+}
+
+function isUserId(value: unknown): value is string {
+  return typeof value === "string" && USER_ID_PATTERN.test(value);
 }
 
 function memberOf(row: { name: string; is_admin: boolean }): GroupMember {
@@ -145,6 +184,62 @@ export function createGroupsService({
       SELECT id FROM users WHERE id = ${userId} FOR UPDATE`;
     if (rows.length === 0) {
       throw new MissingUserError();
+    }
+  }
+
+  /** Locks the group's row until the transaction ends; `false` if the group does not exist. */
+  async function lockGroup(tx: Pick<PrismaClient, "$queryRaw">, groupId: string): Promise<boolean> {
+    const rows = await tx.$queryRaw<{ id: string }[]>`
+      SELECT id FROM groups WHERE id = ${groupId} FOR UPDATE`;
+    return rows.length > 0;
+  }
+
+  /**
+   * Locks the group, then reads the session's role in it: `null` if the group does not exist or the
+   * user is not a member (R-05). Two statements on purpose: in READ COMMITTED a statement that waited
+   * for the lock keeps its old snapshot, while the second one takes a new snapshot and sees what the
+   * transaction that held the lock committed — a leave and its promotion included (spec round 1, F1).
+   */
+  async function lockedRole(
+    tx: Pick<PrismaClient, "$queryRaw">,
+    userId: string,
+    groupId: string,
+  ): Promise<{ isAdmin: boolean } | null> {
+    if (!(await lockGroup(tx, groupId))) {
+      return null;
+    }
+    const rows = await tx.$queryRaw<{ is_admin: boolean }[]>`
+      SELECT is_admin FROM group_members WHERE group_id = ${groupId} AND user_id = ${userId}`;
+    const membership = rows[0];
+    return membership ? { isAdmin: membership.is_admin } : null;
+  }
+
+  /**
+   * Runs `write` in a transaction with the group locked, only if the session's user administers it.
+   * None of these operations adds a group to anybody, so they take no user lock and the "user, then
+   * group" order of `joinGroup` holds (R-03).
+   */
+  async function asAdmin<T>(
+    userId: string,
+    groupId: unknown,
+    write: (tx: Pick<PrismaClient, "$queryRaw" | "$executeRaw">, groupId: string) => Promise<T>,
+  ): Promise<T | typeof NOT_FOUND | typeof NOT_ADMIN | Unavailable> {
+    if (!isGroupId(groupId)) {
+      return NOT_FOUND;
+    }
+    try {
+      return await db.$transaction(async (tx) => {
+        const role = await lockedRole(tx, userId, groupId);
+        if (!role) {
+          return NOT_FOUND;
+        }
+        if (!role.isAdmin) {
+          return NOT_ADMIN;
+        }
+        return write(tx, groupId);
+      });
+    } catch {
+      return unavailable();
     }
   }
 
@@ -241,8 +336,8 @@ export function createGroupsService({
         if (!group) {
           return NOT_FOUND;
         }
-        const members = await db.$queryRaw<{ name: string; is_admin: boolean }[]>`
-          SELECT u.name, m.is_admin
+        const members = await db.$queryRaw<{ user_id: string; name: string; is_admin: boolean }[]>`
+          SELECT m.user_id, u.name, m.is_admin
           FROM group_members m JOIN users u ON u.id = m.user_id
           WHERE m.group_id = ${groupId}
           ORDER BY m.joined_at, m.user_id`;
@@ -252,7 +347,11 @@ export function createGroupsService({
             id: group.id,
             name: group.name,
             isAdmin: group.is_admin,
-            members: members.map(memberOf),
+            members: members.map((row): GroupDetailMember => ({
+              ...memberOf(row),
+              userId: row.user_id,
+              isSelf: row.user_id === userId,
+            })),
             invite: readInvite(group.id, group.token_ciphertext, group.expires_at),
           },
         };
@@ -261,37 +360,95 @@ export function createGroupsService({
       }
     },
 
-    async regenerateInvite(userId, groupId) {
+    regenerateInvite(userId, groupId) {
+      // The same group lock a join takes before re-reading the link: a join with the old link
+      // either commits before this replacement or sees the new one and is rejected (R-13).
+      return asAdmin(userId, groupId, async (tx, id) => {
+        const at = now();
+        const invite = newInvite(id, at);
+        await tx.$executeRaw`
+          INSERT INTO group_invites (group_id, token_hash, token_ciphertext, created_at, expires_at)
+          VALUES (${id}, ${invite.tokenHash}, ${invite.ciphertext}, ${at}, ${invite.expiresAt})
+          ON CONFLICT (group_id) DO UPDATE SET
+            token_hash = EXCLUDED.token_hash,
+            token_ciphertext = EXCLUDED.token_ciphertext,
+            created_at = EXCLUDED.created_at,
+            expires_at = EXCLUDED.expires_at`;
+        return OK;
+      });
+    },
+
+    async renameGroup(userId, groupId, rawName) {
+      const name = normalizeGroupName(rawName);
+      if (name === null) {
+        return INVALID_NAME;
+      }
+      return asAdmin(userId, groupId, async (tx, id) => {
+        await tx.$executeRaw`UPDATE groups SET name = ${name} WHERE id = ${id}`;
+        return OK;
+      });
+    },
+
+    async removeMember(userId, groupId, memberUserId) {
+      if (!isGroupId(groupId)) {
+        return NOT_FOUND;
+      }
+      if (!isUserId(memberUserId)) {
+        return MEMBER_NOT_FOUND;
+      }
+      return asAdmin(userId, groupId, async (tx, id) => {
+        // Leaving is "Salir": the admin never removes themself, so a group is never left adminless.
+        if (memberUserId === userId) {
+          return MEMBER_NOT_FOUND;
+        }
+        const removed = await tx.$executeRaw`
+          DELETE FROM group_members WHERE group_id = ${id} AND user_id = ${memberUserId}`;
+        return removed === 0 ? MEMBER_NOT_FOUND : OK;
+      });
+    },
+
+    deleteGroup(userId, groupId) {
+      return asAdmin(userId, groupId, async (tx, id) => {
+        // Its members and its link go with it (`ON DELETE CASCADE`).
+        await tx.$executeRaw`DELETE FROM groups WHERE id = ${id}`;
+        return OK;
+      });
+    },
+
+    async leaveGroup(userId, groupId) {
       if (!isGroupId(groupId)) {
         return NOT_FOUND;
       }
       try {
-        return await db.$transaction(async (tx): Promise<RegenerateInviteResult> => {
-          // The same group lock a join takes before re-reading the link: a join with the old link
-          // either commits before this replacement or sees the new one and is rejected (R-13).
-          const rows = await tx.$queryRaw<{ is_admin: boolean }[]>`
-            SELECT m.is_admin
-            FROM groups g JOIN group_members m ON m.group_id = g.id AND m.user_id = ${userId}
-            WHERE g.id = ${groupId}
-            FOR UPDATE OF g`;
-          const membership = rows[0];
+        return await db.$transaction(async (tx): Promise<LeaveGroupResult> => {
+          if (!(await lockGroup(tx, groupId))) {
+            return NOT_FOUND;
+          }
+          // The role is the one the deleted row had, read after the lock: a promotion committed by
+          // a leave this one waited for is seen (spec round 1, F1).
+          const left = await tx.$queryRaw<{ is_admin: boolean }[]>`
+            DELETE FROM group_members WHERE group_id = ${groupId} AND user_id = ${userId}
+            RETURNING is_admin`;
+          const membership = left[0];
           if (!membership) {
             return NOT_FOUND;
           }
-          if (!membership.is_admin) {
-            return NOT_ADMIN;
+          const remaining = await tx.$queryRaw<{ count: number }[]>`
+            SELECT count(*)::int AS count FROM group_members WHERE group_id = ${groupId}`;
+          if ((remaining[0]?.count ?? 0) === 0) {
+            // The last one out: the group and its link go too (AC-18).
+            await tx.$executeRaw`DELETE FROM groups WHERE id = ${groupId}`;
+          } else if (membership.is_admin) {
+            // The admin's row is already gone, so the partial unique index allows the new one
+            // (AC-17, R-06): the oldest member, ties broken by user id.
+            await tx.$executeRaw`
+              UPDATE group_members SET is_admin = true
+              WHERE (group_id, user_id) = (
+                SELECT group_id, user_id FROM group_members WHERE group_id = ${groupId}
+                ORDER BY joined_at, user_id LIMIT 1
+              )`;
           }
-          const at = now();
-          const invite = newInvite(groupId, at);
-          await tx.$executeRaw`
-            INSERT INTO group_invites (group_id, token_hash, token_ciphertext, created_at, expires_at)
-            VALUES (${groupId}, ${invite.tokenHash}, ${invite.ciphertext}, ${at}, ${invite.expiresAt})
-            ON CONFLICT (group_id) DO UPDATE SET
-              token_hash = EXCLUDED.token_hash,
-              token_ciphertext = EXCLUDED.token_ciphertext,
-              created_at = EXCLUDED.created_at,
-              expires_at = EXCLUDED.expires_at`;
-          return { ok: true };
+          return OK;
         });
       } catch {
         return unavailable();
@@ -453,6 +610,37 @@ export function regenerateInvite(
   groupId: unknown,
 ): Promise<RegenerateInviteResult> {
   return shared().regenerateInvite(userId, groupId);
+}
+
+/** Renames the group; only its admin may (FR-01). */
+export function renameGroup(
+  userId: string,
+  groupId: unknown,
+  name: unknown,
+): Promise<RenameGroupResult> {
+  return shared().renameGroup(userId, groupId, name);
+}
+
+/** Removes another member from the group; only its admin may (FR-01, AC-14). */
+export function removeMember(
+  userId: string,
+  groupId: unknown,
+  memberUserId: unknown,
+): Promise<RemoveMemberResult> {
+  return shared().removeMember(userId, groupId, memberUserId);
+}
+
+/** Deletes the group, its members and its link; only its admin may (FR-01, AC-15). */
+export function deleteGroup(userId: string, groupId: unknown): Promise<DeleteGroupResult> {
+  return shared().deleteGroup(userId, groupId);
+}
+
+/**
+ * Takes `userId` out of the group: the oldest member becomes admin if the admin left, and the group
+ * is deleted with its last member (FR-02, AC-17, AC-18).
+ */
+export function leaveGroup(userId: string, groupId: unknown): Promise<LeaveGroupResult> {
+  return shared().leaveGroup(userId, groupId);
 }
 
 /** What a link shows before joining: name and member count (FR-06, FR-08, FR-10). */

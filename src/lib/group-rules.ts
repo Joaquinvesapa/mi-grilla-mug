@@ -14,6 +14,11 @@ export const INVITE_TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 /** A group id as `crypto.randomUUID` writes it: lowercase hex, version 4. */
 export const GROUP_ID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+/**
+ * A user id, as a group's screen sends it to remove a member: Better Auth writes 32 alphanumeric
+ * characters, and the integration tests use short literal ids.
+ */
+export const USER_ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
 
 const LOCALE = "es-AR";
 const WORD_SEPARATOR = /\s+/u;

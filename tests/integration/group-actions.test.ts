@@ -98,7 +98,7 @@ describe("group-actions", () => {
     const group = await getGroup(anaId, groupId);
     expect(group.ok && group.group.name).toBe("Los del Lolla");
     expect(group.ok && group.group.members).toStrictEqual([
-      { name: "Ana Pérez", initials: "AP", isAdmin: true },
+      { name: "Ana Pérez", initials: "AP", isAdmin: true, userId: anaId, isSelf: true },
     ]);
   });
 
@@ -179,15 +179,15 @@ describe("group-actions", () => {
     }
     const token = await tokenOf(anaId, created.groupId);
     // Beto signs up: the jar now holds his session.
-    await signUp("beto@mail.com", "Beto");
+    const betoId = await signUp("beto@mail.com", "Beto");
 
     const digest = await redirectDigest(() => joinGroupAction(JOIN_INITIAL, form({ token })));
 
     expect(REDIRECT_TO_GROUP.exec(digest)?.[1], digest).toBe(created.groupId);
     const group = await getGroup(anaId, created.groupId);
     expect(group.ok && group.group.members).toStrictEqual([
-      { name: "Ana Pérez", initials: "AP", isAdmin: true },
-      { name: "Beto", initials: "BE", isAdmin: false },
+      { name: "Ana Pérez", initials: "AP", isAdmin: true, userId: anaId, isSelf: true },
+      { name: "Beto", initials: "BE", isAdmin: false, userId: betoId, isSelf: false },
     ]);
 
     // Joining again is not a second membership: it goes to the group as well (FR-10).

@@ -27,7 +27,8 @@ const CATALOG = {
   GROUP_FULL: "El grupo está completo (20 integrantes).",
   INVALID_INVITE: "Este link de invitación ya no es válido. Pedile uno nuevo a alguien del grupo.",
   NOT_FOUND: "No encontramos ese grupo.",
-  NOT_ADMIN: "Solo quien administra el grupo puede generar un link nuevo.",
+  NOT_ADMIN: "Solo quien administra el grupo puede hacer esto.",
+  MEMBER_NOT_FOUND: "Esa persona ya no está en el grupo.",
   UNAUTHENTICATED: "Tu sesión terminó. Volvé a iniciar sesión.",
   SERVICE_UNAVAILABLE: "No pudimos guardar. Probá de nuevo en un rato.",
 } satisfies Record<GroupMessageCode, string>;
