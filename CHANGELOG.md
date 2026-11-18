@@ -55,6 +55,12 @@ Todos los cambios notables de Mi Grilla se registran en este archivo. El formato
   copiar; el administrador puede generar uno nuevo, que corta el anterior. Quien abre el link ve el
   nombre del grupo y cuántos son, y se une con "Unirme"; sin sesión, entra o se registra y vuelve a
   la invitación.
+- [FEAT-006c] El grupo en la grilla: si el usuario está en algún grupo, arriba de los días aparece
+  el selector "Grupo" (con "Sin grupo") y cada show muestra las iniciales de los amigos que lo
+  eligieron, hasta 3 y "+N". Solo cuenta la selección guardada de cada amigo. El grupo elegido se
+  recuerda en el celular; la primera vez se muestra el grupo al que se unió último.
+- [FEAT-006c] Sin conexión, el selector y las iniciales usan los últimos datos del grupo cargados;
+  cerrar sesión borra esos datos del celular.
 
 ### Changed
 
@@ -77,3 +83,6 @@ Todos los cambios notables de Mi Grilla se registran en este archivo. El formato
   bibliotecas, sin `playwright install` ni cache de navegadores.
 - [FIX-003] En la pantalla de bloqueo del iPhone, la linterna y la cámara ya no tapan la última hora
   del fondo de pantalla: la grilla deja libre el 14 % inferior (392 px) en vez del 8 %.
+- [FEAT-006c] La línea del horario de cada show mide 15 px en vez de heredar 24 px; en los bloques
+  cortos con amigos que no tienen alto para el nombre en dos líneas, el nombre se recorta a una
+  línea con "…", así entran el horario y las iniciales.
