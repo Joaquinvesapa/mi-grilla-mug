@@ -12,9 +12,12 @@
 
 | Sub-ticket | Title | PRD | ACs | Dependencies | Status |
 |---|---|---|---|---|---|
-| FEAT-006a | Crear grupos, invitar y unirse | prd-FEAT-006a.md | AC-01, AC-02, AC-03, AC-04, AC-05, AC-06, AC-07, AC-08, AC-09, AC-10, AC-11, AC-12, AC-13, AC-29, AC-31 | none | active |
-| FEAT-006b | Administrar y salir de un grupo | prd-FEAT-006b.md | AC-14, AC-15, AC-16, AC-17, AC-18, AC-19, AC-28 | depends on a | pending |
-| FEAT-006c | El grupo en la grilla | prd-FEAT-006c.md | AC-20, AC-21, AC-22, AC-23, AC-24, AC-25, AC-26, AC-27, AC-30, AC-32 | depends on a | pending |
+| FEAT-006a | Crear grupos, invitar y unirse | prd-FEAT-006a.md | AC-01, AC-02, AC-03, AC-04, AC-05, AC-06, AC-07, AC-08, AC-09, AC-10, AC-11, AC-12, AC-13, AC-29, AC-31 | none | done |
+| FEAT-006b | Administrar y salir de un grupo | prd-FEAT-006b.md | AC-14, AC-15, AC-16, AC-17, AC-18, AC-19, AC-28 | depends on a | done |
+| FEAT-006c | El grupo en la grilla | prd-FEAT-006c.md | AC-20, AC-21, AC-22, AC-23, AC-24, AC-25, AC-26, AC-27, AC-30, AC-32 | depends on a | done |
+
+Integración: FEAT-006a se mergeó en `main` por el PR #11, FEAT-006b por el PR #13 y FEAT-006c por el
+PR #15.
 
 Los 32 criterios de aceptación son los del PRD de DISCOVERY (`prd-DISC-001-06.md`), sin criterios
 agregados en DEFINE.
