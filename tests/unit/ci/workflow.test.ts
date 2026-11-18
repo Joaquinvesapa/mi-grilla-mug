@@ -19,8 +19,7 @@ const E2E_COMMAND = "pnpm test:e2e $E2E_PROJECTS";
 /** A PR runs only the iPhone project; a push to main runs the four (FIX-001, FR-01/FR-02). */
 const E2E_PROJECTS_EXPR =
   "${{ github.event_name == 'pull_request' && '--project=iphone-webkit' || '' }}";
-const PLAYWRIGHT_CACHE_KEY =
-  /^playwright-\$\{\{\s*runner\.os\s*\}\}-\$\{\{\s*steps\.([\w-]+)\.outputs\.([\w-]+)\s*\}\}$/;
+const E2E_DOCKER_SCRIPT_PATH = resolve(process.cwd(), "scripts/test-e2e-docker.sh");
 
 type Step = {
   id?: string;
@@ -35,6 +34,7 @@ type Job = {
   uses?: string;
   env?: Record<string, unknown>;
   services?: Record<string, { image?: string } & Record<string, unknown>>;
+  container?: string | ({ image?: string } & Record<string, unknown>);
   permissions?: unknown;
   steps?: Step[];
 } & Record<string, unknown>;
@@ -174,6 +174,53 @@ function e2eProjectsProblem(workflow: Workflow, projectNames: string[]): string 
     .map((match) => match[1] ?? "")
     .filter((name) => !projectNames.includes(name));
   return invalid.length > 0 ? `proyecto inválido en E2E_PROJECTS: ${invalid.join(", ")}` : null;
+}
+
+/** The exact version of @playwright/test in package.json (versions are pinned, no `^`). */
+function playwrightVersion(): string {
+  const pkg = JSON.parse(readFileSync(PACKAGE_JSON_PATH, "utf8")) as {
+    devDependencies?: Record<string, string>;
+  };
+  return pkg.devDependencies?.["@playwright/test"] ?? "";
+}
+
+/** The official Playwright image that ships the browsers of that version (FIX-002). */
+function playwrightImage(version: string): string {
+  return `mcr.microsoft.com/playwright:v${version}-noble`;
+}
+
+/**
+ * Why the e2e job does not run inside the Playwright image, or null when it does (FIX-002): the
+ * job's `container` is `playwrightImage(version)`, no step installs browsers or caches
+ * `ms-playwright` (the system libraries came from apt on every run and hung it), and the job
+ * reaches its `postgres` service by that host name, as a container must.
+ */
+function e2eContainerProblem(workflow: Workflow, version: string): string | null {
+  const e2e = jobsOf(workflow).e2e;
+  if (!e2e) return "falta el job e2e";
+  const container = e2e.container;
+  const image = typeof container === "string" ? container : container?.image;
+  const expected = playwrightImage(version);
+  if (image !== expected) {
+    return `imagen del container inválida: ${JSON.stringify(image)}, se esperaba ${expected}`;
+  }
+  const steps = e2e.steps ?? [];
+  const install = steps.find((step) => /playwright install/.test(step.run ?? ""));
+  if (install) return `step rechazado, instala navegadores: ${install.run}`;
+  const cache = steps.find((step) =>
+    JSON.stringify(step.with?.path ?? "").includes("ms-playwright"),
+  );
+  if (cache) return `step rechazado, cachea ms-playwright: ${cache.uses}`;
+  if (!e2e.services?.postgres) return "service postgres faltante en el job e2e";
+  const rawUrl = e2e.env?.DATABASE_URL;
+  const url = typeof rawUrl === "string" ? rawUrl : "";
+  const host = /@([^:/]+)[:/]/.exec(url)?.[1];
+  return host === "postgres" ? null : `host de DATABASE_URL inválido: ${JSON.stringify(host)}`;
+}
+
+/** The `IMAGE=` that scripts/test-e2e-docker.sh runs the suite in. */
+function e2eDockerScriptImage(script: string): string | undefined {
+  return /^IMAGE="([^"]+)"$/m.exec(script)?.[1];
 }
 
 function composePostgresImage(): unknown {
@@ -356,39 +403,66 @@ describe("CI workflow — jobs (AC-08)", () => {
     expect(JSON.stringify(integration!.env ?? {})).toContain("DATABASE_URL");
   });
 
-  it("e2e instala WebKit y Chromium con sus dependencias, corre Playwright y sube el reporte si falla", () => {
-    const e2e = jobsOf(readWorkflow()).e2e;
-    expect(e2e, "falta el job e2e").toBeDefined();
+  it("test-workflow-e2e-container: e2e corre en la imagen de Playwright de su versión, sin instalar navegadores, contra el host postgres, y sube el reporte si falla; una imagen inválida, sin container, con playwright install, con la cache de ms-playwright, con DATABASE_URL a 127.0.0.1 o con el service faltante es rechazado", () => {
+    const version = playwrightVersion();
+    expect(version, "falta @playwright/test en package.json").toMatch(/^\d+\.\d+\.\d+$/);
+    const workflow = readWorkflow();
+    expect(e2eContainerProblem(workflow, version)).toBeNull();
 
-    expect(e2e!.services?.postgres?.image).toMatch(PINNED_POSTGRES);
-    expect(commandsOf(e2e!)).toEqual(
-      expect.arrayContaining([
-        "pnpm install --frozen-lockfile",
-        "pnpm exec playwright install --with-deps webkit chromium",
-        E2E_COMMAND,
-      ]),
+    const e2e = jobsOf(workflow).e2e!;
+    expect(e2e.services?.postgres?.image).toMatch(PINNED_POSTGRES);
+    expect(commandsOf(e2e)).toEqual(
+      expect.arrayContaining(["pnpm install --frozen-lockfile", E2E_COMMAND]),
     );
-
-    const steps = e2e!.steps ?? [];
-    const browserCache = steps.find((step) => step.uses?.startsWith("actions/cache@"));
-    expect(browserCache, "falta la cache de los navegadores de Playwright").toBeDefined();
-    expect(String(browserCache!.with?.path)).toContain("ms-playwright");
-    // La key depende de la versión de @playwright/test, no del lockfile entero.
-    const key = String(browserCache!.with?.key);
-    expect(key).not.toContain("hashFiles");
-    const [, stepId, output] = PLAYWRIGHT_CACHE_KEY.exec(key) ?? [];
-    expect(stepId, `key con forma inesperada: ${key}`).toBeDefined();
-    const versionStep = steps.find((step) => step.id === stepId);
-    expect(versionStep, `falta el step con id ${stepId}`).toBeDefined();
-    expect(steps.indexOf(versionStep!)).toBeLessThan(steps.indexOf(browserCache!));
-    expect(versionStep!.run).toContain("@playwright/test");
-    expect(versionStep!.run).toContain(`${output}=`);
-    expect(versionStep!.run).toContain("$GITHUB_OUTPUT");
-
-    const report = steps.find((step) => step.uses?.startsWith("actions/upload-artifact@"));
+    const report = (e2e.steps ?? []).find((step) =>
+      step.uses?.startsWith("actions/upload-artifact@"),
+    );
     expect(report, "falta subir playwright-report").toBeDefined();
     expect(report!.if).toBe("failure()");
     expect(report!.with?.path).toBe("playwright-report");
+
+    // Sad paths over fixtures built from a valid job.
+    const ok: Job = {
+      container: { image: playwrightImage(version) },
+      services: { postgres: { image: "postgres:17.12" } },
+      env: { DATABASE_URL: "postgresql://u:p@postgres:5432/db" },
+      steps: [{ run: E2E_COMMAND }],
+    };
+    const withJob = (job: Job): Workflow => ({ jobs: { e2e: job } });
+    expect(e2eContainerProblem(withJob(ok), version)).toBeNull();
+    expect(
+      e2eContainerProblem(withJob({ ...ok, container: playwrightImage(version) }), version),
+    ).toBeNull();
+    const rejected: Record<string, Job> = {
+      "versión inválida": { ...ok, container: { image: playwrightImage("1.64.0") } },
+      "container faltante": { ...ok, container: undefined },
+      "playwright install": {
+        ...ok,
+        steps: [{ run: "pnpm exec playwright install --with-deps webkit chromium" }, ...ok.steps!],
+      },
+      "cache de ms-playwright": {
+        ...ok,
+        steps: [{ uses: "actions/cache@x", with: { path: "~/.cache/ms-playwright" } }],
+      },
+      "host 127.0.0.1": {
+        ...ok,
+        env: { DATABASE_URL: "postgresql://u:p@127.0.0.1:5432/db" },
+      },
+      "service postgres faltante": { ...ok, services: {} },
+    };
+    for (const [why, job] of Object.entries(rejected)) {
+      expect(e2eContainerProblem(withJob(job), version), why).not.toBeNull();
+    }
+    expect(e2eContainerProblem({ jobs: {} }, version)).toBe("falta el job e2e");
+  });
+
+  it("test-e2e-docker-image: scripts/test-e2e-docker.sh corre en la misma imagen de Playwright que la CI; una imagen de otra versión es rechazada (versión inválida)", () => {
+    const expected = playwrightImage(playwrightVersion());
+    const script = readFileSync(E2E_DOCKER_SCRIPT_PATH, "utf8");
+    expect(e2eDockerScriptImage(script)).toBe(expected);
+    // Sad path: a script left on another version does not match.
+    const stale = script.replace(/^IMAGE="[^"]+"$/m, `IMAGE="${playwrightImage("1.64.0")}"`);
+    expect(e2eDockerScriptImage(stale)).not.toBe(expected);
   });
 
   it("test-workflow-auth-env: integration y e2e tienen BETTER_AUTH_SECRET y BETTER_AUTH_URL, quality ninguna, y e2e migra antes de correr Playwright", () => {
