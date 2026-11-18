@@ -58,3 +58,8 @@ Todos los cambios notables de Mi Grilla se registran en este archivo. El formato
   de 254); al mergear a `main` sigue corriendo los 4 proyectos.
 - [FIX-001] `AGENTS.md` fija cuándo se corren los E2E en DAW: solo el E2E del bloque en CODE, la
   suite completa al cierre de CODE, y en VERIFY la misma corrida si el código no cambió.
+
+### Fixed
+
+- [FIX-003] En la pantalla de bloqueo del iPhone, la linterna y la cámara ya no tapan la última hora
+  del fondo de pantalla: la grilla deja libre el 14 % inferior (392 px) en vez del 8 %.
