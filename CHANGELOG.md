@@ -48,6 +48,10 @@ Todos los cambios notables de Mi Grilla se registran en este archivo. El formato
   y lo que sigue en cada escenario, con los escenarios de tus shows elegidos primero, con la hora
   real de Argentina y actualizado solo cada minuto mientras está abierto. Fuera de horario dice
   cuándo es el próximo show o que el festival terminó. Funciona también sin conexión.
+- [FEAT-005b] Reloj simulado en `/demo`: al lado del iPhone, un control con los 3 días, la hora y
+  "−15 min" / "+15 min", que arranca el viernes 13 de marzo de 2026 a las 22:30. "En vivo" y el día
+  con el que abre la grilla usan esa hora dentro del iPhone, y un cambio se ve en 2 segundos o menos.
+  Fuera de `/demo` la app sigue con la hora real.
 - [FEAT-006a] Grupos: crear uno con nombre (quien lo crea lo administra), ver la lista "Grupos" y la
   pantalla de cada grupo con sus integrantes, sus iniciales y la marca de administrador. Hasta 20
   integrantes por grupo y 10 grupos por cuenta.
