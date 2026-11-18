@@ -78,7 +78,7 @@ export async function expectClosed(page: Page): Promise<void> {
   await expect(livePanel(page)).toHaveCount(0);
 }
 
-/** A row of the panel: the stage's id and its "Ahora:" and "Sigue:" lines, as read on screen. */
+/** A row of the panel: the stage's id and its «Ahora» block and its "Sigue:" line, as read on screen. */
 export type LiveRow = { stageId: string; now: string; next: string };
 
 /** The rows of the panel, in the order they are shown (whitespace collapsed). */
@@ -89,7 +89,11 @@ export async function liveRows(page: Page): Promise<LiveRow[]> {
       const text = (el: Element | null) => (el?.textContent ?? "").replace(/\s+/g, " ").trim();
       return rows.map((row) => ({
         stageId: row.getAttribute("data-live-stage") ?? "",
-        now: text(row.querySelector("[data-live-now]")),
+        // The status («Ahora», «Elegido», «Choque»), when a show plays, and then the show.
+        now: [row.querySelector("[data-live-status]"), row.querySelector("[data-live-now]")]
+          .map(text)
+          .filter(Boolean)
+          .join(" "),
         next: text(row.querySelector("[data-live-next]")),
       }));
     });

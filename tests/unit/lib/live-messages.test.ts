@@ -11,7 +11,10 @@ import {
   nextShowLabel,
   NO_LIVE_SHOWS,
   NOTHING_NOW,
-  NOW_PREFIX,
+  NOW_LABEL,
+  CLASH_LABEL,
+  minutesLeftLabel,
+  PROGRESS_LABEL,
   SELECTED_LABEL,
 } from "@/lib/live-messages";
 import type { FestivalDay, Show, Stage } from "@/lib/schedule-types";
@@ -37,6 +40,8 @@ describe("live messages", () => {
       "Sigue el sábado a las 13:45 — Tobika en Samsung",
     );
     expect(minutesUntilLabel(1)).toBe("en 1 min");
+    expect(minutesLeftLabel(1)).toBe("quedan 1 min");
+    expect(minutesLeftLabel(60)).toBe("quedan 60 min");
     expect(minutesUntilLabel(60)).toBe("en 60 min");
   });
 
@@ -48,7 +53,9 @@ describe("live messages", () => {
     expect(LIVE_LABEL).toBe("En vivo");
     expect(CLOSE_LABEL).toBe("Cerrar");
     expect(SELECTED_LABEL).toBe("Elegido");
-    expect(NOW_PREFIX).toBe("Ahora:");
+    expect(NOW_LABEL).toBe("Ahora");
+    expect(CLASH_LABEL).toBe("Choque");
+    expect(PROGRESS_LABEL).toBe("Avance del show");
     expect(NEXT_PREFIX).toBe("Sigue:");
   });
 });

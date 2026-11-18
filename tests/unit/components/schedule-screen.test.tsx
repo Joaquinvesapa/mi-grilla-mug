@@ -873,7 +873,10 @@ describe('ScheduleScreen y el panel "En vivo"', () => {
     ]);
     const easykid = panel.querySelector<HTMLElement>('[data-live-stage="perrys"] [data-live-now]');
     expect(easykid).toHaveTextContent("Easykid");
-    expect(within(easykid!).getByText(SELECTED_LABEL)).toBeInTheDocument();
+    const perrysStatus = panel.querySelector<HTMLElement>(
+      '[data-live-stage="perrys"] [data-live-status]',
+    );
+    expect(within(perrysStatus!).getByText(SELECTED_LABEL)).toBeInTheDocument();
   });
 
   it("schedule-screen: en modo offline el botón también está", async () => {
@@ -885,7 +888,10 @@ describe('ScheduleScreen y el panel "En vivo"', () => {
 
     const djo = panel.querySelector<HTMLElement>('[data-live-stage="flow"] [data-live-now]');
     expect(djo).toHaveTextContent("DJO");
-    expect(within(djo!).getByText(SELECTED_LABEL)).toBeInTheDocument();
+    const flowStatus = panel.querySelector<HTMLElement>(
+      '[data-live-stage="flow"] [data-live-status]',
+    );
+    expect(within(flowStatus!).getByText(SELECTED_LABEL)).toBeInTheDocument();
     expect(stageOrder(panel)[0]).toBe("flow");
   });
 });

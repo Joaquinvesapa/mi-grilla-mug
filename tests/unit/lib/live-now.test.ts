@@ -108,6 +108,42 @@ describe("liveNow on the real grid", () => {
     expect(samsung?.next).toBeNull();
   });
 
+  it("live-now: avance, minutos que quedan y choque del show en curso", () => {
+    // Tyler plays 22:15 – 23:30 (75 min): at 22:30 15 min went by and 60 are left.
+    const view = liveNow(SCHEDULE, at("2026-03-13", "22:30"), NONE);
+    if (view.kind !== "live") throw new Error(`expected live, got ${view.kind}`);
+    const flow = view.stages.find((row) => row.stage.id === "flow");
+    expect(flow?.currentProgress).toEqual({ minutesLeft: 60, percent: 20 });
+    expect(view.stages.find((row) => row.stage.id === "samsung")?.currentProgress).toBeNull();
+
+    // The last minute still counts as 1 min left, and seconds round up.
+    const late = liveNow(SCHEDULE, new Date(at("2026-03-13", "23:29").getTime() + 30_000), NONE);
+    if (late.kind !== "live") throw new Error(`expected live, got ${late.kind}`);
+    expect(late.stages.find((row) => row.stage.id === "flow")?.currentProgress).toEqual({
+      minutesLeft: 1,
+      percent: 99,
+    });
+
+    // Clash: Tyler and Turf share 22:15 – 23:30 on different stages; touching edges do not count.
+    const both = liveNow(
+      SCHEDULE,
+      at("2026-03-13", "22:30"),
+      new Set(["fri-flow-2215", "fri-alternative-2215"]),
+    );
+    if (both.kind !== "live") throw new Error(`expected live, got ${both.kind}`);
+    const clash = Object.fromEntries(both.stages.map((row) => [row.stage.id, row.currentClash]));
+    expect(clash).toEqual({
+      flow: true,
+      alternative: true,
+      samsung: false,
+      perrys: false,
+      kidzapalooza: false,
+    });
+    const alone = liveNow(SCHEDULE, at("2026-03-13", "22:30"), new Set(["fri-flow-2215"]));
+    if (alone.kind !== "live") throw new Error(`expected live, got ${alone.kind}`);
+    expect(alone.stages.some((row) => row.currentClash)).toBe(false);
+  });
+
   it("live-now: con Turf elegido, Alternative primero y el resto en orden", () => {
     const view = liveNow(SCHEDULE, at("2026-03-13", "22:30"), new Set(["fri-alternative-2215"]));
     expect(stageOrder(view)).toEqual(["Alternative", "Flow", "Samsung", "Perry's", "Kidzapalooza"]);

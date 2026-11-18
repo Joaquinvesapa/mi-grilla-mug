@@ -3,6 +3,7 @@
  * comparison is between instants (`Date.parse` of `startsAt`/`endsAt` and `now`), so the device's
  * time zone changes nothing (FR-13).
  */
+import { findClashes } from "@/lib/clashes";
 import { festivalDayAt } from "@/lib/festival-time";
 import type { FestivalDay, Schedule, Show, Stage } from "@/lib/schedule-types";
 
@@ -13,6 +14,10 @@ export type LiveStage = {
   /** The show playing now on this stage, or `null` ("Nada ahora"). */
   current: Show | null;
   currentSelected: boolean;
+  /** How far the current show is: whole minutes left (rounded up) and percent done (0–100). */
+  currentProgress: { minutesLeft: number; percent: number } | null;
+  /** The current show is chosen and shares a minute with another chosen show of the day. */
+  currentClash: boolean;
   /** The next show of this stage on today's festival day, or `null` ("Terminó por hoy"). */
   next: { show: Show; minutesUntil: number } | null;
   nextSelected: boolean;
@@ -54,17 +59,35 @@ function liveStages(
   now: number,
   selectedIds: ReadonlySet<string>,
 ): LiveStage[] {
+  const clashes = findClashes(
+    today.map((item) => item.show),
+    selectedIds,
+  );
   const rows = [...schedule.stages]
     .sort((a, b) => a.position - b.position)
     .map((stage): LiveStage => {
       const own = today.filter((item) => item.stage.id === stage.id);
       // A show plays from its start minute up to the minute before its end (FR-05).
-      const current = own.find((item) => item.start <= now && now < item.end)?.show ?? null;
+      const playing = own.find((item) => item.start <= now && now < item.end);
+      const current = playing?.show ?? null;
       const next = own.find((item) => item.start > now);
       return {
         stage,
         current,
         currentSelected: current !== null && selectedIds.has(current.id),
+        currentProgress: playing
+          ? {
+              minutesLeft: Math.ceil((playing.end - now) / MINUTE_MS),
+              percent: Math.min(
+                100,
+                Math.max(
+                  0,
+                  Math.round(((now - playing.start) / (playing.end - playing.start)) * 100),
+                ),
+              ),
+            }
+          : null,
+        currentClash: current !== null && clashes.has(current.id),
         next: next
           ? { show: next.show, minutesUntil: Math.ceil((next.start - now) / MINUTE_MS) }
           : null,

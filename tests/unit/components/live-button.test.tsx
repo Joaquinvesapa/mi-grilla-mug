@@ -81,6 +81,12 @@ function nowLine(panel: HTMLElement, stageId: string): HTMLElement {
   return line;
 }
 
+function stageRow(panel: HTMLElement, stageId: string): HTMLElement {
+  const row = panel.querySelector<HTMLElement>(`[data-live-stage="${stageId}"]`);
+  if (!row) throw new Error(`no row for ${stageId}`);
+  return row;
+}
+
 describe("LiveButton", () => {
   it("live-button: el botón está abajo a la derecha, fuera del scroll de la grilla", () => {
     render(
@@ -121,6 +127,41 @@ describe("LiveButton", () => {
     expect(liveTrigger()).not.toHaveClass("bottom-[calc(1rem+env(safe-area-inset-bottom,0px))]");
   });
 
+  it("live-button: el botón es una píldora love con punto, texto «En vivo» y anillo animado", () => {
+    renderButton();
+    const trigger = liveTrigger();
+
+    // Visible text and a live dot, not an icon alone; the accessible name stays «En vivo».
+    expect(trigger).toHaveTextContent(LIVE_LABEL);
+    expect(trigger.querySelector("[data-live-dot]")).not.toBeNull();
+    expect(trigger).toHaveClass("border-[1.5px]", "border-rp-love", "text-foreground");
+    expect(trigger.className).toContain("bg-[color-mix(in_srgb,var(--color-rp-love)_16%");
+    // The ring only runs when motion is allowed (S6).
+    expect(trigger).toHaveClass("motion-safe:animate-live-ring");
+    expect(trigger.className).not.toMatch(/(^|\s)animate-live-ring/);
+  });
+
+  it("live-button: el encabezado tiene punto en vivo y la hora de la app a la derecha", async () => {
+    renderButton();
+    const panel = await openPanel();
+
+    // 18:30 on Friday: shows are playing, so the title carries the dot (hidden from the name).
+    const title = within(panel).getByRole("heading", { name: LIVE_LABEL });
+    expect(title.querySelector("[data-live-dot]")).not.toBeNull();
+    expect(panel.querySelector("[data-live-time]")).toHaveTextContent("18:30");
+  });
+
+  it("live-button: sin shows sonando el título no lleva punto", async () => {
+    vi.setSystemTime(Date.parse("2026-03-14T10:00:00-03:00"));
+    renderButton();
+    const panel = await openPanel();
+
+    expect(
+      within(panel).getByRole("heading", { name: LIVE_LABEL }).querySelector("[data-live-dot]"),
+    ).toBeNull();
+    expect(panel.querySelector("[data-live-time]")).toHaveTextContent("10:00");
+  });
+
   it('live-button: tocar En vivo abre el diálogo "En vivo"', async () => {
     renderButton();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
@@ -142,7 +183,7 @@ describe("LiveButton", () => {
     renderButton({ selected: ["fri-flow-1800"] });
 
     const panel = await openPanel();
-    expect(within(nowLine(panel, "flow")).getByText(SELECTED_LABEL)).toBeInTheDocument();
+    expect(within(stageRow(panel, "flow")).getByText(SELECTED_LABEL)).toBeInTheDocument();
     const close = within(panel).getByRole("button", { name: CLOSE_LABEL });
     // Tapping it never starts a drag of the sheet (gestures).
     expect(close.closest("[data-vaul-no-drag]")).not.toBeNull();
@@ -157,8 +198,8 @@ describe("LiveButton", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     // Opening it again shows the same chosen show, and only that one, with its mark.
     const again = await openPanel();
-    const djo = nowLine(again, "flow");
-    expect(djo).toHaveTextContent("DJO");
+    const djo = stageRow(again, "flow");
+    expect(nowLine(again, "flow")).toHaveTextContent("DJO");
     expect(within(djo).getByText(SELECTED_LABEL)).toBeInTheDocument();
     expect(within(again).getAllByText(SELECTED_LABEL)).toHaveLength(1);
   });
@@ -206,9 +247,11 @@ describe("LiveButton", () => {
   it("live-button: el botón y Cerrar miden al menos 44 × 44", async () => {
     renderButton();
 
-    // jsdom has no layout: the sizes are read from their classes (size-14 = 56 px, size-11 =
-    // 44 px); the real measurement is the E2E of Block 4.
-    expect(liveTrigger()).toHaveClass("size-14");
+    // jsdom has no layout: the sizes are read from their classes (h-12 = 48 px, min-h-11 and
+    // size-11 = 44 px); the real measurement is the E2E of Block 4. The pill stays within the
+    // 56 px footprint the grid's clearance is sized from.
+    expect(liveTrigger()).toHaveClass("h-12", "min-h-11");
+    expect(liveTrigger()).not.toHaveClass("size-14");
     const panel = await openPanel();
     expect(within(panel).getByRole("button", { name: CLOSE_LABEL })).toHaveClass("size-11");
   });

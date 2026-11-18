@@ -60,11 +60,15 @@ const FRIDAY_2329 = art("2026-03-13T23:29");
 const FESTIVAL_OVER_AT = art("2026-03-16T00:35");
 
 const DONE = "Sigue: Terminó por hoy";
-const NOTHING = "Ahora: Nada ahora";
+const NOTHING = "Nada ahora";
 
 /** AC-04 at 22:30 on Friday, in the app's order (AC-08); `turf` marks Turf as chosen (AC-10). */
 function rowsAt2230(turf: boolean): LiveRow[] {
-  const flow = { stageId: "flow", now: `Ahora: ${TYLER.artist} 22:15 – 23:30`, next: DONE };
+  const flow = {
+    stageId: "flow",
+    now: `Ahora ${TYLER.artist} 22:15 – 23:30 · quedan 60 min`,
+    next: DONE,
+  };
   const samsung = {
     stageId: "samsung",
     now: NOTHING,
@@ -72,10 +76,14 @@ function rowsAt2230(turf: boolean): LiveRow[] {
   };
   const alternative = {
     stageId: "alternative",
-    now: `Ahora: ${TURF.artist} 22:15 – 23:30${turf ? " Elegido" : ""}`,
+    now: `Ahora${turf ? " Elegido" : ""} ${TURF.artist} 22:15 – 23:30 · quedan 60 min`,
     next: DONE,
   };
-  const perrys = { stageId: "perrys", now: `Ahora: ${YOUSUKE.artist} 22:15 – 23:30`, next: DONE };
+  const perrys = {
+    stageId: "perrys",
+    now: `Ahora ${YOUSUKE.artist} 22:15 – 23:30 · quedan 60 min`,
+    next: DONE,
+  };
   const kidzapalooza = { stageId: "kidzapalooza", now: NOTHING, next: DONE };
   return turf
     ? [alternative, flow, samsung, perrys, kidzapalooza]
@@ -300,7 +308,11 @@ test.describe("En vivo (FEAT-005a)", () => {
         .poll(async () => samsungAt(await liveRows(page)), {
           message: "no cambió solo a las 23:30",
         })
-        .toEqual({ stageId: "samsung", now: `Ahora: ${PEGGY.artist} 23:30 – 01:00`, next: DONE });
+        .toEqual({
+          stageId: "samsung",
+          now: `Ahora ${PEGGY.artist} 23:30 – 01:00 · quedan 90 min`,
+          next: DONE,
+        });
       expect((await liveRows(page)).find((row) => row.stageId === "flow")?.now).toBe(NOTHING);
       await expect(livePanel(page)).toHaveAttribute("data-e2e-same-panel", "");
     });
