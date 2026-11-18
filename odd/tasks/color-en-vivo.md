@@ -24,16 +24,16 @@ real. Brief: `design/color-en-vivo/brief.md`. Tokens: `design/system.md`. Rama `
 
 ## Tasks
 
-| ID  | Specs      | Route                                                                                                                                                       | Commit    |
-| --- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
-| T1  | S1, S4, S6 | inline — base compartida: `src/lib/stage-colors.ts` (escenario/día → color y color de texto), animaciones `live-*` en `globals.css`, `palette.ts`           | dfb626b   |
-| T2  | S1, S3, S6 | worker — grilla: carriles, encabezados, bloques por color, choque rayado, pestañas de día con color, línea del ahora, puntos de show sonando, shows pasados | 8e57ffe   |
-| T3  | S1, S6     | worker — fondo de pantalla: colores por escenario y día (layout + canvas)                                                                                   | a6c4a09   |
-| T4  | S4, S5, S6 | worker — botón «En vivo» en love animado y panel con chips de color, punto, atenuado, avance                                                                | 29b9e65   |
-| T5  | S2, S6     | worker — reloj de `/demo`: slider + hora a mano + ±15                                                                                                       | a9c457b   |
-| T7  | S7         | worker — diagnosticar y corregir la vista previa vacía del fondo «Con amigos» al abrir la hoja                                                              | 7f0225c   |
-| T8  | S1, S6     | worker — e2e `test-e2e-grid-names-two-lines`: con el choque rayado, «Las Canciones de Ainé» elegido ocupa 3 líneas a 360 px (NFR-04 pide ≤ 2)               | 78e64b4   |
-| T6  | S1–S6      | inline — cierre: suite completa, e2e en 4 proyectos, handoff                                                                                                | pendiente |
+| ID  | Specs      | Route                                                                                                                                                       | Commit   |
+| --- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| T1  | S1, S4, S6 | inline — base compartida: `src/lib/stage-colors.ts` (escenario/día → color y color de texto), animaciones `live-*` en `globals.css`, `palette.ts`           | dfb626b  |
+| T2  | S1, S3, S6 | worker — grilla: carriles, encabezados, bloques por color, choque rayado, pestañas de día con color, línea del ahora, puntos de show sonando, shows pasados | 8e57ffe  |
+| T3  | S1, S6     | worker — fondo de pantalla: colores por escenario y día (layout + canvas)                                                                                   | a6c4a09  |
+| T4  | S4, S5, S6 | worker — botón «En vivo» en love animado y panel con chips de color, punto, atenuado, avance                                                                | 29b9e65  |
+| T5  | S2, S6     | worker — reloj de `/demo`: slider + hora a mano + ±15                                                                                                       | a9c457b  |
+| T7  | S7         | worker — diagnosticar y corregir la vista previa vacía del fondo «Con amigos» al abrir la hoja                                                              | 7f0225c  |
+| T8  | S1, S6     | worker — e2e `test-e2e-grid-names-two-lines`: con el choque rayado, «Las Canciones de Ainé» elegido ocupa 3 líneas a 360 px (NFR-04 pide ≤ 2)               | 78e64b4  |
+| T6  | S1–S6      | inline — cierre: suite completa, e2e en 4 proyectos, handoff                                                                                                | validado |
 
 ## Log
 
@@ -55,3 +55,4 @@ real. Brief: `design/color-en-vivo/brief.md`. Tokens: `design/system.md`. Rama `
 - **L11** (2026-11-18, usuario, textual): «Bueno vamos a hacer las validaciones y si ta todo ok PR y si ci verde, merge / Decisiones: / Lo dejamos asi». Se aceptan el contraste de pine en Perry's (3,96:1) y «Choque» recortado en bloques de 44 px.
 - **L12**: validación T6 (Postgres descartable en 5433, e2e de a un proyecto por pedido del usuario: «no podemos correr todos los e2e todos juntos»). Integración 110/110. E2E: iphone-webkit 115 ok / 1 falla, mobile-chromium 113 / 6, mobile-360 104 / 10, desktop 8 / 0. Falla real en los 3 móviles: `grid.spec.ts:534` (`sun-kidzapalooza-1600 "Las Canciones de Ainé" (elegido): 3 líneas`) → T8. Las demás (offline, grupos, «el registro no terminó en /», «la sincronización tardó más de un segundo») solo en Chromium y parecen de tiempos: se re-corren aparte.
 - **L13**: T8 en `78e64b4`: sin `pl-2.5` en el choque, borde rayado de 3 px superpuesto y nombre elegido en semibold (no bold). `grid.spec.ts` pasa en mobile-360 (24), iphone-webkit (23 + 1 skip de Chromium) y mobile-chromium (24). Unit 803/803.
+- **L14**: re-corrida de las fallas de Chromium (offline, groups-admin, group-grid, groups, live), de a un proyecto: mobile-chromium 37 ok + 1 skip, mobile-360 37 ok + 1 skip. Eran de tiempos. T6 validada: unit 803/803, integración 110/110, e2e verde en los 4 proyectos. Se abre el PR.
