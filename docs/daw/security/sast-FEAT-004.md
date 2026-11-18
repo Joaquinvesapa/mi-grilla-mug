@@ -6,7 +6,7 @@
 | Tools | grep sobre los 9 archivos de `src/` del ticket (`git diff main...HEAD`), oxlint --type-aware, pnpm audit --prod |
 | Date | 2026-11-18 |
 
-Alcance: los archivos de `src/` del ticket.
+Alcance: los archivos de `src/` del ticket. Re-corrida sobre `4b4cc2a`, después del ciclo de corrección desde VERIFY (cambiaron `wallpaperFileName`, los textos del catálogo, el estado `delivery` del botón y algunos exports): mismos resultados.
 
 - **Nuevos:** `src/lib/wallpaper-layout.ts`, `src/lib/wallpaper-messages.ts`,
   `src/components/wallpaper-canvas.ts`, `src/components/wallpaper-delivery.ts` y
@@ -24,7 +24,7 @@ en el navegador.
 | F-SAST-02 | ✅ | no hay consultas a la base en el ticket |
 | F-SAST-03 | ✅ | nada llega a exec/spawn/child_process |
 | F-SAST-04 | ✅ | sin `eval`, `new Function` ni deserialización insegura |
-| F-SAST-05 | ✅ | no hay rutas de archivo; el nombre de la descarga sale de `wallpaperFileName` (solo `[a-z0-9-]`) |
+| F-SAST-05 | ✅ | no hay rutas de archivo; el nombre de la descarga sale de `wallpaperFileName` (solo `[a-z0-9-]`; `../../etc/passwd` da `mi-grilla-etc-passwd.png`, cubierto por `test-wallpaper-file-name-invalid`) |
 | F-SAST-06 | ✅ | sin `innerHTML` ni `dangerouslySetInnerHTML`; el texto se dibuja con `fillText` en canvas (R-02) y la vista previa es un `<img>` con `src` blob del mismo origen |
 | F-SAST-07 | ✅ | sin `fetch` ni pedidos salientes en los archivos del ticket |
 | F-SAST-08 | ✅ | no se usa criptografía |

@@ -1,32 +1,32 @@
 # Test run FEAT-004
 
-Corrida del cierre de CODE (Blocks 1–4, con las rondas de corrección de cada bloque): suite completa.
+Corrida del re-cierre de CODE después del ciclo de corrección desde VERIFY (ronda 1): suite completa.
 Incluye unit con cobertura, integración contra PostgreSQL real (`postgres:17.12` de
 `docker-compose.yml`, migrada y sembrada) y E2E de los 4 proyectos de Playwright. Los E2E corren
 dentro de la imagen oficial `mcr.microsoft.com/playwright:v1.65.1-noble` con la red del host,
 porque a WebKit le faltan bibliotecas del sistema en este host. Corrida el 2026-11-18 sobre
-`0bfb671`, con Node 24.22.2 (el `node` del PATH del host es v20 y Vitest no arranca con él).
+`4b4cc2a`, con Node 24.22.2 (el `node` del PATH del host es v20 y Vitest no arranca con él).
 
 | Field | Value |
 |---|---|
 | Runner | vitest 5.1.0 (unit en jsdom con coverage v8, e integración en node) + @playwright/test 1.65.1 (E2E, imagen mcr.microsoft.com/playwright:v1.65.1-noble) |
 | Command | `pnpm test && pnpm test:integration && CI=1 bash e2e-root.sh "$PWD"` (equivalente a `CI=1 pnpm test:e2e:docker` sin `--user`, porque el Docker de este host es rootless) |
-| Total | 717 |
-| Passed | 714 |
+| Total | 722 |
+| Passed | 719 |
 | Failed | 0 |
 | Skipped | 3 |
-| Line coverage | 99.4% |
-| Branch coverage | 97.04% |
+| Line coverage | 99.5% |
+| Branch coverage | 97.64% |
 | Function coverage | 99.23% |
 | Coverage floor | 80% líneas, 70% ramas, 80% funciones (AGENTS.md, "Testing") |
 | Lint | `pnpm lint` (`oxlint --type-aware`) — clean, 0 findings; `pnpm format:check` (oxfmt) — OK; `pnpm typecheck` (`next typegen && tsc --noEmit`) — 0 errores |
 
 Detalle:
-- **Unit:** 415 tests en 47 archivos.
+- **Unit:** 420 tests en 47 archivos.
 - **Integración:** 48 tests en 6 archivos.
 - **E2E:** 254 ejecuciones en los 4 proyectos (`iphone-webkit`, `mobile-chromium`, `mobile-360` y
   `desktop`). Pasan 251 y se saltean 3.
-- **Cobertura:** es la de la suite unitaria (statements 99,24 %).
+- **Cobertura:** es la de la suite unitaria (statements 99,33 %).
 - **Casos nuevos:**
   - `tests/e2e/wallpaper.spec.ts`: 8 casos por proyecto mobile.
   - Unit: `tests/unit/lib/wallpaper-layout.test.ts`, `wallpaper-messages.test.ts`,
