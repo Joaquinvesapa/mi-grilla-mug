@@ -1,4 +1,6 @@
-# Postgres local para desarrollo y tests de integración.
+# Postgres local. El mismo servidor tiene la base de desarrollo (`mi_grilla`, DATABASE_URL) y la de
+# los tests (TEST_DATABASE_URL, `mi_grilla_test` en .env.example), que no se crea acá: la crea
+# `pnpm db:test:prepare`, también sobre un volumen que ya tiene datos.
 # La contraseña se lee de `.env` (ver `.env.example`); sin ella, `docker compose` se niega a arrancar.
 # El puerto queda atado a 127.0.0.1: la base no se expone a la red (R-04).
 services:
