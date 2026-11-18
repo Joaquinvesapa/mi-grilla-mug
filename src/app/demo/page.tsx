@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { IphoneFrame } from "@/components/iphone-frame";
+import { DemoStage } from "@/components/demo-stage";
 
 export const metadata: Metadata = {
   title: "Demo · Mi Grilla",
@@ -17,7 +17,7 @@ export default function DemoPage() {
           La app de verdad, en un iPhone. Tocá y scrolleá adentro del marco.
         </p>
       </header>
-      <IphoneFrame />
+      <DemoStage />
     </main>
   );
 }
