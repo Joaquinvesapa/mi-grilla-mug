@@ -110,6 +110,8 @@ export function deleteGroupTitle(groupName: string): string {
   return `¿Borrar ${groupName}?`;
 }
 export const CANCEL = "Cancelar";
+/** Any group action tried without a connection (FR-04, AC-28): nothing is sent. */
+export const OFFLINE_ACTION = "Necesitás conexión para hacer esto";
 
 /** The title and text the system share sheet gets with the link. */
 export function inviteShareText(groupName: string): { title: string; text: string } {

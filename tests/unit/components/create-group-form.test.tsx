@@ -5,7 +5,16 @@ import type { CreateGroupFormState } from "@/app/group-actions";
 import { CreateGroupForm } from "@/components/create-group-form";
 import { groupMessageFor } from "@/lib/group-messages";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
+
+const OFFLINE = "Necesitás conexión para hacer esto";
+
+function setOnline(value: boolean) {
+  vi.spyOn(navigator, "onLine", "get").mockReturnValue(value);
+}
 
 type CreateAction = (
   prev: CreateGroupFormState,
@@ -62,5 +71,56 @@ describe("CreateGroupForm", () => {
 
     expect(screen.getByRole("alert")).toHaveTextContent("Ya estás en 10 grupos, el máximo");
     expect(screen.getByLabelText("Nombre del grupo")).toHaveValue("Los del Lolla");
+  });
+
+  it("test-forms-offline-ac28: crear sin conexión avisa y no llama a la acción", async () => {
+    setOnline(false);
+    const action = fakeAction({ error: null, name: "" });
+    render(<CreateGroupForm action={action} />);
+
+    await typeAndSubmit("Los del Lolla");
+
+    expect(action).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toHaveTextContent(OFFLINE);
+    expect(screen.getByLabelText("Nombre del grupo")).toHaveValue("Los del Lolla");
+    expect(screen.getByRole("button", { name: "Crear grupo" })).toBeEnabled();
+  });
+
+  it("test-guard-message-priority: el aviso de conexión le gana al error de la acción y el próximo envío con conexión lo limpia", async () => {
+    setOnline(true);
+    const action = vi
+      .fn<CreateAction>()
+      .mockResolvedValueOnce({ error: groupMessageFor("INVALID_NAME"), name: "" })
+      .mockResolvedValueOnce({ error: groupMessageFor("USER_GROUP_LIMIT"), name: "Los del Lolla" });
+    render(<CreateGroupForm action={action} />);
+
+    await typeAndSubmit("");
+    expect(screen.getByRole("alert")).toHaveTextContent("entre 1 y 40 caracteres");
+
+    setOnline(false);
+    await typeAndSubmit("Los del Lolla");
+    expect(action).toHaveBeenCalledTimes(1);
+    expect(screen.getAllByRole("alert")).toHaveLength(1);
+    expect(screen.getByRole("alert")).toHaveTextContent(OFFLINE);
+
+    setOnline(true);
+    await typeAndSubmit("Los del Lolla");
+    expect(action).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole("alert")).toHaveTextContent("Ya estás en 10 grupos, el máximo");
+    expect(screen.queryByText(OFFLINE)).toBeNull();
+  });
+
+  it("crear rechazado por la red con conexión muestra el genérico", async () => {
+    setOnline(true);
+    const action = vi.fn<CreateAction>(async () => {
+      throw new TypeError("Failed to fetch");
+    });
+    render(<CreateGroupForm action={action} />);
+
+    await typeAndSubmit("Los del Lolla");
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "No pudimos guardar. Probá de nuevo en un rato.",
+    );
   });
 });

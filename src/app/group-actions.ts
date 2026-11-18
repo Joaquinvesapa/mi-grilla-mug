@@ -18,7 +18,8 @@ import {
 
 // Thin on purpose: the user comes from the verified session, never from the form (R-01), and the
 // fields are validated by src/server/groups.ts. Next rejects a Server Action posted from another
-// origin (R-07). Only the catalog's text reaches the screen, never an infrastructure message (R-08).
+// origin (R-07). Only the catalog's text reaches the screen, never an infrastructure message
+// (R-08).
 // `redirect` throws to navigate, so it never goes inside a try/catch.
 
 /** What the create form shows: the message, and what the person typed so it is not lost. */

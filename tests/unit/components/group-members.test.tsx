@@ -5,7 +5,16 @@ import type { GroupChangeState } from "@/app/group-actions";
 import { GroupMembers, type GroupMembersProps } from "@/components/group-members";
 import { groupMessageFor } from "@/lib/group-messages";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
+
+const OFFLINE = "Necesitás conexión para hacer esto";
+
+function setOnline(value: boolean) {
+  vi.spyOn(navigator, "onLine", "get").mockReturnValue(value);
+}
 
 const GROUP_ID = "0b6f7c1e-2d3a-4b5c-8d9e-0f1a2b3c4d5e";
 
@@ -95,5 +104,18 @@ describe("GroupMembers", () => {
     expect(within(rows().bruno).getByRole("alert")).toHaveTextContent(
       "Esa persona ya no está en el grupo.",
     );
+  });
+
+  it("test-forms-offline-ac28: sacar sin conexión avisa en la fila y no llama a la acción", async () => {
+    setOnline(false);
+    const { removeAction } = renderMembers({ isAdmin: true });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Sacar a Bruno" }));
+    });
+
+    expect(removeAction).not.toHaveBeenCalled();
+    expect(within(rows().bruno).getByRole("alert")).toHaveTextContent(OFFLINE);
+    expect(screen.getByRole("button", { name: "Sacar a Bruno" })).toBeEnabled();
   });
 });

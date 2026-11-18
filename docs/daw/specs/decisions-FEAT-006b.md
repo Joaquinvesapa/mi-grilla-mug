@@ -24,3 +24,15 @@ Formato: decisión — quién la aprobó — fecha — bloque.
   implementer, aceptado — 2026-11-18 — Block 2.
 - `deleteGroupAction` y `leaveGroupAction` devuelven solo `{ ok: false, error }`: si salen bien,
   redirigen — supuesto del implementer, aceptado — 2026-11-18 — Block 2.
+- Mientras se ve el aviso "Necesitás conexión para hacer esto", se ocultan los mensajes de éxito
+  anteriores ("Nombre guardado", "Link nuevo generado") — supuesto del implementer, aceptado por el
+  module-verifier y mostrado al usuario (autonomy minimal) — 2026-11-18 — Block 3.
+- `test-forms-offline-ac28` va partido en un test por archivo de formulario (seis archivos, siete
+  formularios); el de la danger zone cubre "Salir" y "Borrar" — aceptado por el module-verifier —
+  2026-11-18 — Block 3.
+- Los diálogos de "Salir" y "Borrar" se limpian al reabrirse con el estado dentro de
+  `AlertDialogContent` (más un `key` por apertura, redundante) — supuesto del implementer, aceptado
+  — 2026-11-18 — Block 3.
+- Queda sin cambiar: si la red corta con la acción ya enviada, crear y renombrar pierden lo tipeado
+  (sin conexión desde el principio no pasa) — orquestador (autonomy minimal), aviso del
+  arch-auditor — 2026-11-18 — Block 3.

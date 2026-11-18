@@ -5,7 +5,9 @@ import { useActionState } from "react";
 import type { GroupChangeState } from "@/app/group-actions";
 import { FormAlert } from "@/components/form-feedback";
 import { Button } from "@/components/ui/button";
+import { useConnectionGuard } from "@/components/use-connection-guard";
 import { REMOVE_MEMBER_BUTTON, removeMemberLabel } from "@/lib/group-messages";
+import { cn } from "@/lib/utils";
 import type { GroupDetailMember } from "@/server/groups";
 
 export type RemoveMemberAction = (
@@ -29,7 +31,7 @@ type RemoveView = GroupChangeState | null;
  * "Sacar" for one row: the group and the member go hidden, and it sends at once, without asking
  * (the PRD asks first only for deleting and leaving; whoever is taken out can come back with a
  * link). Its own `useActionState`, so a row's answer stays in that row. On success the page is
- * revalidated and the row goes away.
+ * revalidated and the row goes away. Without a connection nothing is sent (FR-04).
  */
 function RemoveMemberForm({
   groupId,
@@ -40,13 +42,15 @@ function RemoveMemberForm({
   member: GroupDetailMember;
   action: RemoveMemberAction;
 }) {
+  const { message, onSubmit, guard } = useConnectionGuard();
   const [state, formAction, pending] = useActionState<RemoveView, FormData>(
-    async (_prev, formData) => action({ ok: true }, formData),
+    guard(async (_prev, formData) => action({ ok: true }, formData)),
     null,
   );
+  const error = message ?? (state?.ok === false ? state.error : null);
 
   return (
-    <form action={formAction} className="contents">
+    <form action={formAction} onSubmit={onSubmit} className="contents">
       <input type="hidden" name="groupId" value={groupId} />
       <input type="hidden" name="memberUserId" value={member.userId} />
       <Button
@@ -59,12 +63,13 @@ function RemoveMemberForm({
       >
         {REMOVE_MEMBER_BUTTON}
       </Button>
-      {/* Under the row, full width: the form is `contents`, so this wraps inside the row's flex. */}
-      {state?.ok === false ? (
+      {/* Under the row, full width: the form is `contents`, so this wraps inside the row's
+          flex. */}
+      {error === null ? null : (
         <div className="basis-full">
-          <FormAlert message={state.error} />
+          <FormAlert message={error} />
         </div>
-      ) : null}
+      )}
     </form>
   );
 }
@@ -82,7 +87,10 @@ export function GroupMembers({ groupId, members, isAdmin, removeAction }: GroupM
         <li key={member.userId} className="flex min-h-11 flex-wrap items-center gap-x-3 gap-y-2">
           <span
             aria-hidden="true"
-            className="flex size-11 shrink-0 items-center justify-center rounded-full bg-secondary text-sm font-semibold"
+            className={cn(
+              "flex size-11 shrink-0 items-center justify-center",
+              "rounded-full bg-secondary text-sm font-semibold",
+            )}
           >
             {member.initials}
           </span>

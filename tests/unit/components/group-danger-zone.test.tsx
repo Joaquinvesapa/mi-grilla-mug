@@ -108,4 +108,46 @@ describe("GroupDangerZone", () => {
       within(screen.getByRole("alertdialog")).getByRole("button", { name: "Borrar" }),
     ).toBeEnabled();
   });
+
+  it("test-forms-offline-ac28: salir y borrar sin conexión avisan en el diálogo y no llaman a la acción", async () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+    const { leaveAction, deleteAction } = renderZone(true);
+
+    await tap(screen.getByRole("button", { name: "Salir del grupo" }));
+    let dialog = screen.getByRole("alertdialog", { name: "¿Salir de Los del Lolla?" });
+    await tap(within(dialog).getByRole("button", { name: "Salir" }));
+    expect(leaveAction).not.toHaveBeenCalled();
+    expect(within(dialog).getByRole("alert")).toHaveTextContent(
+      "Necesitás conexión para hacer esto",
+    );
+    expect(within(dialog).getByRole("button", { name: "Salir" })).toBeEnabled();
+    await tap(within(dialog).getByRole("button", { name: "Cancelar" }));
+
+    await tap(screen.getByRole("button", { name: "Borrar grupo" }));
+    dialog = screen.getByRole("alertdialog", { name: "¿Borrar Los del Lolla?" });
+    await tap(within(dialog).getByRole("button", { name: "Borrar" }));
+    expect(deleteAction).not.toHaveBeenCalled();
+    expect(within(dialog).getByRole("alert")).toHaveTextContent(
+      "Necesitás conexión para hacer esto",
+    );
+  });
+
+  it("group-danger-zone: al cerrar con Cancelar y volver a abrir, el error anterior ya no está", async () => {
+    const deleteAction = vi.fn<ExitAction>(async () => ({
+      ok: false,
+      error: groupMessageFor("NOT_ADMIN"),
+    }));
+    renderZone(true, { deleteAction });
+
+    await tap(screen.getByRole("button", { name: "Borrar grupo" }));
+    const dialog = screen.getByRole("alertdialog");
+    await tap(within(dialog).getByRole("button", { name: "Borrar" }));
+    expect(within(dialog).getByRole("alert")).toHaveTextContent(
+      "Solo quien administra el grupo puede hacer esto.",
+    );
+    await tap(within(dialog).getByRole("button", { name: "Cancelar" }));
+
+    await tap(screen.getByRole("button", { name: "Borrar grupo" }));
+    expect(within(screen.getByRole("alertdialog")).queryByRole("alert")).toBeNull();
+  });
 });

@@ -25,10 +25,10 @@ export const metadata: Metadata = {
 };
 
 // A group's screen (FR-04, FR-05, FR-11): its name, its members and its invite link. Its admin also
-// renames it, takes members out and deletes it; everyone can leave it (FEAT-006b, FR-01, FR-02). Someone else's
-// group, one that does not exist and a malformed id all answer `notFound()`, with nothing of the
-// group (FR-12, R-04). Dynamic: it reads the request's cookies. The headers are read before
-// getAccounts(), so nothing creates Better Auth while `next build` prerenders.
+// renames it, takes members out and deletes it; everyone can leave it (FEAT-006b, FR-01, FR-02).
+// Someone else's group, one that does not exist and a malformed id all answer `notFound()`, with
+// nothing of the group (FR-12, R-04). Dynamic: it reads the request's cookies. The headers are
+// read before getAccounts(), so nothing creates Better Auth while `next build` prerenders.
 export default async function GroupPage({ params }: { params: Promise<{ groupId: string }> }) {
   const { groupId } = await params;
   const requestHeaders = await headers();

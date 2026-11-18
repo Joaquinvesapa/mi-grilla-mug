@@ -4,7 +4,16 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { RenameGroupForm, type RenameGroupFormProps } from "@/components/rename-group-form";
 import { groupMessageFor } from "@/lib/group-messages";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
+
+const OFFLINE = "Necesitás conexión para hacer esto";
+
+function setOnline(value: boolean) {
+  vi.spyOn(navigator, "onLine", "get").mockReturnValue(value);
+}
 
 const GROUP_ID = "0b6f7c1e-2d3a-4b5c-8d9e-0f1a2b3c4d5e";
 
@@ -56,6 +65,19 @@ describe("RenameGroupForm", () => {
 
     expect(screen.getByRole("status")).toHaveTextContent("Nombre guardado");
     expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.getByLabelText("Cambiar nombre")).toHaveValue("Los de siempre");
+  });
+
+  it("test-forms-offline-ac28: renombrar sin conexión avisa y no llama a la acción", async () => {
+    setOnline(false);
+    const action = vi.fn<RenameAction>(async () => ({ ok: true }));
+    render(<RenameGroupForm groupId={GROUP_ID} name="Los del Lolla" action={action} />);
+
+    await typeAndSave("Los de siempre");
+
+    expect(action).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toHaveTextContent(OFFLINE);
+    expect(screen.queryByText("Nombre guardado")).toBeNull();
     expect(screen.getByLabelText("Cambiar nombre")).toHaveValue("Los de siempre");
   });
 });

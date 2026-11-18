@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 
 import type { GroupExitState } from "@/app/group-actions";
 import { FormAlert } from "@/components/form-feedback";
@@ -15,6 +15,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { useConnectionGuard } from "@/components/use-connection-guard";
 import {
   CANCEL,
   DELETE_GROUP_BUTTON,
@@ -54,10 +55,43 @@ type ConfirmExitProps = {
 };
 
 /**
- * A button that asks first: the dialog closes with "Cancelar" or a tap outside (gestures), and only
- * its confirm button sends. That one is a plain submit inside its form, not AlertDialogAction:
+ * The dialog's answer and its confirm button. It lives inside the dialog and is mounted again on
+ * every opening, so a rejection or the offline notice from an earlier try does not come back
+ * after "Cancelar". The confirm button is a plain submit inside its form, not AlertDialogAction:
  * closing the dialog on click would unmount the form before the browser submits it (as in
  * app-menu.tsx). It stays disabled while the answer comes, and a rejection shows in the dialog.
+ * Without a connection nothing is sent and the notice shows in the dialog too (FR-04).
+ */
+function ExitConfirm({
+  groupId,
+  confirm,
+  action,
+}: Pick<ConfirmExitProps, "groupId" | "confirm" | "action">) {
+  const { message, onSubmit, guard } = useConnectionGuard();
+  const [state, formAction, pending] = useActionState(
+    guard<GroupExitState | null, FormData>(action),
+    null,
+  );
+
+  return (
+    <>
+      <FormAlert message={message ?? state?.error ?? null} />
+      <AlertDialogFooter>
+        <AlertDialogCancel>{CANCEL}</AlertDialogCancel>
+        <form action={formAction} onSubmit={onSubmit} className="contents">
+          <input type="hidden" name="groupId" value={groupId} />
+          <Button type="submit" variant="destructive" disabled={pending} aria-busy={pending}>
+            {confirm}
+          </Button>
+        </form>
+      </AlertDialogFooter>
+    </>
+  );
+}
+
+/**
+ * A button that asks first: the dialog closes with "Cancelar" or a tap outside (gestures), and only
+ * its confirm button sends. Each opening gets a fresh `ExitConfirm` through its `key`.
  */
 function ConfirmExit({
   groupId,
@@ -68,10 +102,16 @@ function ConfirmExit({
   confirm,
   action,
 }: ConfirmExitProps) {
-  const [state, formAction, pending] = useActionState(action, null);
+  const [opening, setOpening] = useState(0);
 
   return (
-    <AlertDialog>
+    <AlertDialog
+      onOpenChange={(open) => {
+        if (open) {
+          setOpening((count) => count + 1);
+        }
+      }}
+    >
       <AlertDialogTrigger asChild>
         <Button type="button" variant={triggerVariant} size="lg" className="w-full">
           {trigger}
@@ -85,16 +125,7 @@ function ConfirmExit({
           <AlertDialogTitle className="break-words">{title}</AlertDialogTitle>
           {warning === null ? null : <AlertDialogDescription>{warning}</AlertDialogDescription>}
         </AlertDialogHeader>
-        <FormAlert message={state?.error ?? null} />
-        <AlertDialogFooter>
-          <AlertDialogCancel>{CANCEL}</AlertDialogCancel>
-          <form action={formAction} className="contents">
-            <input type="hidden" name="groupId" value={groupId} />
-            <Button type="submit" variant="destructive" disabled={pending} aria-busy={pending}>
-              {confirm}
-            </Button>
-          </form>
-        </AlertDialogFooter>
+        <ExitConfirm key={opening} groupId={groupId} confirm={confirm} action={action} />
       </AlertDialogContent>
     </AlertDialog>
   );

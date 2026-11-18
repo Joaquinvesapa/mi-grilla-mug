@@ -265,4 +265,18 @@ describe("InviteLink", () => {
     expect(screen.queryByRole("button", { name: "Compartir link" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Generar link nuevo" })).toBeNull();
   });
+
+  it("test-forms-offline-ac28: generar link nuevo sin conexión avisa y no llama a la acción", async () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+    const { regenerateAction } = renderLink({ isAdmin: true });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Generar link nuevo" }));
+    });
+
+    expect(regenerateAction).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toHaveTextContent("Necesitás conexión para hacer esto");
+    expect(screen.queryByText("Link nuevo generado")).toBeNull();
+    expect(screen.getByRole("button", { name: "Generar link nuevo" })).toBeEnabled();
+  });
 });
