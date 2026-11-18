@@ -11,6 +11,7 @@ import {
   MAX_GROUPS_PER_USER,
   normalizeGroupName,
 } from "@/lib/group-rules";
+import type { GroupPicks } from "@/lib/group-picks";
 import { getDb } from "@/server/db";
 import type { PrismaClient } from "@/server/generated/prisma/client";
 import {
@@ -38,6 +39,8 @@ export type CreateGroupResult =
   | Unavailable;
 
 export type ListGroupsResult = { ok: true; groups: GroupSummary[] } | Unavailable;
+
+export type ListGroupPicksResult = { ok: true; groups: GroupPicks[] } | Unavailable;
 
 export type GetGroupResult =
   | { ok: true; group: GroupDetail }
@@ -74,6 +77,7 @@ export type GroupsOptions = {
 export type GroupsService = {
   createGroup(userId: string, name: unknown): Promise<CreateGroupResult>;
   listGroups(userId: string): Promise<ListGroupsResult>;
+  listGroupPicks(userId: string): Promise<ListGroupPicksResult>;
   getGroup(userId: string, groupId: unknown): Promise<GetGroupResult>;
   regenerateInvite(userId: string, groupId: unknown): Promise<RegenerateInviteResult>;
   getInvitePreview(userId: string, token: unknown): Promise<InvitePreviewResult>;
@@ -210,6 +214,53 @@ export function createGroupsService({
             groups.set(row.group_id, group);
           }
           group.members.push(memberOf({ name: row.member_name, is_admin: row.is_admin }));
+        }
+        return { ok: true, groups: [...groups.values()] };
+      } catch {
+        return unavailable();
+      }
+    },
+
+    async listGroupPicks(userId) {
+      try {
+        // Anchored on the session's own memberships (R-01); one row per other member, with their
+        // saved selection only (FR-05). A group with no one else comes as one row with no member.
+        // No member's account id is selected: none leaves the server (R-02).
+        const rows = await db.$queryRaw<
+          {
+            group_id: string;
+            group_name: string;
+            member_name: string | null;
+            show_ids: string[];
+          }[]
+        >`
+          SELECT g.id AS group_id, g.name AS group_name, u.name AS member_name,
+            COALESCE(
+              array_agg(s.show_id ORDER BY s.show_id) FILTER (WHERE s.show_id IS NOT NULL), '{}'
+            ) AS show_ids
+          FROM group_members me
+          JOIN groups g ON g.id = me.group_id
+          LEFT JOIN group_members m ON m.group_id = g.id AND m.user_id <> me.user_id
+          LEFT JOIN users u ON u.id = m.user_id
+          LEFT JOIN selected_shows s ON s.user_id = m.user_id
+          WHERE me.user_id = ${userId}
+          GROUP BY g.id, g.name, me.joined_at, m.user_id, m.joined_at, u.name
+          ORDER BY me.joined_at DESC, g.id, m.joined_at, m.user_id`;
+        // The rows come in the final order: each group starts where its id first appears.
+        const groups = new Map<string, GroupPicks>();
+        for (const row of rows) {
+          let group = groups.get(row.group_id);
+          if (!group) {
+            group = { id: row.group_id, name: row.group_name, friends: [] };
+            groups.set(row.group_id, group);
+          }
+          if (row.member_name !== null) {
+            group.friends.push({
+              name: row.member_name,
+              initials: initialsOf(row.member_name),
+              showIds: row.show_ids,
+            });
+          }
         }
         return { ok: true, groups: [...groups.values()] };
       } catch {
@@ -440,6 +491,14 @@ export function createGroup(userId: string, name: unknown): Promise<CreateGroupR
 /** The groups of `userId`, with their members (FR-11). */
 export function listGroups(userId: string): Promise<ListGroupsResult> {
   return shared().listGroups(userId);
+}
+
+/**
+ * The groups of `userId`, newest membership first, each with the other members and their saved
+ * selection (FEAT-006c FR-01, FR-02, FR-05).
+ */
+export function listGroupPicks(userId: string): Promise<ListGroupPicksResult> {
+  return shared().listGroupPicks(userId);
 }
 
 /** A group `userId` is a member of, with its link; any other id is `NOT_FOUND` (FR-12). */
