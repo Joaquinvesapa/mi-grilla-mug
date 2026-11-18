@@ -104,3 +104,5 @@ Todos los cambios notables de Mi Grilla se registran en este archivo. El formato
 - [FEAT-006c] La línea del horario de cada show mide 15 px en vez de heredar 24 px; en los bloques
   cortos con amigos que no tienen alto para el nombre en dos líneas, el nombre se recorta a una
   línea con "…", así entran el horario y las iniciales.
+- [FIX-005] El índice de FEAT-006 marca como terminados los tres sub-tickets (FEAT-006a, 006b y
+  006c), mergeados en los PR #11, #13 y #15.
