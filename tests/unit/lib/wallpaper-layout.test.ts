@@ -832,6 +832,14 @@ describe("wallpaperLayout with a group", () => {
       expect(badge.height).toBe(24);
       expect(badge.radius).toBe(12);
       expect(badge.width).toBeCloseTo(measureText(badge.label.text, badge.label.font) + 12, 6);
+      // The label is centered in its box: the same padding on both sides, and the 20 px text
+      // centered in the 24 px height, so the canvas only paints it where it is.
+      const left = badge.label.x - badge.x;
+      const right =
+        badge.x + badge.width - (badge.label.x + measureText(badge.label.text, badge.label.font));
+      expect(left).toBeCloseTo(right, 6);
+      expect(left).toBeCloseTo(6, 6);
+      expect(badge.label.y).toBeCloseTo(badge.y + (24 - 20) / 2, 6);
     }
     expectBadgesInside(block, measureText);
   });
