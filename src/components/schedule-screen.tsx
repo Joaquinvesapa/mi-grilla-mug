@@ -13,6 +13,7 @@ import {
 import { AppBar } from "@/components/app-menu";
 import { DayPicker } from "@/components/day-picker";
 import { clearPending, readPending, writePending, writeSnapshot } from "@/components/device-store";
+import { LiveButton } from "@/components/live-button";
 import { OfflinePendingNotice } from "@/components/offline-pending-notice";
 import { PendingBar } from "@/components/pending-bar";
 import { ScheduleGrid } from "@/components/schedule-grid";
@@ -323,15 +324,22 @@ export function ScheduleScreen({
         }
       >
         {day ? (
-          <ScheduleGrid
-            day={day}
-            stages={schedule.stages}
-            shows={dayShows}
-            selectedIds={draft}
-            pendingIds={pending}
-            clashIds={clashes}
-            onToggle={toggle}
-          />
+          // The "En vivo" button floats over the grid, not inside its scroll: a sibling in this
+          // relative wrapper, which ends where the pending bar starts (FR-01). Opening the panel
+          // touches neither the day, the draft nor the grid, which stays mounted (AC-03).
+          <div className="relative flex min-h-0 flex-1 flex-col">
+            <ScheduleGrid
+              day={day}
+              stages={schedule.stages}
+              shows={dayShows}
+              selectedIds={draft}
+              pendingIds={pending}
+              clashIds={clashes}
+              onToggle={toggle}
+            />
+            {/* The draft, as on screen: unsaved marks and a pending selection included (FR-09). */}
+            <LiveButton schedule={schedule} selectedIds={draft} clearHomeIndicator={!hasPending} />
+          </div>
         ) : null}
       </DayPicker>
       {hasPending ? (

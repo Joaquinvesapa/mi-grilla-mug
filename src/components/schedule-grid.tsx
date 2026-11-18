@@ -28,6 +28,12 @@ const HOURS_WIDTH = "3rem";
 const MINUTE_MS = 60_000;
 /** Room under the last hour mark, so its label (drawn below the line) is not cut off. */
 const AXIS_TAIL_PX = 16;
+/**
+ * Room at the end of every column for the floating "En vivo" button, so any show can be scrolled
+ * out from under it (FR-16): the button's 56 px (`size-14` in `live-button.tsx`) + its 16 px
+ * bottom margin + 8 px. Tied to that size: changing the button means changing this.
+ */
+export const LIVE_BUTTON_CLEARANCE_PX = 80;
 
 function timeRange(show: Show): string {
   return `${formatClock(new Date(show.startsAt))} – ${formatClock(new Date(show.endsAt))}`;
@@ -61,6 +67,8 @@ export function ScheduleGrid({
   const axis = dayAxis(shows);
   const marks = hourMarks(axis);
   const bodyHeight = ((axis.end.getTime() - axis.start.getTime()) / MINUTE_MS) * PX_PER_MINUTE;
+  // The blocks keep their geometry: only the columns grow, below the last hour mark.
+  const columnHeight = bodyHeight + AXIS_TAIL_PX + LIVE_BUTTON_CLEARANCE_PX;
   const offsetOf = (mark: Date) =>
     ((mark.getTime() - axis.start.getTime()) / MINUTE_MS) * PX_PER_MINUTE;
 
@@ -89,7 +97,7 @@ export function ScheduleGrid({
         <div
           aria-hidden="true"
           className="sticky left-0 z-10 bg-background"
-          style={{ height: bodyHeight + AXIS_TAIL_PX }}
+          style={{ height: columnHeight }}
         >
           {marks.map((mark) => (
             <span
@@ -108,7 +116,7 @@ export function ScheduleGrid({
             key={stage.id}
             data-stage-column={stage.id}
             className="relative border-l border-border/40"
-            style={{ height: bodyHeight + AXIS_TAIL_PX }}
+            style={{ height: columnHeight }}
           >
             {marks.map((mark) => (
               <div

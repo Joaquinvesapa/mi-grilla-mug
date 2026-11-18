@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { ScheduleGrid } from "@/components/schedule-grid";
+import { LIVE_BUTTON_CLEARANCE_PX, ScheduleGrid } from "@/components/schedule-grid";
 
 import { blockOf, DAYS, showsOf, STAGES } from "./schedule-fixture";
 
@@ -179,6 +179,27 @@ describe("ScheduleGrid", () => {
     // test-e2e-grid-names-two-lines, these are the knobs it depends on.
     expect(name).toHaveClass("text-[13px]", "font-semibold", "hyphens-auto", "tracking-[-0.01em]");
     expect(block).toHaveClass("inset-x-px", "px-1");
+  });
+
+  it("schedule-grid: las columnas suman el espacio libre del botón", () => {
+    const { container } = renderFriday();
+
+    // The "En vivo" button (56 px) + 16 px of margin + 8 px.
+    expect(LIVE_BUTTON_CLEARANCE_PX).toBe(80);
+    // Friday in the fixture: 15:00 to 01:00, 600 minutes at 2 px = 1200 px, plus the 16 px tail
+    // under the last hour mark, plus the button's room (FR-16).
+    const hours = container.querySelector<HTMLElement>("[data-hour-mark]")?.parentElement;
+    expect(hours?.style.height).toBe("1296px");
+    const columns = [...container.querySelectorAll<HTMLElement>("[data-stage-column]")];
+    expect(columns).toHaveLength(5);
+    for (const column of columns) {
+      expect(column.style.height).toBe("1296px");
+    }
+    // The blocks keep their geometry: Arjaus Crew still starts at the top, 45 minutes tall.
+    const first = blockOf(container, "fri-kidzapalooza-1500");
+    expect(first.style.top).toBe("0px");
+    expect(first.style.height).toBe("90px");
+    expect(blockOf(container, "fri-samsung-2330").style.top).toBe("1020px");
   });
 
   it("da respuesta táctil al bloque con data-pressed", () => {

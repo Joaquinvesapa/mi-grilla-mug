@@ -55,6 +55,22 @@ export function formatClock(instant: Date): string {
 }
 
 /**
+ * The id of the festival day whose `[date 06:00, date+1 06:00)` interval contains `now`, or `null`
+ * outside the festival. Saturday 00:30 is still Friday (FR-06 of FEAT-005a).
+ */
+export function festivalDayAt(
+  now: Date,
+  days: readonly Pick<FestivalDay, "id" | "date">[],
+): string | null {
+  const time = now.getTime();
+  const current = days.find((day) => {
+    const start = posterTimeToInstant(day.date, "06:00").getTime();
+    return time >= start && time < start + DAY_MS;
+  });
+  return current ? current.id : null;
+}
+
+/**
  * The id of the festival day whose `[date 06:00, date+1 06:00)` interval contains `now`. Outside
  * the festival, the day in position 1 (the lowest position if none is 1).
  */
@@ -62,13 +78,9 @@ export function festivalDayFor(
   now: Date,
   days: readonly Pick<FestivalDay, "id" | "date" | "position">[],
 ): string {
-  const time = now.getTime();
-  const current = days.find((day) => {
-    const start = posterTimeToInstant(day.date, "06:00").getTime();
-    return time >= start && time < start + DAY_MS;
-  });
-  if (current) {
-    return current.id;
+  const current = festivalDayAt(now, days);
+  if (current !== null) {
+    return current;
   }
   const first = [...days].sort((a, b) => a.position - b.position)[0];
   if (!first) {

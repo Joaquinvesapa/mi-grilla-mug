@@ -4,6 +4,7 @@ import {
   DATE_PATTERN,
   FESTIVAL_TIME_ZONE,
   FESTIVAL_UTC_OFFSET,
+  festivalDayAt,
   festivalDayFor,
   formatClock,
   posterTimeToInstant,
@@ -75,6 +76,22 @@ describe("formatClock", () => {
     expect(formatClock(new Date("2026-03-14T04:00:00.000Z"))).toBe("01:00");
     expect(formatClock(new Date("2026-03-14T02:30:00.000Z"))).toBe("23:30");
     expect(formatClock(new Date("2026-03-14T03:00:00.000Z"))).toBe("00:00");
+  });
+});
+
+describe("festivalDayAt", () => {
+  it("festival-time: festivalDayAt devuelve el día o null fuera del festival", () => {
+    // AC-06: Peggy Gou's Saturday 00:30 still belongs to Friday.
+    expect(festivalDayAt(festivalClock("2026-03-14T00:30:00"), DAYS)).toBe("fri");
+    expect(festivalDayAt(festivalClock("2026-03-13T06:00:00"), DAYS)).toBe("fri");
+    expect(festivalDayAt(festivalClock("2026-03-14T05:59:59"), DAYS)).toBe("fri");
+    expect(festivalDayAt(festivalClock("2026-03-14T06:00:00"), DAYS)).toBe("sat");
+    expect(festivalDayAt(festivalClock("2026-03-16T00:35:00"), DAYS)).toBe("sun");
+    // Outside the three days there is no festival day.
+    expect(festivalDayAt(festivalClock("2026-03-13T05:59:59"), DAYS)).toBeNull();
+    expect(festivalDayAt(festivalClock("2026-03-16T06:00:00"), DAYS)).toBeNull();
+    expect(festivalDayAt(festivalClock("2026-11-17T12:00:00"), DAYS)).toBeNull();
+    expect(festivalDayAt(new Date(), [])).toBeNull();
   });
 });
 
