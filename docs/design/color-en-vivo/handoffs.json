@@ -8,7 +8,7 @@
       "sentAt": "2026-11-18T20:52:44.347Z",
       "startedAt": "2026-11-18T20:52:57.360Z",
       "implementedAt": null,
-      "note": "T1–T5 commiteadas; unit 803/803, tipos, lint y formato OK. Falta: integración y e2e (falta TEST_DATABASE_URL en .env)."
+      "note": "Pausado: T1–T5 y T7 commiteadas, unit 803/803. Falta T6 (integración + e2e), bloqueado por TEST_DATABASE_URL en .env."
     }
   }
 }
