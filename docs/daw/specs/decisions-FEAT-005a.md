@@ -85,3 +85,25 @@ que la spec ya dice se resuelven en los bloques y se registran acá, en vez de r
   calculada; cerrado no se calcula nada. — orquestador — 2026-11-18 — Block 3
 - El fade del overlay sigue en 500 ms (el wrapper de shadcn no le pasa `className`): NFR-01 mide el
   panel, y Block 4 lo mide en WebKit. — orquestador — 2026-11-18 — Block 3
+
+## Block 4 — E2E de "En vivo"
+
+- Los 10 tests de la spec viven en 6 tests de Playwright (presupuesto de la CI, G14); los que
+  agrupan varios AC envuelven cada parte en `test.step` con el nombre exacto de la spec. —
+  orquestador — 2026-11-18 — Block 4
+- **AC-22 en E2E afirma solo lo determinista** (hallazgo 12 aplicado): la duración configurada de la
+  animación del panel ≤ 250 ms y que la animación corra y termine. El tiempo total desde el toque
+  se registra como anotación `AC-22`, sin afirmarlo: en el WebKit headless del contenedor dio
+  255–356 ms con una animación de 250 ms (montaje 12–63 ms y frames con ruido), y como gate fallaba
+  en 1 a 4 de cada 8 corridas. El criterio de ≤ 300 ms en un iPhone 12 se verifica a mano en VERIFY.
+  — orquestador — 2026-11-18 — Block 4
+- AC-24 se mide a 360 × 640 con `setViewportSize` en todos los proyectos; con 640 de alto los 5
+  escenarios pasan del 80dvh del panel. — orquestador — 2026-11-18 — Block 4
+- AC-20 guarda Turf antes de cortar la conexión: una marca sin guardar no sobrevive a recargar sin
+  conexión, y "lo mismo" se compara contra las filas leídas con conexión. — orquestador —
+  2026-11-18 — Block 4
+- El swipe se prueba con `page.mouse` (Vaul usa pointer events; Playwright no ofrece arrastre
+  táctil en WebKit) y en los 3 proyectos mobile; el camino táctil real de iOS queda para VERIFY. —
+  orquestador — 2026-11-18 — Block 4
+- `scrollGrid` queda duplicado en `tests/e2e/live.ts` (el de `grid.spec.ts` es privado); se puede
+  unificar en `grid.ts` cuando otro ticket lo necesite. — orquestador — 2026-11-18 — Block 4
