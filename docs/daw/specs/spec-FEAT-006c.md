@@ -6,8 +6,26 @@
 | PRD | docs/daw/prd/prd-FEAT-006c.md |
 | Tier | FEATURE |
 | Date | 2026-11-18 |
-| Spec loops | 0 |
+| Spec loops | 1 |
 | Loops since last human decision | 0 |
+
+## Vuelta 1 (CODE → PLAN desde el Block 5, decisión del usuario, 2026-11-18)
+
+- **Qué encontró el E2E.** `test-e2e-group-grid-fit` falló en los 3 proyectos mobile. En los dos
+  shows de 20 minutos del domingo en Kidzapalooza (18:00 y 18:30), la fila de iniciales sale del
+  bloque de 60 px. La cuenta de "Horario siempre visible" suponía un horario de unos 15 px, pero
+  `[data-time-line]` no tiene `leading` propio y hereda 24 px (16 px × 1,5). A 360 px, además,
+  "¡Qué Lío, Hugo!" ocupa 2 líneas, y nombre en 2 líneas + horario + iniciales (≈ 75,5 px) no
+  entran en 60 px con ningún ajuste.
+- **Decisión del usuario (opción 1 de 3).** En un bloque con amigos cuya altura no alcanza para el
+  nombre en 2 líneas, el nombre se recorta a 1 línea con "…". El nombre completo sigue en el nombre
+  accesible y el horario sigue visible. Se descartaron dejar que el bloque tape el principio del
+  show siguiente y mostrar solo "+N" (eso último no cumple FR-02).
+- **Cómo se aplica.** Un bloque nuevo, el Block 6, que se implementa antes de cerrar el Block 5
+  (cuyo `test-e2e-group-grid-fit` es el que lo comprueba). Los Blocks 1 a 4 ya están completos y no
+  se tocan.
+- **Fuera de este ticket.** Sin amigos, el bloque de 44 px de "¡Qué Lío, Hugo!" ya no mostraba su
+  horario a 360 px desde FEAT-003a (nombre en 2 líneas + horario ≈ 64,5 px). No se corrige acá.
 
 ## Summary
 La página `/` suma una lectura más a su `Promise.all`: `listGroupPicks(user.id)` en
@@ -15,8 +33,9 @@ La página `/` suma una lectura más a su `Promise.all`: `listGroupPicks(user.id
 guardada (una fila por amigo, con `array_agg`). La pantalla de la grilla muestra un selector de grupo
 (el `native-select` de shadcn/ui) y, en cada show, las iniciales de los amigos que lo eligieron.
 Todos los grupos viajan en la copia del dispositivo, así el selector y los indicadores funcionan sin
-conexión (ADR-007, que extiende ADR-004). Son 5 bloques: servicio; reglas puras y copia;
-presentación (grilla y selector); pantalla, página y copia; E2E. Incorpora R-01 a R-08 de `docs/daw/security/threat-FEAT-006c.md`, los 16 huecos del Impact
+conexión (ADR-007, que extiende ADR-004). Son 6 bloques: servicio; reglas puras y copia;
+presentación (grilla y selector); pantalla, página y copia; E2E; y el ajuste de los bloques cortos
+con amigos (vuelta 1). Incorpora R-01 a R-08 de `docs/daw/security/threat-FEAT-006c.md`, los 16 huecos del Impact
 Check y los 9 hallazgos de la auditoría de arquitectura de PLAN.
 
 ### Decisiones aplicadas
@@ -27,8 +46,8 @@ Check y los 9 hallazgos de la auditoría de arquitectura de PLAN.
   menos `MIN_BLOCK_HEIGHT_WITH_FRIENDS = 60` px, sin pasar del inicio del show siguiente del mismo
   escenario. En la grilla real, los únicos bloques de menos de 60 px son los dos shows de 20 minutos
   del domingo en Kidzapalooza (18:00 y 18:30). Cada show deja al menos 10 minutos (20 px) libres
-  antes del siguiente, así que 44 + 16 = 60 px siempre entra. Un bloque con iniciales y subtítulo
-  recorta el subtítulo a 1 línea. El E2E `test-e2e-group-grid-fit` comprueba en los tres días que
+  antes del siguiente. Un bloque con iniciales y subtítulo recorta el subtítulo a 1 línea. (La
+  cuenta original, "44 + 16 = 60 px siempre entra", estaba mal: ver "Vuelta 1" y el Block 6.) El E2E `test-e2e-group-grid-fit` comprueba en los tres días que
   la fila entra en todos los bloques.
 - **Selector:** se usa el componente `native-select` de shadcn/ui, copiado con la CLI fijada
   (`pnpm exec shadcn add native-select`, 4.23.0). No suma dependencias porque usa `lucide-react` y
@@ -99,7 +118,7 @@ Check y los 9 hallazgos de la auditoría de arquitectura de PLAN.
 | AC-26 | Block 1, Block 5 |
 | AC-27 | Block 2, Block 4, Block 5 |
 | AC-30 | Block 1, Block 5 |
-| AC-32 | Block 3, Block 5 |
+| AC-32 | Block 3, Block 5, Block 6 |
 
 ## Rollback
 No hay migración ni cambio de esquema: revertir el merge alcanza. El campo `groups` de la copia
@@ -107,7 +126,8 @@ No hay migración ni cambio de esquema: revertir el merge alcanza. El campo `gro
 clave `mi-grilla:group-choice:<userId>` queda sin uso.
 
 ## Dependencies between blocks
-Block 1 → Block 2 → Block 3 → Block 4 → Block 5. Block 2 importa el tipo `GroupPicks` desde `src/lib/` (lo
+Block 1 → Block 2 → Block 3 → Block 4 → Block 5, y el Block 6 (vuelta 1) depende del Block 3 y se
+implementa antes de cerrar el Block 5: `test-e2e-group-grid-fit` lo comprueba. Block 2 importa el tipo `GroupPicks` desde `src/lib/` (lo
 define Block 2, y Block 1 lo reusa desde `src/lib/group-picks.ts`: `src/lib/` no importa de
 `src/server/`). Por eso Block 1 crea el archivo con los tipos, y Block 2 agrega las funciones.
 
@@ -460,6 +480,51 @@ Cubre de punta a punta los AC de FEAT-006c en el build de producción.
 de CODE pasa la suite completa en los 4 proyectos, con `performance.spec.ts` en los proyectos
 Chromium. Siguen en verde `groups.spec.ts`, `grid.spec.ts` (nombres accesibles sin cambios) y
 `offline.spec.ts`.
+
+## Block 6 — Bloques cortos con amigos: horario a su alto y nombre a 1 línea (vuelta 1)
+
+**Files**
+- `src/lib/schedule-layout.ts` (modified) — `NAME_TWO_LINES_MIN_HEIGHT_WITH_FRIENDS = 76`: el alto
+  que necesita un bloque con amigos para el nombre en 2 líneas (padding 8 + nombre 32,5 + 2 +
+  horario 15 + 2 + fila 16 ≈ 75,5 px).
+- `src/components/schedule-grid.tsx` (modified):
+  - `[data-time-line]` toma `leading-tight` (12 px → 15 px de alto), así no hereda los 24 px del
+    `body`;
+  - en un bloque con amigos cuya altura (después de `heightWithFriends`) es menor que
+    `NAME_TWO_LINES_MIN_HEIGHT_WITH_FRIENDS`, el nombre pasa a `line-clamp-1`, que muestra "…" al
+    final; sin amigos, o con altura suficiente, el nombre sigue como hasta ahora (hasta 2 líneas,
+    NFR-04 de FEAT-003a).
+- `tests/unit/components/schedule-grid.test.tsx` (modified)
+- `tests/unit/lib/schedule-layout.test.ts` (modified)
+
+**Logic**
+Implements FR-02 (las iniciales se ven en cada show, también en los bloques cortos) y AC-32 (la
+fila mide al menos 12 px y queda dentro del bloque), sin ocultar el horario (FR-03 de FEAT-003a).
+Con el horario a 15 px, un bloque de 60 px con el nombre en 1 línea mide 8 + 16,25 + 2 + 15 + 2 +
+16 = 59,25 px y entra. El nombre accesible del bloque no cambia: el recorte es solo visual.
+
+**Data model**
+- Reuses `FriendPicks` from Block 2 (`src/lib/group-picks.ts`) — no schema change; constraints as
+  declared there: `name` NOT NULL (1 a 100), `showIds` unique y conocidos por la grilla, como mucho
+  19 amigos por grupo.
+
+**Error handling**
+- Sin condiciones de error propias: es presentación sobre datos ya validados en el Block 2.
+
+**Required tests**
+- [ ] test-grid-short-name-clamp — `un bloque corto con amigos recorta el nombre a 1 línea y conserva
+  el nombre accesible completo` — validates AC-32
+- [ ] test-grid-tall-name-unclamped — `un bloque con amigos y altura suficiente, o sin amigos, no
+  recorta el nombre` — validates AC-21
+- [ ] test-grid-time-line-height — `la línea del horario tiene leading-tight y no hereda el alto de
+  línea del body` — validates AC-32
+- [ ] test-name-two-lines-threshold — `NAME_TWO_LINES_MIN_HEIGHT_WITH_FRIENDS vale 76 y deja afuera a
+  los bloques de 60 px` — validates AC-32
+
+**Completion criterion**
+Los 4 tests pasan, los existentes de `schedule-grid` y `schedule-layout` siguen en verde (nombres
+accesibles sin cambios), y `test-e2e-group-grid-fit` (Block 5) pasa en `iphone-webkit`,
+`mobile-chromium` y `mobile-360`.
 
 ## Final verification
 - `validate_spec.py --tier FEATURE` y `validate_threat.py --spec docs/daw/specs/spec-FEAT-006c.md`
