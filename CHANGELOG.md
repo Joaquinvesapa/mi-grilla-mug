@@ -58,3 +58,9 @@ Todos los cambios notables de Mi Grilla se registran en este archivo. El formato
   de 254); al mergear a `main` sigue corriendo los 4 proyectos.
 - [FIX-001] `AGENTS.md` fija cuándo se corren los E2E en DAW: solo el E2E del bloque en CODE, la
   suite completa al cierre de CODE, y en VERIFY la misma corrida si el código no cambió.
+
+### Fixed
+
+- [FIX-002] El job `e2e` de la CI ya no se cancela por el tope de 10 minutos cuando apt se cuelga:
+  corre dentro de la imagen oficial de Playwright (`v1.65.1-noble`), que trae los navegadores y sus
+  bibliotecas, sin `playwright install` ni cache de navegadores.
