@@ -3,6 +3,8 @@
 // reserved for «En vivo» and is never a stage or day color. Pure: shared by the grid, the
 // «En vivo» sheet, the /demo clock and the wallpaper canvas, which cannot read CSS tokens.
 
+import type { CSSProperties } from "react";
+
 import { BASE, FOAM, GOLD, IRIS, PINE, ROSE, SUBTLE, TEXT } from "@/lib/palette";
 
 /** A fill color and the text color that reads on it. */
@@ -40,7 +42,7 @@ export function dayTint(dayId: string): Tint {
 }
 
 /** CSS custom properties for a React `style`: `var(--stage)` and `var(--on-stage)` in classes. */
-export type TintStyle = { "--stage": string; "--on-stage": string };
+export type TintStyle = CSSProperties & { "--stage": string; "--on-stage": string };
 
 export function stageStyle(stageId: string): TintStyle {
   const { color, onColor } = stageTint(stageId);
@@ -48,7 +50,7 @@ export function stageStyle(stageId: string): TintStyle {
 }
 
 /** Same for a day: `var(--day)` and `var(--on-day)`. */
-export type DayStyle = { "--day": string; "--on-day": string };
+export type DayStyle = CSSProperties & { "--day": string; "--on-day": string };
 
 export function dayStyle(dayId: string): DayStyle {
   const { color, onColor } = dayTint(dayId);
