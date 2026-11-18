@@ -143,6 +143,14 @@ Si un número de acá no coincide con el que exige la CI, gana el de la CI y se 
 
 ---
 
+## Organizational memory
+
+Servidor MCP: **Cortex** (`mcp__cortex__*`), proyecto `mi-grilla-mug`.
+Acelera la búsqueda, no es la fuente de verdad: si una memoria contradice el repo (código, PRD,
+spec, ADR, `.daw-state.json`), gana el repo y la memoria se corrige con `memoria_update`.
+
+---
+
 ## Domain glossary
 
 - **Show:** una actuación de un artista en un escenario, un día, con hora de inicio y fin. Tiene un
