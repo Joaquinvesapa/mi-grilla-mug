@@ -4,7 +4,7 @@
 |-------|-------|
 | Ticket | FEAT-005b |
 | Tools | revisión manual del diff (`git diff origin/main...HEAD -- src`) + grep de patrones (`postMessage`, `addEventListener`, `innerHTML`, `dangerouslySetInnerHTML`, `eval`, `fetch`, `process.env`, storage, `console`) + `pnpm audit --prod` |
-| Date | 2026-11-18 |
+| Date | 2026-11-18 (re-corrida sobre `c1a9462`, después de traer FEAT-006b: el diff propio de la rama contra `origin/main` y los 9 archivos del alcance no cambiaron desde `f007219`, `package.json` y `pnpm-lock.yaml` son iguales a `main`, y `pnpm audit --prod` sigue sin vulnerabilidades) |
 | Alcance | `src/lib/demo-clock.ts`, `src/components/demo-clock.ts`, `src/components/demo-clock-control.tsx`, `src/components/demo-stage.tsx`, `src/components/iphone-frame.tsx`, `src/components/schedule-screen.tsx`, `src/components/live-button.tsx`, `src/components/use-now.ts`, `src/app/demo/page.tsx` (424 líneas sumadas, 8 sacadas) |
 
 | Rule | Verdict | Notes |
