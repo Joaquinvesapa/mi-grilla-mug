@@ -7,9 +7,11 @@ import {
   FESTIVAL_OVER,
   LIVE_LABEL,
   minutesUntilLabel,
+  NEXT_PREFIX,
   nextShowLabel,
   NO_LIVE_SHOWS,
   NOTHING_NOW,
+  NOW_PREFIX,
   SELECTED_LABEL,
 } from "@/lib/live-messages";
 import type { FestivalDay, Show, Stage } from "@/lib/schedule-types";
@@ -46,5 +48,7 @@ describe("live messages", () => {
     expect(LIVE_LABEL).toBe("En vivo");
     expect(CLOSE_LABEL).toBe("Cerrar");
     expect(SELECTED_LABEL).toBe("Elegido");
+    expect(NOW_PREFIX).toBe("Ahora:");
+    expect(NEXT_PREFIX).toBe("Sigue:");
   });
 });

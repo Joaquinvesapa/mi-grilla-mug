@@ -13,6 +13,12 @@ export const CLOSE_LABEL = "Cerrar";
 /** Hidden text next to the icon of a chosen show (FR-08). */
 export const SELECTED_LABEL = "Elegido";
 
+/** The label of a stage's line with the show playing now (FR-03). */
+export const NOW_PREFIX = "Ahora:";
+
+/** The label of a stage's line with the show that comes next (FR-04). */
+export const NEXT_PREFIX = "Sigue:";
+
 /** A stage where nothing plays right now (FR-03). */
 export const NOTHING_NOW = "Nada ahora";
 

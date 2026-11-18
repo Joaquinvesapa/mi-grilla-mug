@@ -3,12 +3,13 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 
 import { type SaveSelection, ScheduleScreen } from "@/components/schedule-screen";
 import { renderWallpaper } from "@/components/wallpaper-canvas";
+import { CLOSE_LABEL, LIVE_LABEL, SELECTED_LABEL } from "@/lib/live-messages";
 import { pendingKey, SNAPSHOT_KEY } from "@/lib/offline-selection";
 import { selectionMessageFor } from "@/lib/selection-messages";
 import { WALLPAPER_BUTTON_LABEL } from "@/lib/wallpaper-messages";
 
 import { blockOf, SCHEDULE, showsOf } from "./schedule-fixture";
-import { stubMatchMedia } from "./vaul-env";
+import { endVaulCloseAnimation, stubMatchMedia } from "./vaul-env";
 
 // jsdom has no canvas: the wallpaper's drawing is a fake (Block 2 tests the real one).
 vi.mock("@/components/wallpaper-canvas", () => ({ renderWallpaper: vi.fn() }));
@@ -663,5 +664,84 @@ describe("ScheduleScreen y el fondo de pantalla", () => {
     const input = wallpaperInput();
     expect(input.day.id).toBe("sat");
     expect(input.shows.map((show) => show.id)).toStrictEqual(["sat-flow-1800"]);
+  });
+});
+
+describe('ScheduleScreen y el panel "En vivo"', () => {
+  beforeEach(() => {
+    // Only `Date`, at 18:30 of Friday: DJO plays on Flow and Easykid on Perry's.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(Date.parse("2026-03-13T18:30:00-03:00"));
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  async function openLive(): Promise<HTMLElement> {
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: LIVE_LABEL }));
+    });
+    return screen.getByRole("dialog", { name: LIVE_LABEL });
+  }
+
+  function stageOrder(panel: HTMLElement): (string | undefined)[] {
+    return [...panel.querySelectorAll<HTMLElement>("[data-live-stage]")].map(
+      (row) => row.dataset.liveStage,
+    );
+  }
+
+  it("schedule-screen: abrir y cerrar el panel no cambia el día ni los cambios pendientes", async () => {
+    renderScreen();
+    pickDay("Sábado");
+    tap("sat-flow-1800");
+    const grid = screen.getByRole("region", { name: "Grilla del Sábado" });
+
+    const panel = await openLive();
+    await act(async () => {
+      fireEvent.click(within(panel).getByRole("button", { name: CLOSE_LABEL }));
+    });
+    await act(async () => {
+      endVaulCloseAnimation(panel);
+    });
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Sábado" })).toHaveAttribute("aria-selected", "true");
+    expect(blockOf(document, "sat-flow-1800")).toHaveAttribute("aria-pressed", "true");
+    expect(pendingBar()).toHaveTextContent("1 cambio sin guardar");
+    // The same grid node: it was never unmounted, so its scroll position is kept (AC-03).
+    expect(screen.getByRole("region", { name: "Grilla del Sábado" })).toBe(grid);
+  });
+
+  it("schedule-screen: el panel usa el draft sin guardar", async () => {
+    renderScreen();
+    tap("fri-perrys-1815");
+    expect(pendingBar()).toHaveTextContent("1 cambio sin guardar");
+
+    const panel = await openLive();
+
+    // Easykid is chosen but unsaved: Perry's goes first, with the mark (FR-09).
+    expect(stageOrder(panel)).toStrictEqual([
+      "perrys",
+      "flow",
+      "samsung",
+      "alternative",
+      "kidzapalooza",
+    ]);
+    const easykid = panel.querySelector<HTMLElement>('[data-live-stage="perrys"] [data-live-now]');
+    expect(easykid).toHaveTextContent("Easykid");
+    expect(within(easykid!).getByText(SELECTED_LABEL)).toBeInTheDocument();
+  });
+
+  it("schedule-screen: en modo offline el botón también está", async () => {
+    setOnline(false);
+    renderScreen({ mode: "offline", saved: ["fri-flow-1800"] });
+    await settle();
+
+    const panel = await openLive();
+
+    const djo = panel.querySelector<HTMLElement>('[data-live-stage="flow"] [data-live-now]');
+    expect(djo).toHaveTextContent("DJO");
+    expect(within(djo!).getByText(SELECTED_LABEL)).toBeInTheDocument();
+    expect(stageOrder(panel)[0]).toBe("flow");
   });
 });

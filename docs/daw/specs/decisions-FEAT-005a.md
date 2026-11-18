@@ -72,3 +72,16 @@ que la spec ya dice se resuelven en los bloques y se registran acá, en vez de r
 - El `Date` que devuelve `useNow` es el mismo objeto mientras la hora no cambie (`useMemo` por
   milisegundos), para que el `useMemo` de `liveNow` en el Block 3 sirva. — orquestador —
   2026-11-18 — Block 2
+
+## Block 3 — Botón y panel en la pantalla de la grilla
+
+- "Ahora:" y "Sigue:" son `NOW_PREFIX` y `NEXT_PREFIX` de `src/lib/live-messages.ts`. Formato de
+  "Sigue": "Peggy Gou 23:30 (en 60 min)"; el horario de "Ahora" es "22:15 – 23:30", como en la
+  grilla. — orquestador — 2026-11-18 — Block 3
+- El encabezado del panel (título y "Cerrar") queda fuera del área con scroll, así "Cerrar" siempre
+  se ve; solo el cuerpo hace `overflow-y-auto overscroll-contain`. — orquestador — 2026-11-18 —
+  Block 3
+- Mientras el panel se cierra (Vaul lo deja montado durante la animación), muestra la última vista
+  calculada; cerrado no se calcula nada. — orquestador — 2026-11-18 — Block 3
+- El fade del overlay sigue en 500 ms (el wrapper de shadcn no le pasa `className`): NFR-01 mide el
+  panel, y Block 4 lo mide en WebKit. — orquestador — 2026-11-18 — Block 3
