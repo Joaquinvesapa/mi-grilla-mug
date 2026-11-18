@@ -5,6 +5,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest
 import { OfflineApp } from "@/components/offline-app";
 import { selectionMessageFor } from "@/lib/selection-messages";
 import type { SaveSelection } from "@/components/schedule-screen";
+import type { GroupPicks } from "@/lib/group-picks";
 import { pendingKey, SNAPSHOT_KEY } from "@/lib/offline-selection";
 
 import { blockOf, SCHEDULE } from "./schedule-fixture";
@@ -35,7 +36,15 @@ afterEach(() => {
   window.history.replaceState(null, "", "/");
 });
 
-function storeSnapshot(savedShowIds: string[]) {
+const GROUPS: GroupPicks[] = [
+  {
+    id: "11111111-1111-4111-8111-111111111111",
+    name: "Los del colegio",
+    friends: [{ name: "Beto Gómez", initials: "BG", showIds: ["fri-flow-1800"] }],
+  },
+];
+
+function storeSnapshot(savedShowIds: string[], groups: GroupPicks[] = []) {
   localStorage.setItem(
     SNAPSHOT_KEY,
     JSON.stringify({
@@ -44,6 +53,7 @@ function storeSnapshot(savedShowIds: string[]) {
       userName: "Ana",
       schedule: SCHEDULE,
       savedShowIds,
+      groups,
     }),
   );
 }
@@ -87,6 +97,17 @@ describe("OfflineApp", () => {
     expect(blockOf(document, "fri-samsung-1700")).toHaveAttribute("aria-pressed", "false");
     expect(screen.getByRole("heading", { level: 1, name: "Mi Grilla" })).toBeInTheDocument();
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
+  it("test-offline-app-groups: la grilla sin conexión muestra los indicadores de la copia", () => {
+    storeSnapshot([], GROUPS);
+
+    renderApp();
+
+    expect(screen.getByRole("combobox", { name: "Grupo" })).toHaveValue(GROUPS[0]!.id);
+    const row = blockOf(document, "fri-flow-1800").querySelector("[data-friend-picks]");
+    expect(row).toHaveTextContent("BG");
+    expect(blockOf(document, "fri-samsung-1700").querySelector("[data-friend-picks]")).toBeNull();
   });
 
   it("test-offline-app-pending-first: con copia y pendiente del mismo usuario, se ve la pendiente y el aviso", () => {

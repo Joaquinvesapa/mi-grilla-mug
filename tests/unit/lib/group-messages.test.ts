@@ -8,7 +8,10 @@ import {
   DELETE_GROUP_CONFIRM,
   DELETE_GROUP_WARNING,
   deleteGroupTitle,
+  extraFriendsLabel,
   formatInviteExpiry,
+  friendsPickedLabel,
+  GROUP_PICKER_LABEL,
   GROUP_LOAD_FAILED,
   GROUP_NAME_LABEL,
   type GroupMessageCode,
@@ -26,6 +29,7 @@ import {
   memberCountLabel,
   NAME_SAVED,
   NO_ACTIVE_LINK,
+  NO_GROUP_OPTION,
   NO_GROUPS,
   REMOVE_MEMBER_BUTTON,
   removeMemberLabel,
@@ -95,6 +99,15 @@ describe("group-messages", () => {
     });
     expect(memberCountLabel(1)).toBe("1 integrante");
     expect(memberCountLabel(3)).toBe("3 integrantes");
+  });
+
+  it("test-group-picks-messages: friendsPickedLabel y extraFriendsLabel arman los textos", () => {
+    expect(GROUP_PICKER_LABEL).toBe("Grupo");
+    expect(NO_GROUP_OPTION).toBe("Sin grupo");
+    expect(friendsPickedLabel(["Ana Pérez", "Bruno"])).toBe("Lo eligieron: Ana Pérez, Bruno");
+    expect(friendsPickedLabel(["Ana Pérez"])).toBe("Lo eligieron: Ana Pérez");
+    expect(extraFriendsLabel(2)).toBe("+2");
+    expect(extraFriendsLabel(16)).toBe("+16");
   });
 
   it("group-messages: los textos de administrar y salir de un grupo", () => {

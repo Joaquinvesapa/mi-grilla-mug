@@ -5,6 +5,8 @@ import { resetDemoClockForTests } from "@/components/demo-clock";
 import { type SaveSelection, ScheduleScreen } from "@/components/schedule-screen";
 import { renderWallpaper } from "@/components/wallpaper-canvas";
 import { DEMO_CLOCK_MESSAGE } from "@/lib/demo-clock";
+import { GROUP_PICKER_LABEL, NO_GROUP_OPTION } from "@/lib/group-messages";
+import { groupChoiceKey, type GroupPicks } from "@/lib/group-picks";
 import { CLOSE_LABEL, LIVE_LABEL, SELECTED_LABEL } from "@/lib/live-messages";
 import { pendingKey, SNAPSHOT_KEY } from "@/lib/offline-selection";
 import { selectionMessageFor } from "@/lib/selection-messages";
@@ -28,11 +30,31 @@ afterEach(() => {
 const USER_ID = "user-ana";
 const NOTICE_TITLE = "Guardado solo en este celular";
 
+/** Two groups, the most recent first, as `listGroupPicks` returns them. */
+const COLEGIO_ID = "11111111-1111-4111-8111-111111111111";
+const FACU_ID = "22222222-2222-4222-8222-222222222222";
+const GROUPS: GroupPicks[] = [
+  {
+    id: COLEGIO_ID,
+    name: "Los del colegio",
+    friends: [
+      { name: "Beto Gómez", initials: "BG", showIds: ["fri-flow-1800", "fri-samsung-1700"] },
+      { name: "Caro Díaz", initials: "CD", showIds: ["fri-flow-1800"] },
+    ],
+  },
+  {
+    id: FACU_ID,
+    name: "Facu y amigos",
+    friends: [{ name: "Facu Ruiz", initials: "FR", showIds: ["fri-perrys-1815"] }],
+  },
+];
+
 function renderScreen({
   initialDayId = "fri",
   saved = [] as string[],
   userId = USER_ID,
   mode = "online" as "online" | "offline",
+  groups = [] as GroupPicks[] | null,
   saveAction = vi.fn<SaveSelection>(async () => ({ ok: true })),
   logoutAction = vi.fn(async () => {}),
 } = {}) {
@@ -44,11 +66,49 @@ function renderScreen({
       userName="Ana"
       userId={userId}
       mode={mode}
+      groups={groups}
       saveAction={saveAction}
       logoutAction={logoutAction}
     />,
   );
   return { ...view, saveAction, logoutAction };
+}
+
+function picker() {
+  return screen.queryByRole("combobox", { name: GROUP_PICKER_LABEL });
+}
+
+/** The initials a show's block shows, in order; empty when it has none. */
+function initialsOn(showId: string): string[] {
+  const row = blockOf(document, showId).querySelector("[data-friend-picks]");
+  return row ? [...row.children].map((chip) => chip.textContent ?? "") : [];
+}
+
+function storeChoice(userId: string, groupId: string | null) {
+  localStorage.setItem(groupChoiceKey(userId), JSON.stringify({ version: 1, userId, groupId }));
+}
+
+function storedChoice(userId: string): unknown {
+  return JSON.parse(localStorage.getItem(groupChoiceKey(userId)) ?? "null");
+}
+
+function storedGroups(): unknown {
+  const raw = localStorage.getItem(SNAPSHOT_KEY);
+  return raw === null ? null : (JSON.parse(raw) as { groups: unknown }).groups;
+}
+
+function storeCopyOf(userId: string, groups: GroupPicks[]) {
+  localStorage.setItem(
+    SNAPSHOT_KEY,
+    JSON.stringify({
+      version: 1,
+      userId,
+      userName: "Ana",
+      schedule: SCHEDULE,
+      savedShowIds: [],
+      groups,
+    }),
+  );
 }
 
 /** Lets the effects and the awaited actions run. */
@@ -480,7 +540,29 @@ describe("ScheduleScreen", () => {
       userName: "Ana",
       schedule: SCHEDULE,
       savedShowIds: ["fri-flow-1800"],
+      groups: [],
     });
+  });
+
+  it("test-screen-writes-snapshot: la copia lleva los grupos que recibió la pantalla, en los tres caminos que la escriben", async () => {
+    renderScreen({ saved: ["fri-flow-1800"], groups: GROUPS });
+    await settle();
+
+    expect(JSON.parse(localStorage.getItem(SNAPSHOT_KEY) ?? "null")).toStrictEqual({
+      version: 1,
+      userId: USER_ID,
+      userName: "Ana",
+      schedule: SCHEDULE,
+      savedShowIds: ["fri-flow-1800"],
+      groups: GROUPS,
+    });
+
+    // A save with ok writes the copy again, with the same groups.
+    localStorage.removeItem(SNAPSHOT_KEY);
+    tap("fri-perrys-1815");
+    await press("Guardar");
+    expect(storedSnapshot()?.savedShowIds).toStrictEqual(["fri-flow-1800", "fri-perrys-1815"]);
+    expect(storedGroups()).toStrictEqual(GROUPS);
   });
 
   it("con mode offline no escribe la copia al montar", async () => {
@@ -748,6 +830,177 @@ describe('ScheduleScreen y el panel "En vivo"', () => {
   });
 });
 
+describe("ScheduleScreen y el grupo", () => {
+  function choose(groupId: string) {
+    fireEvent.change(picker()!, { target: { value: groupId } });
+  }
+
+  it("test-picker-hidden-without-groups: sin grupos no hay selector ni iniciales", async () => {
+    renderScreen({ groups: [] });
+    await settle();
+
+    expect(picker()).not.toBeInTheDocument();
+    expect(document.querySelector("[data-friend-picks]")).toBeNull();
+
+    // Groups that could not be loaded: the grid is there, without the picker either.
+    cleanup();
+    renderScreen({ groups: null });
+    await settle();
+
+    expect(screen.getByRole("region", { name: "Grilla del Viernes" })).toBeInTheDocument();
+    expect(picker()).not.toBeInTheDocument();
+    expect(document.querySelector("[data-friend-picks]")).toBeNull();
+  });
+
+  it("test-screen-friend-initials: con el grupo elegido, la pantalla pasa sus amigos a la grilla", async () => {
+    renderScreen({ groups: GROUPS });
+    await settle();
+
+    // The picker sits between the bar and the days.
+    const select = picker()!;
+    const bar = screen.getByRole("heading", { level: 1, name: "Mi Grilla" });
+    const days = screen.getByRole("tablist");
+    expect(bar.compareDocumentPosition(select) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(select.compareDocumentPosition(days) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    expect(initialsOn("fri-flow-1800")).toStrictEqual(["BG", "CD"]);
+    expect(initialsOn("fri-samsung-1700")).toStrictEqual(["BG"]);
+    expect(initialsOn("fri-perrys-1815")).toStrictEqual([]);
+    expect(blockOf(document, "fri-flow-1800")).toHaveAccessibleDescription(
+      /Lo eligieron: Beto Gómez, Caro Díaz/,
+    );
+
+    choose(FACU_ID);
+
+    expect(select).toHaveValue(FACU_ID);
+    expect(initialsOn("fri-flow-1800")).toStrictEqual([]);
+    expect(initialsOn("fri-perrys-1815")).toStrictEqual(["FR"]);
+    // The picker only changes the view: nothing is sent to the server.
+    expect(pendingBar()).not.toBeInTheDocument();
+  });
+
+  it('test-picker-no-group: "Sin grupo" saca las iniciales de la grilla', async () => {
+    renderScreen({ groups: GROUPS });
+    await settle();
+    expect(initialsOn("fri-flow-1800")).toStrictEqual(["BG", "CD"]);
+
+    fireEvent.change(picker()!, { target: { value: "" } });
+
+    expect(picker()).toHaveValue("");
+    expect(within(picker()!).getByRole("option", { name: NO_GROUP_OPTION })).toHaveProperty(
+      "selected",
+      true,
+    );
+    expect(document.querySelector("[data-friend-picks]")).toBeNull();
+    expect(storedChoice(USER_ID)).toStrictEqual({ version: 1, userId: USER_ID, groupId: null });
+  });
+
+  it("test-picker-remembers: el grupo elegido se guarda y al volver a montar se adopta", async () => {
+    renderScreen({ groups: GROUPS });
+    await settle();
+
+    choose(FACU_ID);
+    expect(storedChoice(USER_ID)).toStrictEqual({ version: 1, userId: USER_ID, groupId: FACU_ID });
+
+    cleanup();
+    renderScreen({ groups: GROUPS });
+    await settle();
+
+    expect(picker()).toHaveValue(FACU_ID);
+    expect(initialsOn("fri-perrys-1815")).toStrictEqual(["FR"]);
+
+    // "Sin grupo" is remembered too.
+    fireEvent.change(picker()!, { target: { value: "" } });
+    cleanup();
+    renderScreen({ groups: GROUPS });
+    await settle();
+
+    expect(picker()).toHaveValue("");
+    expect(document.querySelector("[data-friend-picks]")).toBeNull();
+  });
+
+  it("test-picker-remembers: si el celular no deja guardar la elección, el grupo elegido igual se ve", async () => {
+    renderScreen({ groups: GROUPS });
+    await settle();
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new DOMException("The quota has been exceeded.", "QuotaExceededError");
+    });
+
+    choose(FACU_ID);
+
+    expect(picker()).toHaveValue(FACU_ID);
+    expect(initialsOn("fri-perrys-1815")).toStrictEqual(["FR"]);
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("test-picker-default-latest: sin elección guardada se muestra el grupo más reciente", async () => {
+    renderScreen({ groups: GROUPS });
+    await settle();
+    expect(picker()).toHaveValue(COLEGIO_ID);
+
+    // A group the user is no longer in: the most recent one again (R-05).
+    cleanup();
+    storeChoice(USER_ID, "33333333-3333-4333-8333-333333333333");
+    renderScreen({ groups: GROUPS });
+    await settle();
+    expect(picker()).toHaveValue(COLEGIO_ID);
+    expect(initialsOn("fri-flow-1800")).toStrictEqual(["BG", "CD"]);
+
+    // Another account's choice is not this user's.
+    cleanup();
+    localStorage.clear();
+    storeChoice("user-beto", FACU_ID);
+    renderScreen({ groups: GROUPS });
+    await settle();
+    expect(picker()).toHaveValue(COLEGIO_ID);
+  });
+
+  it("test-screen-keeps-copy-groups: con groups null, la copia conserva los grupos anteriores del mismo usuario y queda vacía para otra cuenta", async () => {
+    storeCopyOf(USER_ID, [GROUPS[1]!]);
+    const { saveAction } = renderScreen({ groups: null, saved: ["fri-flow-1800"] });
+    await settle();
+
+    expect(storedSnapshot()?.savedShowIds).toStrictEqual(["fri-flow-1800"]);
+    expect(storedGroups()).toStrictEqual([GROUPS[1]]);
+    // Not shown: the groups of the copy only travel with it.
+    expect(picker()).not.toBeInTheDocument();
+
+    // A save with ok keeps them too.
+    tap("fri-perrys-1815");
+    await press("Guardar");
+    expect(saveAction).toHaveBeenCalled();
+    expect(storedSnapshot()?.savedShowIds).toStrictEqual(["fri-flow-1800", "fri-perrys-1815"]);
+    expect(storedGroups()).toStrictEqual([GROUPS[1]]);
+
+    // Another account's copy: its groups are not this user's.
+    cleanup();
+    storeCopyOf("user-beto", GROUPS);
+    renderScreen({ groups: null });
+    await settle();
+    expect(storedSnapshot()?.userId).toBe(USER_ID);
+    expect(storedGroups()).toStrictEqual([]);
+
+    // No copy at all.
+    cleanup();
+    localStorage.clear();
+    renderScreen({ groups: null });
+    await settle();
+    expect(storedGroups()).toStrictEqual([]);
+  });
+
+  it("test-screen-keeps-copy-groups: la sincronización de una pendiente también escribe los grupos conservados", async () => {
+    setOnline(true);
+    storeCopyOf(USER_ID, [GROUPS[1]!]);
+    storePending(USER_ID, ["fri-perrys-1815"]);
+    const { saveAction } = renderScreen({ groups: null });
+    await settle();
+
+    expect(saveAction).toHaveBeenCalledWith(["fri-perrys-1815"], USER_ID);
+    expect(storedSnapshot()?.savedShowIds).toStrictEqual(["fri-perrys-1815"]);
+    expect(storedGroups()).toStrictEqual([GROUPS[1]]);
+  });
+});
+
 describe("ScheduleScreen y el reloj de /demo", () => {
   const ORIGINAL_PARENT = Object.getOwnPropertyDescriptor(window, "parent");
   const SATURDAY_18_00 = Date.parse("2026-03-14T18:00:00-03:00");
@@ -834,6 +1087,7 @@ describe("ScheduleScreen y el reloj de /demo", () => {
         userName="Ana"
         userId={USER_ID}
         mode="online"
+        groups={[]}
         saveAction={vi.fn<SaveSelection>(async () => ({ ok: true }))}
         logoutAction={vi.fn(async () => {})}
       />,

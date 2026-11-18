@@ -3,11 +3,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   clearPending,
   clearSnapshot,
+  readGroupChoice,
   readPending,
   readSnapshot,
+  writeGroupChoice,
   writePending,
   writeSnapshot,
 } from "@/components/device-store";
+import { groupChoiceKey } from "@/lib/group-picks";
 import {
   type DeviceSnapshot,
   pendingKey,
@@ -27,6 +30,13 @@ const SNAPSHOT: DeviceSnapshot = {
   userName: "Ana",
   schedule: SCHEDULE,
   savedShowIds: ["fri-flow-1800"],
+  groups: [
+    {
+      id: "0b6f3c1e-8a2d-4f7b-9c3e-1d2a3b4c5d6e",
+      name: "Los del viernes",
+      friends: [{ name: "Ana Pérez", initials: "AP", showIds: ["fri-flow-1800"] }],
+    },
+  ],
 };
 
 function pendingOf(userId: string, showIds: string[]): PendingSelection {
@@ -125,5 +135,59 @@ describe("device-store", () => {
 
     expect(clearPending("user-a")).toEqual({ ok: false, code: "STORAGE_UNAVAILABLE" });
     expect(clearSnapshot()).toEqual({ ok: false, code: "STORAGE_UNAVAILABLE" });
+  });
+});
+
+describe("device-store y la elección de grupo", () => {
+  const GROUP_ID = "0b6f3c1e-8a2d-4f7b-9c3e-1d2a3b4c5d6e";
+
+  it("test-picker-remembers: la elección se guarda con su dueño bajo su clave y se lee igual, también Sin grupo", () => {
+    expect(readGroupChoice("user-a")).toBeUndefined();
+
+    expect(writeGroupChoice("user-a", GROUP_ID)).toEqual({ ok: true });
+    expect(JSON.parse(localStorage.getItem(groupChoiceKey("user-a")) ?? "null")).toStrictEqual({
+      version: 1,
+      userId: "user-a",
+      groupId: GROUP_ID,
+    });
+    expect(readGroupChoice("user-a")).toStrictEqual({ groupId: GROUP_ID });
+
+    // "Sin grupo" is a choice too, not "never chose".
+    expect(writeGroupChoice("user-a", null)).toEqual({ ok: true });
+    expect(readGroupChoice("user-a")).toStrictEqual({ groupId: null });
+  });
+
+  it("la elección de otra cuenta no se lee, ni bajo su clave ni copiada bajo la propia (R-05)", () => {
+    writeGroupChoice("user-b", GROUP_ID);
+
+    expect(readGroupChoice("user-a")).toBeUndefined();
+    expect(readGroupChoice("user-b")).toStrictEqual({ groupId: GROUP_ID });
+
+    // B's value pasted under A's key: the owner inside does not match.
+    localStorage.setItem(groupChoiceKey("user-a"), localStorage.getItem(groupChoiceKey("user-b"))!);
+    expect(readGroupChoice("user-a")).toBeUndefined();
+
+    localStorage.setItem(groupChoiceKey("user-a"), "{broken");
+    expect(readGroupChoice("user-a")).toBeUndefined();
+  });
+
+  it("test-store-choice-unavailable: writeGroupChoice con localStorage no disponible devuelve STORAGE_UNAVAILABLE", () => {
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(quotaExceeded);
+
+    expect(writeGroupChoice("user-a", GROUP_ID)).toEqual({
+      ok: false,
+      code: "STORAGE_UNAVAILABLE",
+    });
+    expect(writeGroupChoice("user-a", null)).toEqual({ ok: false, code: "STORAGE_UNAVAILABLE" });
+  });
+
+  it("con getItem que lanza, la elección se lee como nunca elegida", () => {
+    writeGroupChoice("user-a", GROUP_ID);
+    expect(readGroupChoice("user-a")).toStrictEqual({ groupId: GROUP_ID });
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new DOMException("The operation is insecure.", "SecurityError");
+    });
+
+    expect(readGroupChoice("user-a")).toBeUndefined();
   });
 });

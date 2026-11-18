@@ -1,7 +1,13 @@
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 
+import { MAX_GROUP_MEMBERS } from "@/lib/group-rules";
+
 import { signUp } from "./auth";
+import { insertFriends, insertGroup, insertSelection, userIdByEmail } from "./db";
 import { gridRegion, showsOfDay } from "./grid";
+
+/** A full group: everyone but the viewer (AC-30). */
+const MAX_FRIENDS = MAX_GROUP_MEMBERS - 1;
 
 const LOAD_BUDGET_MS = 3000;
 /** NFR-01 of FEAT-003a: the day's grid on screen, whole, in 2 s or less over 4G. */
@@ -112,5 +118,56 @@ test.describe("la grilla con 4G simulada (NFR-01 de FEAT-003a)", () => {
       .info()
       .annotations.push({ type: "NFR-01", description: `/: bloques del día en ${elapsed} ms` });
     expect(elapsed, `/: bloques del día en ${elapsed} ms`).toBeLessThanOrEqual(GRID_BUDGET_MS);
+  });
+});
+
+test.describe("el grupo en la grilla con 4G simulada (NFR-01 de FEAT-006c)", () => {
+  test(`test-e2e-group-grid-load: con 4G, la grilla con 20 integrantes se ve completa con indicadores en ≤ ${GRID_BUDGET_MS} ms`, async ({
+    page,
+    context,
+  }, testInfo) => {
+    // Setup, not what is measured: the viewer, a group of 20 (19 friends) where everyone picked the
+    // whole of Friday. The network is throttled only after it.
+    const account = await signUp(page, testInfo);
+    const viewerId = await userIdByEmail(account.email);
+    const expected = showsOfDay("fri");
+    const fridayIds = expected.map((show) => show.id);
+    const groupId = await insertGroup({
+      name: "Los del Lolla",
+      members: [viewerId],
+      joinedAt: new Date(Date.now() - 60_000),
+    });
+    await insertFriends(
+      groupId,
+      Array.from({ length: MAX_FRIENDS }, (_, index) => ({
+        name: `Amigo ${index + 1}`,
+        showIds: fridayIds,
+      })),
+    );
+    await insertSelection(viewerId, fridayIds);
+    await emulateNetwork(context, page, false);
+
+    const region = gridRegion(page, "fri");
+    const blocks = region.locator("[data-show-id]");
+    const indicators = region.locator("[data-friend-picks]");
+
+    const started = Date.now();
+    await page.goto("/", { waitUntil: "commit" });
+    await expect(blocks).toHaveCount(expected.length, { timeout: 15_000 });
+    await expect(indicators).toHaveCount(expected.length, { timeout: 15_000 });
+    await expect(blocks.first()).toBeVisible({ timeout: 15_000 });
+    await expect(indicators.first()).toBeVisible({ timeout: 15_000 });
+    const elapsed = Date.now() - started;
+
+    expect(new URL(page.url()).pathname, "la medición no fue sobre /").toBe("/");
+    // Every block of the day carries the 19 friends: 3 initials and "+16".
+    await expect(indicators.first()).toContainText(`+${MAX_FRIENDS - 3}`);
+    test.info().annotations.push({
+      type: "NFR-01",
+      description: `/: bloques con indicadores de 20 integrantes en ${elapsed} ms`,
+    });
+    expect(elapsed, `/: bloques con indicadores en ${elapsed} ms`).toBeLessThanOrEqual(
+      GRID_BUDGET_MS,
+    );
   });
 });
