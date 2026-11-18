@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 
 import { expect, type Download, type Locator, type Page } from "@playwright/test";
 
+import { stageTint } from "@/lib/stage-colors";
 import {
   DOWNLOAD_IMAGE_LABEL,
   SAVE_TO_PHOTOS_LABEL,
@@ -64,11 +65,19 @@ export const EDGE_CLEARANCE = 2;
 const PROBE_SHIFTS = [0, 3, -3, 6, -6, 9, -9];
 
 type Rgb = [number, number, number];
-const FOAM: Rgb = [0x9c, 0xcf, 0xd8];
 const BASE: Rgb = [0x19, 0x17, 0x24];
-/** FOAM drawn at `DIMMED_OPACITY` (0.3) over BASE. */
-const DIMMED: Rgb = [0, 1, 2].map((i) => Math.round(FOAM[i]! * 0.3 + BASE[i]! * 0.7)) as Rgb;
+/** The lane of a stage is its color at this share over BASE (artboard 02 · Carriles). */
+const LANE_SHARE = 0.07;
+const DIMMED_SHARE = 0.3;
 const COLOR_TOLERANCE = 30;
+
+function rgbOf(hex: string): Rgb {
+  return [1, 3, 5].map((start) => Number.parseInt(hex.slice(start, start + 2), 16)) as Rgb;
+}
+
+function mix(top: Rgb, bottom: Rgb, share: number): Rgb {
+  return [0, 1, 2].map((i) => Math.round(top[i]! * share + bottom[i]! * (1 - share))) as Rgb;
+}
 
 /** A pixel to read: `id` names it in the report, `stageId` is its column. */
 type Probe = { id: string; stageId: string; x: number; y: number };
@@ -202,12 +211,21 @@ function distance(a: Rgb, b: Rgb): number {
   return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
 }
 
-/** "lit" (FOAM), "dimmed" (FOAM at 0.3), "background" (BASE) or the color found. */
-function shade(rgb: Rgb): string {
-  if (distance(rgb, FOAM) <= COLOR_TOLERANCE) return "lit";
-  if (distance(rgb, DIMMED) <= COLOR_TOLERANCE) return "dimmed";
-  if (distance(rgb, BASE) <= COLOR_TOLERANCE) return "background";
-  return `rgb(${rgb.join(", ")})`;
+/**
+ * "lit" (the stage's color), "dimmed" (that color at 0.3 over the stage's lane), "background" (the
+ * lane itself: the stage's color at 7 % over BASE) or the color found. The nearest of the three
+ * wins, so the dim pine, close to its lane, is not read as the lane.
+ */
+function shade(rgb: Rgb, stageId: string): string {
+  const color = rgbOf(stageTint(stageId).color);
+  const lane = mix(color, BASE, LANE_SHARE);
+  const candidates: [string, Rgb][] = [
+    ["lit", color],
+    ["dimmed", mix(color, lane, DIMMED_SHARE)],
+    ["background", lane],
+  ];
+  const [name, found] = candidates.sort((a, b) => distance(rgb, a[1]) - distance(rgb, b[1]))[0]!;
+  return distance(rgb, found) <= COLOR_TOLERANCE ? name : `rgb(${rgb.join(", ")})`;
 }
 
 type PngSource =
@@ -280,7 +298,10 @@ export async function readPng(
     { source, probes, altPrefix: PREVIEW_ALT_PREFIX },
   );
   const shades: Record<string, string> = {};
-  for (const [id, rgb] of Object.entries(report.colors)) shades[id] = shade(rgb);
+  for (const [id, rgb] of Object.entries(report.colors)) {
+    const probe = probes.find((item) => item.id === id);
+    shades[id] = shade(rgb, probe?.stageId ?? "");
+  }
   return {
     name: report.name,
     type: report.type,

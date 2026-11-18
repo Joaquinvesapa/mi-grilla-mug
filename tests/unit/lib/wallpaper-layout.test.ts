@@ -7,6 +7,7 @@ import { formatClock, posterTimeToInstant } from "@/lib/festival-time";
 import { type FriendPicks, type GroupPicks, indicatorParts, picksByShow } from "@/lib/group-picks";
 import { BASE, FOAM, SUBTLE, TEXT } from "@/lib/palette";
 import type { FestivalDay, Schedule, Show, Stage } from "@/lib/schedule-types";
+import { dayTint, stageTint } from "@/lib/stage-colors";
 import {
   type WallpaperInput,
   ARTIST_FONT_SIZE,
@@ -129,6 +130,32 @@ function expectInside(block: WallpaperLayout["blocks"][number], measure: Measure
     expect(text.y, text.text).toBeGreaterThanOrEqual(block.y);
     expect(text.y + fontSize(text.font), text.text).toBeLessThanOrEqual(block.y + block.height);
   }
+}
+
+function luminanceOf(hex: string): number {
+  const channels = [1, 3, 5].map((start) => {
+    const value = Number.parseInt(hex.slice(start, start + 2), 16) / 255;
+    return value <= 0.039_28 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  });
+  const [red = 0, green = 0, blue = 0] = channels;
+  return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+}
+
+function contrastOf(a: string, b: string): number {
+  const [light, dark] = [luminanceOf(a), luminanceOf(b)].sort((x, y) => y - x);
+  return ((light ?? 0) + 0.05) / ((dark ?? 0) + 0.05);
+}
+
+/** `color` at `percent` % over BASE, as an opaque hex (what the canvas paints). */
+function overBase(color: string, percent: number): string {
+  const hex = [1, 3, 5].map((start) => {
+    const top = Number.parseInt(color.slice(start, start + 2), 16);
+    const bottom = Number.parseInt(BASE.slice(start, start + 2), 16);
+    return Math.round((top * percent) / 100 + (bottom * (100 - percent)) / 100)
+      .toString(16)
+      .padStart(2, "0");
+  });
+  return `#${hex.join("")}`;
 }
 
 function minutes(show: Show): number {
@@ -276,14 +303,107 @@ describe("wallpaperLayout", () => {
     expect(contrast).toBeCloseTo(10.37, 1);
     expect(DIMMED_OPACITY).toBeLessThanOrEqual(0.35);
     expect(DIMMED_OPACITY).toBe(0.3);
+  });
 
-    // The text inside a block is BASE (drawn over the FOAM block).
-    const layout = layoutOf("fri");
-    for (const block of layout.blocks) {
-      for (const line of block.lines) {
-        expect(line.color).toBe(BASE);
+  it("test-wallpaper-stage-colors-blocks: each block is filled with its stage's color and its text is the stage's onColor (TEXT on pine, BASE otherwise), readable on every stage", () => {
+    const seen = new Set<string>();
+    for (const dayId of DAY_IDS) {
+      const stageOf = new Map(showsOf(dayId).map((show) => [show.id, show.stageId]));
+      for (const block of layoutOf(dayId).blocks) {
+        const stageId = stageOf.get(block.showId) ?? "";
+        const { color, onColor } = stageTint(stageId);
+        seen.add(stageId);
+        expect(block.fill, block.showId).toBe(color);
+        for (const line of block.lines) {
+          expect(line.color).toBe(onColor);
+        }
+        expect(block.time?.color).toBe(onColor);
+        // Pine/TEXT is 3.96:1: the spec accepts it for bold text (28 px artist, large).
+        expect(contrastOf(color, onColor), stageId).toBeGreaterThanOrEqual(3.9);
       }
-      expect(block.time?.color).toBe(BASE);
+    }
+    expect([...seen].sort()).toEqual(["alternative", "flow", "kidzapalooza", "perrys", "samsung"]);
+    expect(stageTint("perrys").onColor).toBe(TEXT);
+    expect(stageTint("flow").onColor).toBe(BASE);
+  });
+
+  it("test-wallpaper-stage-lanes: each stage has a lane tinted 7 % and a header tinted 9 % with a top bar in its color; names stay TEXT, AA on the tint", () => {
+    const layout = layoutOf("fri");
+    expect(layout.lanes).toHaveLength(5);
+    expect(layout.headers).toHaveLength(5);
+    for (const [index, lane] of layout.lanes.entries()) {
+      const { color } = stageTint(lane.stageId);
+      expect(lane.fill, lane.stageId).toBe(overBase(color, 7));
+      const header = layout.headers[index];
+      expect(header?.stageId).toBe(lane.stageId);
+      expect(header?.fill).toBe(overBase(color, 9));
+      expect(header?.barColor).toBe(color);
+      expect(header?.barHeight).toBeGreaterThan(0);
+      // Same column as the stage's label and blocks; the lane starts where the header ends.
+      expect(header?.x).toBe(lane.x);
+      expect(header?.width).toBe(lane.width);
+      expect((header?.y ?? 0) + (header?.height ?? 0)).toBe(lane.y);
+      expect(lane.y + lane.height).toBe(WALLPAPER_HEIGHT - SAFE_BOTTOM);
+      const label = layout.stageLabels[index];
+      expect(label?.stageId).toBe(lane.stageId);
+      expect(label?.color).toBe(TEXT);
+      expect(contrastOf(label?.color ?? "", header?.fill ?? "")).toBeGreaterThanOrEqual(4.5);
+      // The label sits inside the header, below its bar.
+      expect(label?.y).toBeGreaterThanOrEqual((header?.y ?? 0) + (header?.barHeight ?? 0));
+      expect((label?.y ?? 0) + fontSize(label?.font ?? "")).toBeLessThanOrEqual(lane.y);
+      expect(header?.y).toBeGreaterThanOrEqual(SAFE_TOP);
+    }
+    for (const block of layout.blocks) {
+      const lane = layout.lanes.find((item) => item.x === block.x);
+      expect(lane, block.showId).toBeDefined();
+      expect(block.y).toBeGreaterThanOrEqual(lane?.y ?? Infinity);
+    }
+  });
+
+  it("test-wallpaper-day-title-color: the title is in the day's color with a bar under it, clear of the iOS clock; Sunday (pine) keeps ≥ 3:1 as large text", () => {
+    for (const dayId of DAY_IDS) {
+      const layout = layoutOf(dayId);
+      const { color } = dayTint(dayId);
+      expect(layout.title.color).toBe(color);
+      expect(layout.titleBar.fill).toBe(color);
+      expect(layout.titleBar.height).toBeGreaterThanOrEqual(3);
+      expect(layout.titleBar.y).toBeGreaterThanOrEqual(
+        layout.title.y + fontSize(layout.title.font),
+      );
+      expect(layout.titleBar.y).toBeGreaterThanOrEqual(SAFE_TOP);
+      expect(layout.title.y).toBeGreaterThanOrEqual(SAFE_TOP);
+      expect(layout.titleBar.x).toBe(layout.title.x);
+      // Above the stage headers.
+      const [header] = layout.headers;
+      expect(layout.titleBar.y + layout.titleBar.height).toBeLessThanOrEqual(header?.y ?? 0);
+      expect(contrastOf(color, BASE), dayId).toBeGreaterThanOrEqual(3);
+    }
+    expect(layoutOf("fri").title.color).toBe(dayTint("fri").color);
+    expect(layoutOf("sat").title.color).not.toBe(layoutOf("fri").title.color);
+  });
+
+  it("test-wallpaper-badges-readable-on-stage-colors: a badge (BASE pill, TEXT label) is AA inside and stands out ≥ 3:1 from every stage color, pine included", () => {
+    const friday = layoutOf("fri", new Set(["fri-samsung-2330"]), undefined, {
+      group: {
+        name: "G",
+        friendsByShow: new Map(
+          showsOf("fri").map((show) => [
+            show.id,
+            [{ name: "Ana Pérez", initials: "AP", showIds: [show.id] }],
+          ]),
+        ),
+      },
+    });
+    const withBadges = friday.blocks.filter((block) => block.badges.length > 0);
+    expect(withBadges.length).toBeGreaterThan(0);
+    for (const block of withBadges) {
+      for (const badge of block.badges) {
+        expect(contrastOf(badge.label.color, badge.fill)).toBeGreaterThanOrEqual(4.5);
+        expect(contrastOf(badge.fill, block.fill), block.showId).toBeGreaterThanOrEqual(3);
+      }
+    }
+    for (const stageId of ["flow", "samsung", "alternative", "perrys", "kidzapalooza"]) {
+      expect(contrastOf(BASE, stageTint(stageId).color), stageId).toBeGreaterThanOrEqual(3);
     }
   });
 
