@@ -49,3 +49,26 @@ que la spec ya dice se resuelven en los bloques y se registran acá, en vez de r
   14). — orquestador — 2026-11-18 — Block 1
 - `festivalDayAt(now: Date, days)`, la misma forma que `festivalDayFor` (hallazgo 15). —
   orquestador — 2026-11-18 — Block 1
+
+## Block 1 — Cálculo puro de "En vivo"
+
+- Un show cuyo `dayId` o `stageId` no existe en la grilla se ignora, igual que uno con un instante
+  ilegible (R-02). — orquestador — 2026-11-18 — Block 1
+- En `idle`, si no hay show siguiente o no se encuentra su día, `liveNow` devuelve `over`: con una
+  grilla coherente no pasa; es una defensa que además acota el tipo de `day`. — orquestador —
+  2026-11-18 — Block 1
+- Si dos shows se superpusieran en un escenario, `current` es el de menor `startsAt` (en la grilla
+  real no pasa). — orquestador — 2026-11-18 — Block 1
+- Los textos del botón, "Cerrar" y "Elegido" se exportan como `LIVE_LABEL`, `CLOSE_LABEL` y
+  `SELECTED_LABEL` desde `src/lib/live-messages.ts`. — orquestador — 2026-11-18 — Block 1
+
+## Block 2 — Hora real que se actualiza sola
+
+- Al pasar de inactivo a activo (abrir el panel), `useNow` relee la hora en ese momento: si no, el
+  panel abierto horas después de montar la pantalla mostraría una hora vieja hasta el próximo
+  minuto. — orquestador — 2026-11-18 — Block 2
+- Al volver visible, además de releer la hora, re-agenda el temporizador desde la hora nueva. —
+  orquestador — 2026-11-18 — Block 2
+- El `Date` que devuelve `useNow` es el mismo objeto mientras la hora no cambie (`useMemo` por
+  milisegundos), para que el `useMemo` de `liveNow` en el Block 3 sirva. — orquestador —
+  2026-11-18 — Block 2
