@@ -142,7 +142,15 @@ export function ScheduleScreen({
     confirmed.current = showIds;
     // A failure is ignored on purpose: the screen with a connection does not depend on the copy,
     // and the next visit to `/` writes it again.
-    writeSnapshot({ version: 1, userId, userName, schedule, savedShowIds: [...showIds] });
+    // `groups: []` until the screen gets the user's groups (FEAT-006c, Block 4).
+    writeSnapshot({
+      version: 1,
+      userId,
+      userName,
+      schedule,
+      savedShowIds: [...showIds],
+      groups: [],
+    });
   }
 
   /** The action's answer, or `null` when it threw: the server never answered (no signal). */

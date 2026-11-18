@@ -17,6 +17,16 @@ const SNAPSHOT: DeviceSnapshot = {
   userName: "Ana",
   schedule: SCHEDULE,
   savedShowIds: ["fri-flow-1800", "sat-flow-1800"],
+  groups: [
+    {
+      id: "0b6f3c1e-8a2d-4f7b-9c3e-1d2a3b4c5d6e",
+      name: "Los del viernes",
+      friends: [
+        { name: "Ana Pérez", initials: "AP", showIds: ["fri-flow-1800", "fri-samsung-1700"] },
+        { name: "Bruno", initials: "BR", showIds: [] },
+      ],
+    },
+  ],
 };
 
 const PENDING: PendingSelection = {
@@ -52,6 +62,26 @@ describe("parseSnapshot", () => {
     const empty = { ...SNAPSHOT, savedShowIds: [] };
     expect(parseSnapshot(JSON.stringify(empty))).toEqual(empty);
   });
+
+  it("test-snapshot-groups-roundtrip: parseSnapshot conserva groups y una copia sin groups da []", () => {
+    const parsed = parseSnapshot(JSON.stringify(SNAPSHOT));
+    expect(parsed?.groups).toEqual(SNAPSHOT.groups);
+    expect(parseSnapshot(snapshotWith({ groups: undefined }))).toEqual({ ...SNAPSHOT, groups: [] });
+  });
+
+  const group = SNAPSHOT.groups[0];
+  const friend = group?.friends[0];
+  it.each([
+    ["un show desconocido", [{ ...group, friends: [{ ...friend, showIds: ["fri-flow-0000"] }] }]],
+    ["más de 10 grupos", Array.from({ length: 11 }, () => group)],
+    ["un nombre faltante", [{ ...group, name: undefined }]],
+    ["un valor que no es arreglo", "grupos"],
+  ])(
+    "test-snapshot-groups-invalid: groups con %s se descartan y la copia sigue valiendo",
+    (_case, groups) => {
+      expect(parseSnapshot(snapshotWith({ groups }))).toEqual({ ...SNAPSHOT, groups: [] });
+    },
+  );
 
   it.each([
     ["nada guardado", null],

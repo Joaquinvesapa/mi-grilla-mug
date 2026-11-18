@@ -2,7 +2,16 @@
 // last user who saw `/` online, and each user's selection saved without a connection. Pure: it only
 // parses and validates what `src/components/device-store.ts` reads from `localStorage`, which is
 // untrusted (R-02), so every `parse*` returns `null` instead of throwing.
+import { type GroupPicks, groupPicksOf } from "@/lib/group-picks";
 import type { FestivalDay, Schedule, Show, Stage } from "@/lib/schedule-types";
+import {
+  FORMAT_VERSION,
+  isBoundedString,
+  isFields,
+  parseJson,
+  USER_ID_MAX_LENGTH,
+  USER_NAME_MAX_LENGTH,
+} from "@/lib/stored-value";
 
 /** The grid, user and confirmed selection as of the last time `/` was shown online. */
 export type DeviceSnapshot = {
@@ -12,6 +21,8 @@ export type DeviceSnapshot = {
   schedule: Schedule;
   /** Confirmed by the server: unique ids, all of them in `schedule.shows`. */
   savedShowIds: string[];
+  /** The user's groups with their friends' picks, all of them on shows of `schedule` (ADR-007). */
+  groups: GroupPicks[];
 };
 
 /** A selection saved without a connection, waiting to be synced to its owner's account. */
@@ -29,13 +40,6 @@ export const SNAPSHOT_KEY = "mi-grilla:snapshot";
 
 const PENDING_KEY_PREFIX = "mi-grilla:pending:";
 
-/** A future format bumps this, and every stored value of another version is ignored. */
-const FORMAT_VERSION = 1;
-
-/** The longest user id accepted, here and by `saveSelectionAction` as `expectedUserId`. */
-export const USER_ID_MAX_LENGTH = 64;
-const USER_NAME_MAX_LENGTH = 100;
-
 // The same limits as `src/server/selection.ts`, which `src/lib/` cannot import.
 const SHOW_ID_PATTERN = /^[a-z0-9-]+$/;
 const SHOW_ID_MAX_LENGTH = 64;
@@ -47,28 +51,6 @@ const ISO_INSTANT_PATTERN =
 /** The key of the pending selection of `userId`: reading another user's means asking for theirs. */
 export function pendingKey(userId: string): string {
   return `${PENDING_KEY_PREFIX}${userId}`;
-}
-
-type Fields = Record<string, unknown>;
-
-function isFields(value: unknown): value is Fields {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function parseJson(raw: string | null): unknown {
-  if (raw === null) {
-    return null;
-  }
-  try {
-    return JSON.parse(raw) as unknown;
-  } catch {
-    // Malformed JSON is the same as no copy: the caller only needs the `null`.
-    return null;
-  }
-}
-
-function isBoundedString(value: unknown, maxLength: number): value is string {
-  return typeof value === "string" && value.length > 0 && value.length <= maxLength;
 }
 
 function isNullableString(value: unknown): value is string | null {
@@ -194,6 +176,8 @@ export function parseSnapshot(raw: string | null): DeviceSnapshot | null {
     userName: value.userName,
     schedule,
     savedShowIds,
+    // Invalid or missing groups cost only the groups, never the offline grid (R-04).
+    groups: groupPicksOf(value.groups, known),
   };
 }
 

@@ -33,6 +33,11 @@ function graphemes(word: string): string[] {
   return Array.from(GRAPHEMES.segment(word), (part) => part.segment);
 }
 
+/** How many user-perceived characters `text` has: "👍🏽AB" is 3. */
+export function graphemeCount(text: string): number {
+  return graphemes(text).length;
+}
+
 /**
  * Two initials for a visible name: the first letter of the first and of the last word, or the first
  * two graphemes of a single word, in uppercase. "Ana Pérez" → "AP", "Bruno" → "BR".

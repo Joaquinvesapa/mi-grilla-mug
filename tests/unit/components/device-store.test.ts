@@ -27,6 +27,13 @@ const SNAPSHOT: DeviceSnapshot = {
   userName: "Ana",
   schedule: SCHEDULE,
   savedShowIds: ["fri-flow-1800"],
+  groups: [
+    {
+      id: "0b6f3c1e-8a2d-4f7b-9c3e-1d2a3b4c5d6e",
+      name: "Los del viernes",
+      friends: [{ name: "Ana Pérez", initials: "AP", showIds: ["fri-flow-1800"] }],
+    },
+  ],
 };
 
 function pendingOf(userId: string, showIds: string[]): PendingSelection {

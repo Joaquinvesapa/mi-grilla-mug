@@ -478,6 +478,7 @@ describe("ScheduleScreen", () => {
       userName: "Ana",
       schedule: SCHEDULE,
       savedShowIds: ["fri-flow-1800"],
+      groups: [],
     });
   });
 

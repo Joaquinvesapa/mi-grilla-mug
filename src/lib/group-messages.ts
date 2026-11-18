@@ -95,3 +95,19 @@ export function inviteShareText(groupName: string): { title: string; text: strin
 export function memberCountLabel(count: number): string {
   return `${count} ${count === 1 ? "integrante" : "integrantes"}`;
 }
+
+// The group on the grid (FEAT-006c).
+
+/** The picker's label, and its option for no group (FR-03). */
+export const GROUP_PICKER_LABEL = "Grupo";
+export const NO_GROUP_OPTION = "Sin grupo";
+
+/** "Lo eligieron: Ana Pérez, Bruno": the accessible name of a show's initials. */
+export function friendsPickedLabel(names: readonly string[]): string {
+  return `Lo eligieron: ${names.join(", ")}`;
+}
+
+/** "+2": the friends beyond the 3 initials shown. */
+export function extraFriendsLabel(count: number): string {
+  return `+${count}`;
+}
