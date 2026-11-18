@@ -82,4 +82,17 @@ Mitigaciones del modelo de amenazas, con su test:
 - ⚠️ Antes de adoptar la elección guardada, la pantalla puede mostrar 1 o 2 frames del grupo más reciente. No cambia el layout.
 - ⚠️ Fuera de este ticket (FEAT-003a): sin amigos, el bloque de 44 px de "¡Qué Lío, Hugo!" no muestra su horario a 360 px.
 
+## Re-corrida después de traer main (CLOSEOUT)
+En CLOSEOUT se mergeó `main` a la rama (`3c9b1d8`) para incluir FEAT-006b y FIX-004, a pedido del
+usuario. Los 4 conflictos, todos en tests y en el CHANGELOG, se resolvieron juntando las dos
+partes. `tests/e2e/db.ts` pasó a la base de tests de FIX-004 (`resolveTestDatabaseUrl`). El código
+de `src/` de FEAT-006c no cambió. Como el árbol sí cambió, se corrió de nuevo la suite completa
+(`docs/daw/reports/tests-FEAT-006c.md`):
+- unit 687/687, con cobertura de 99,62 % líneas, 97,48 % ramas y 99,54 % funciones;
+- integración 110/110;
+- E2E: pasan 337 de 342, y los 5 restantes se saltean con motivo, en los 4 proyectos;
+- lint, formato y tipos limpios.
+
+Los veredictos de los 10 AC y los 6 bloques de arriba siguen valiendo.
+
 Result: PASSED
