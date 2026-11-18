@@ -1,8 +1,8 @@
 # AGENTS.md — Mi Grilla
 
-> Contexto del **proyecto**. El **proceso** (fases, gates, cuándo testear, cuándo commitear) lo
-> define DAW en `.daw/` y no se repite acá. La excepción es la sección Testing, que fija en qué
-> momento se corren los E2E, como regla del proyecto que complementa a DAW.
+> Contexto del **proyecto**. El **proceso** de trabajo (cómo se planifica, se trackea y se
+> commitea) lo pone el harness del agente y no se repite acá. La excepción es la sección Testing,
+> que fija en qué momento se corren los E2E, como regla del proyecto.
 
 ---
 
@@ -72,11 +72,12 @@ dentro de un mockup de iPhone.
   `TEST_DATABASE_URL` falta, no es local (o el `postgres` de la CI) o es la misma base que
   `DATABASE_URL`, la integración, los E2E y `db:test:prepare` se niegan a correr antes de tocar
   nada (`tests/test-database.ts`).
-- **Cuándo se corren los E2E en DAW** (FIX-001): en un bloque de CODE, unit, integración y solo el
-  E2E que el bloque crea o cambia, en un proyecto (`pnpm test:e2e <archivo> --project=iphone-webkit`);
-  en el cierre de CODE, la suite E2E completa en los 4 proyectos; en VERIFY, si el código no cambió
-  desde la corrida del cierre de CODE, esa corrida es la evidencia de los E2E, y si cambió, se corre
-  de nuevo la suite completa.
+- **Cuándo se corren los E2E** (FIX-001): al implementar cada unidad de trabajo, unit, integración
+  y solo el E2E que esa unidad crea o cambia, en un proyecto
+  (`pnpm test:e2e <archivo> --project=iphone-webkit`); al terminar la implementación, antes de
+  abrir el PR, la suite E2E completa en los 4 proyectos; en la verificación final, si el código no
+  cambió desde esa corrida, esa corrida es la evidencia de los E2E, y si cambió, se corre de nuevo
+  la suite completa.
 
 Si un número de acá no coincide con el que exige la CI, gana el de la CI y se corrige este archivo.
 
@@ -161,7 +162,7 @@ Si un número de acá no coincide con el que exige la CI, gana el de la CI y se 
 
 Servidor MCP: **Cortex** (`mcp__cortex__*`), proyecto `mi-grilla-mug`.
 Acelera la búsqueda, no es la fuente de verdad: si una memoria contradice el repo (código, PRD,
-spec, ADR, `.daw-state.json`), gana el repo y la memoria se corrige con `memoria_update`.
+spec, ADR), gana el repo y la memoria se corrige con `memoria_update`.
 
 ---
 
@@ -190,16 +191,3 @@ spec, ADR, `.daw-state.json`), gana el repo y la memoria se corrige con `memoria
 
 ---
 
-<!-- BEGIN DAW (managed by DAW — do not edit by hand) -->
-# DAW — Dilux Agentic Workflow
-
-This repo uses **DAW**: an agent-driven development pipeline with the phases
-`CLASSIFY → DEFINE → PLAN → CODE → VERIFY → CLOSEOUT`.
-
-Before answering, read `.daw/orchestrator.md` and run its Boot Sequence. It is a strict state
-machine: it decides what you are allowed to do based on the phase recorded in `.daw-state.json`.
-
-The project's own context — stack, architecture, domain — is elsewhere in this file. It lives here,
-in `AGENTS.md`, and not in any one tool's file, on purpose: it is tool-agnostic and comes along
-unchanged when the pipeline is ported to another agent.
-<!-- END DAW -->
