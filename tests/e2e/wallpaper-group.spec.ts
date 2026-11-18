@@ -2,7 +2,6 @@ import { expect, type Locator, type Page } from "@playwright/test";
 
 import { GROUP_NAME_MAX_LENGTH } from "@/lib/group-rules";
 import {
-  GENERATING_LABEL,
   PERSONAL_OPTION_LABEL,
   WALLPAPER_CHOICE_LABEL,
   WALLPAPER_GROUP_LABEL,
@@ -48,9 +47,6 @@ const OTHER_GROUP = "Los del laburo";
 /** A group name as long as the server takes, so the sheet's select has to truncate it. */
 const LONG_GROUP_NAME = "Los amigos del Lolla que van a todo 2026";
 const MINUTE_MS = 60 * 1000;
-/** How long the sheet that asks has to stay without drawing anything, and how often it is looked at. */
-const NOTHING_DRAWN_WINDOW_MS = 1500;
-const NOTHING_DRAWN_STEP_MS = 250;
 
 /** Why the budget test runs in one project (AGENTS.md: the reason, on the skipped line). */
 const BUDGET_SKIP =
@@ -104,39 +100,22 @@ async function lollaWithBruno(viewerId: string): Promise<void> {
   await insertFriends(group, [{ name: "Bruno Díaz", showIds: [TYLER] }]);
 }
 
-/** Taps "Descargar fondo" and waits for the sheet, which asks before drawing anything. */
+/**
+ * Taps "Descargar fondo" and waits for the sheet, which opens on "Grilla sola" already drawn: the
+ * options refuse while drawing, so the next tap has to wait for the personal preview.
+ */
 async function openSheet(page: Page): Promise<void> {
   await wallpaperButton(page).click();
   await expect(sheet(page)).toBeVisible();
   await expect(sheet(page).getByText(WALLPAPER_CHOICE_LABEL, { exact: true })).toBeVisible();
-}
-
-/**
- * The sheet draws nothing during `NOTHING_DRAWN_WINDOW_MS`: it is checked every
- * `NOTHING_DRAWN_STEP_MS`, so a drawing that starts late ("Generando…") or a preview that shows up
- * late fails the test instead of slipping past a single look.
- */
-async function expectNothingDrawn(page: Page): Promise<void> {
-  const drawn: [string, Locator][] = [
-    ["la vista previa", sheet(page).getByRole("img")],
-    [`"${GENERATING_LABEL}"`, choiceButton(page, GENERATING_LABEL)],
-    [`"${DOWNLOAD_IMAGE}"`, choiceButton(page, DOWNLOAD_IMAGE)],
-  ];
-  const until = Date.now() + NOTHING_DRAWN_WINDOW_MS;
-  do {
-    // Counted now, not with `toHaveCount(0)`, which would wait for a late drawing to go away.
-    for (const [what, locator] of drawn) {
-      expect(await locator.count(), `la hoja mostró ${what} antes de elegir`).toBe(0);
-    }
-    await page.waitForTimeout(NOTHING_DRAWN_STEP_MS);
-  } while (Date.now() < until);
+  await waitForPreview(page, "fri", DOWNLOAD_IMAGE);
 }
 
 test.describe("el fondo de pantalla del grupo (FEAT-007)", () => {
   // A sign-up, a reload or two and up to 20 members' picks per test; the margin is for a slow CI.
   test.describe.configure({ timeout: 120_000 });
 
-  test('test-e2e-wallpaper-group-asks: en un grupo, "Descargar fondo" pregunta "Grilla sola" o "Con amigos" sin dibujar nada (AC-01)', async ({
+  test('test-e2e-wallpaper-group-default: en un grupo, "Descargar fondo" ofrece "Grilla sola" o "Con amigos" y ya dibuja "Grilla sola" sin tocar nada (color-en-vivo, S7)', async ({
     page,
   }, testInfo) => {
     await withoutShare(page);
@@ -145,11 +124,15 @@ test.describe("el fondo de pantalla del grupo (FEAT-007)", () => {
     await page.reload();
 
     await openSheet(page);
-    await expect(choiceButton(page, PERSONAL_OPTION_LABEL)).toBeVisible();
     await expect(choiceButton(page, WITH_FRIENDS_OPTION_LABEL)).toBeVisible();
-    // Nothing is drawn until one is pressed: no drawing, no preview and no delivery button, for a
-    // while and not just at the first look, so a drawing that starts late is caught.
-    await expectNothingDrawn(page);
+    await expect(choiceButton(page, PERSONAL_OPTION_LABEL)).toHaveAttribute("aria-pressed", "true");
+    await expect(choiceButton(page, WITH_FRIENDS_OPTION_LABEL)).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+    // The personal preview (no group name in its alt) is drawn on open, without pressing an
+    // option (S7).
+    await waitForPreview(page, "fri", DOWNLOAD_IMAGE);
   });
 
   test('test-e2e-wallpaper-group-download: un solo grupo "Los del Lolla" y un amigo que eligió Tyler: "Con amigos" descarga mi-grilla-viernes-los-del-lolla.png, un PNG de 1290 × 2796 y ≤ 5 MB, y muestra la guía (AC-03, AC-16, AC-18, NFR-04)', async ({
@@ -182,7 +165,8 @@ test.describe("el fondo de pantalla del grupo (FEAT-007)", () => {
     test.skip(testInfo.project.name !== "iphone-webkit", BUDGET_SKIP); // AC-19 se mide solo en WebKit (iPhone)
     await withoutShare(page);
     // Timed by the page itself: from the first pointerdown on "Con amigos" to the preview's load.
-    // With groups nothing is drawn before that tap, so the first preview is the group's.
+    // With groups "Grilla sola" is drawn on opening, before that tap (`openSheet` waits for it),
+    // so the first preview after the tap is the group's.
     await trackPreviewTiming(page, WITH_FRIENDS_OPTION_LABEL);
     const viewerId = await signUpViewer(page, testInfo);
     const group = await insertGroup({

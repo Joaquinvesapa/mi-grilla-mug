@@ -2,7 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { renderWallpaper, type RenderWallpaperInput } from "@/components/wallpaper-canvas";
 import { type FriendPicks, picksByShow } from "@/lib/group-picks";
-import { BASE, FOAM, HIGHLIGHT_MED, TEXT } from "@/lib/palette";
+import { BASE, HIGHLIGHT_MED, TEXT } from "@/lib/palette";
+import { stageTint } from "@/lib/stage-colors";
 import {
   DIMMED_OPACITY,
   GRID_LEFT,
@@ -225,6 +226,21 @@ function expectedOps(layout: WallpaperLayout): Drawn[] {
     fillStyle: BASE,
     globalAlpha: 1,
   });
+  const box = (item: { x: number; y: number; width: number; height: number }, fill: string) =>
+    ops.push({
+      op: "fillRect",
+      args: [item.x, item.y, item.width, item.height],
+      fillStyle: fill,
+      globalAlpha: 1,
+    });
+  for (const lane of layout.lanes) {
+    box(lane, lane.fill);
+  }
+  for (const header of layout.headers) {
+    box(header, header.fill);
+    box({ ...header, height: header.barHeight }, header.barColor);
+  }
+  box(layout.titleBar, layout.titleBar.fill);
   text(layout.title, 1);
   text(layout.brand, 1);
   for (const label of layout.stageLabels) {
@@ -241,7 +257,7 @@ function expectedOps(layout: WallpaperLayout): Drawn[] {
   }
   for (const block of layout.blocks) {
     const alpha = block.lit ? 1 : DIMMED_OPACITY;
-    rect(block, 12, FOAM, alpha);
+    rect(block, 12, block.fill, alpha);
     for (const line of block.lines) {
       text(line, alpha);
     }
@@ -257,6 +273,10 @@ function expectedOps(layout: WallpaperLayout): Drawn[] {
     text(layout.groupLabel, 1);
   }
   return ops;
+}
+
+function stageColors(): Record<string, string> {
+  return Object.fromEntries(STAGES.map((stage) => [stage.id, stageTint(stage.id).color]));
 }
 
 function onlyContext(): FakeContext {
@@ -295,8 +315,13 @@ describe("renderWallpaper", () => {
 
     const blocks = context.calls.filter((call) => call.op === "roundRect");
     expect(blocks).toHaveLength(FRIDAY_SHOWS.length);
+    // Each block takes its stage's color (Friday has several stages), never FOAM for all.
+    const colors = new Set(blocks.map((block) => block.fillStyle));
+    expect(colors.size).toBeGreaterThan(1);
+    for (const color of colors) {
+      expect(Object.values(stageColors())).toContain(color);
+    }
     for (const block of blocks) {
-      expect(block.fillStyle).toBe(FOAM);
       expect(block.args[4]).toBe(12);
     }
     expect(context.calls.filter((call) => call.op === "fill")).toHaveLength(FRIDAY_SHOWS.length);
@@ -469,9 +494,9 @@ describe("renderWallpaper", () => {
     const badges = layout.blocks.flatMap((block) => block.badges);
     expect(badges).toHaveLength(3);
 
-    // The blocks are the FOAM rounded rectangles: the badges use `roundRect` at alpha 1 too.
+    // The blocks are the stage-colored rounded rectangles: the badges use `roundRect` at alpha 1 too.
     const blocks = context.calls.filter(
-      (call) => call.op === "roundRect" && call.fillStyle === FOAM,
+      (call) => call.op === "roundRect" && call.fillStyle !== BASE,
     );
     expect(blocks).toHaveLength(FRIDAY_SHOWS.length);
     expect(blocks.filter((call) => call.globalAlpha === 1)).toHaveLength(1);
@@ -556,11 +581,11 @@ describe("renderWallpaper", () => {
     const layout = expectedLayout(plain);
     expect(layout.groupLabel).toBeNull();
     expect(layout.blocks.every((block) => block.badges.length === 0)).toBe(true);
-    // Same blocks, no badges: every rounded rectangle is a FOAM block with the 12 px radius.
+    // Same blocks, no badges: every rounded rectangle is a stage-colored block with the 12 px radius.
     const rects = context.calls.filter((call) => call.op === "roundRect");
     expect(rects).toHaveLength(FRIDAY_SHOWS.length);
     for (const rect of rects) {
-      expect(rect.fillStyle).toBe(FOAM);
+      expect(Object.values(stageColors())).toContain(rect.fillStyle);
       expect(rect.args[4]).toBe(12);
     }
     expect(context.calls.map(drawn)).toEqual(expectedOps(layout));

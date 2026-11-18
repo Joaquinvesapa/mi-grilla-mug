@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mi Grilla — sistema de diseño</title>
+<style>
+  :root{
+    --base:#191724;--surface:#1f1d2e;--overlay:#26233a;--muted:#6e6a86;--subtle:#908caa;--text:#e0def4;
+    --love:#eb6f92;--gold:#f6c177;--rose:#ebbcba;--pine:#31748f;--foam:#9ccfd8;--iris:#c4a7e7;
+    --hl-low:#21202e;--hl-med:#403d52;--hl-high:#524f67;--radius:10px;
+    font-family:ui-sans-serif,system-ui,sans-serif;color-scheme:dark;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--base);color:var(--text);width:1440px;padding:56px 64px 80px}
+  h1{font-size:28px;margin:0 0 4px;font-weight:700;letter-spacing:-.01em}
+  .lede{color:var(--subtle);margin:0 0 40px;font-size:15px}
+  h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--subtle);margin:40px 0 14px;font-weight:600}
+  .row{display:flex;flex-wrap:wrap;gap:14px}
+  .sw{width:150px}
+  .chip{height:72px;border-radius:var(--radius);border:1px solid var(--hl-med)}
+  .sw b{display:block;font-size:13px;margin-top:8px}
+  .sw code{font-size:12px;color:var(--subtle);font-variant-numeric:tabular-nums}
+  .stage{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--hl-med);border-radius:12px;padding:12px 14px;width:236px}
+  .dot{width:12px;height:12px;border-radius:50%}
+  .stage small{display:block;color:var(--subtle);font-size:12px}
+  .type p{margin:0 0 10px}
+  .rad{width:110px;height:64px;background:var(--surface);border:1px solid var(--hl-med);display:grid;place-items:center;font-size:12px;color:var(--subtle)}
+  .comp{display:flex;gap:28px;align-items:flex-start}
+  .block{border-radius:8px;padding:6px 8px;font-size:12px;line-height:1.25;width:140px}
+  .block span{display:block;font-variant-numeric:tabular-nums;opacity:.85}
+  .fab{width:56px;height:56px;border-radius:50%;background:var(--foam);display:grid;place-items:center;color:var(--base);box-shadow:0 10px 15px rgba(25,23,36,.6)}
+  .note{font-size:12px;color:var(--subtle);max-width:260px;margin-top:8px}
+</style>
+</head>
+<body>
+<main>
+  <h1>Mi Grilla — sistema de diseño</h1>
+  <p class="lede">Rosé Pine, tema oscuro único. Fuente: <code>src/app/globals.css</code>. Decisión 2026-11-18: un acento por escenario y love reservado para «En vivo».</p>
+
+  <h2>Neutros</h2>
+  <div class="row">
+    <div class="sw"><div class="chip" style="background:var(--base)"></div><b>base</b><code>#191724</code></div>
+    <div class="sw"><div class="chip" style="background:var(--surface)"></div><b>surface</b><code>#1f1d2e</code></div>
+    <div class="sw"><div class="chip" style="background:var(--overlay)"></div><b>overlay</b><code>#26233a</code></div>
+    <div class="sw"><div class="chip" style="background:var(--hl-low)"></div><b>highlight-low</b><code>#21202e</code></div>
+    <div class="sw"><div class="chip" style="background:var(--hl-med)"></div><b>highlight-med</b><code>#403d52</code></div>
+    <div class="sw"><div class="chip" style="background:var(--hl-high)"></div><b>highlight-high</b><code>#524f67</code></div>
+    <div class="sw"><div class="chip" style="background:var(--muted)"></div><b>muted</b><code>#6e6a86</code></div>
+    <div class="sw"><div class="chip" style="background:var(--subtle)"></div><b>subtle</b><code>#908caa</code></div>
+    <div class="sw"><div class="chip" style="background:var(--text)"></div><b>text</b><code>#e0def4</code></div>
+  </div>
+
+  <h2>Escenarios y en vivo</h2>
+  <div class="row">
+    <div class="stage"><span class="dot" style="background:var(--foam)"></span><div>Flow<small>foam · #9ccfd8</small></div></div>
+    <div class="stage"><span class="dot" style="background:var(--gold)"></span><div>Samsung<small>gold · #f6c177</small></div></div>
+    <div class="stage"><span class="dot" style="background:var(--rose)"></span><div>Alternative<small>rose · #ebbcba</small></div></div>
+    <div class="stage"><span class="dot" style="background:var(--pine)"></span><div>Perry's<small>pine · #31748f · 3.38:1 en base</small></div></div>
+    <div class="stage"><span class="dot" style="background:var(--iris)"></span><div>Kidzapalooza<small>iris · #c4a7e7</small></div></div>
+    <div class="stage" style="border-color:var(--love)"><span class="dot" style="background:var(--love)"></span><div>En vivo<small>love · #eb6f92 · solo para el ahora</small></div></div>
+  </div>
+
+  <h2>Tipografía</h2>
+  <div class="type">
+    <p style="font-size:20px;font-weight:700">Viernes 13 · Mi Grilla</p>
+    <p style="font-size:16px;font-weight:600">Flow — encabezado del panel En vivo (text-base, semibold)</p>
+    <p style="font-size:13px;font-weight:600">Encabezado de escenario (13 px)</p>
+    <p style="font-size:12px">Bloque de show (12 px) · <span style="font-variant-numeric:tabular-nums;color:var(--subtle)">22:15–23:45</span></p>
+    <p class="note">En la app: Public Sans (<code>--font-sans</code>). Los artboards usan la pila del sistema.</p>
+  </div>
+
+  <h2>Radios</h2>
+  <div class="row">
+    <div class="rad" style="border-radius:6px">sm · 6px</div>
+    <div class="rad" style="border-radius:8px">md · 8px</div>
+    <div class="rad" style="border-radius:10px">lg · 10px</div>
+    <div class="rad" style="border-radius:14px">xl · 14px</div>
+    <div class="rad" style="border-radius:18px">2xl · 18px</div>
+  </div>
+
+  <h2>Componentes actuales</h2>
+  <div class="comp">
+    <div>
+      <div class="block" style="background:var(--foam);color:var(--base);border:1px solid var(--base)"><b>Chappell Roan</b><span>22:15–23:45</span></div>
+      <p class="note">Show elegido (hoy, siempre foam).</p>
+    </div>
+    <div>
+      <div class="block" style="background:var(--surface);border:1px solid var(--hl-med)"><b>Riize</b><span>22:30–23:30</span></div>
+      <p class="note">Show sin elegir.</p>
+    </div>
+    <div>
+      <div class="block" style="background:var(--surface);border:1px dashed var(--hl-med)"><b>Skrillex</b><span>23:45–01:00</span></div>
+      <p class="note">Cambio pendiente (borde punteado).</p>
+    </div>
+    <div>
+      <div class="fab" aria-label="En vivo" role="img">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8a6 6 0 0 1 0 8.4M7.8 16.2a6 6 0 0 1 0-8.4M19.1 4.9a10 10 0 0 1 0 14.2M4.9 19.1a10 10 0 0 1 0-14.2"/></svg>
+      </div>
+      <p class="note">Botón «En vivo» actual: foam, sin animación.</p>
+    </div>
+  </div>
+</main>
+</body>
+</html>

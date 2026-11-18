@@ -11,8 +11,10 @@ import {
   hourMarks,
   MIN_BLOCK_HEIGHT,
   MIN_BLOCK_HEIGHT_WITH_FRIENDS,
+  nowOffset,
   NAME_TWO_LINES_MIN_HEIGHT_WITH_FRIENDS,
   PX_PER_MINUTE,
+  showPhase,
 } from "@/lib/schedule-layout";
 import type { Show } from "@/lib/schedule-types";
 
@@ -125,5 +127,38 @@ describe("schedule-layout", () => {
     expect(heightWithFriends({ top: 0, height: 90 }, undefined)).toBeGreaterThanOrEqual(
       NAME_TWO_LINES_MIN_HEIGHT_WITH_FRIENDS,
     );
+  });
+});
+
+describe("nowOffset y showPhase", () => {
+  const axis = dayAxis([
+    {
+      startsAt: posterTimeToInstant(FRIDAY, "15:00").toISOString(),
+      endsAt: posterTimeToInstant(FRIDAY, "16:00").toISOString(),
+    },
+    {
+      startsAt: posterTimeToInstant(FRIDAY, "23:30").toISOString(),
+      endsAt: posterTimeToInstant(FRIDAY, "01:00").toISOString(),
+    },
+  ]);
+  const at = (time: string) => posterTimeToInstant(FRIDAY, time);
+
+  it("test-now-offset: el ahora cae en el eje a 2 px por minuto; fuera del eje no hay línea", () => {
+    expect(nowOffset(axis, at("15:00"))).toBe(0);
+    expect(nowOffset(axis, at("18:30"))).toBe(420);
+    expect(nowOffset(axis, new Date(axis.end))).toBe(1200);
+    expect(nowOffset(axis, at("14:59"))).toBeNull();
+    expect(nowOffset(axis, new Date(axis.end.getTime() + 60_000))).toBeNull();
+  });
+
+  it("test-show-phase: pasado, sonando o por venir; el fin es exclusivo y el inicio inclusivo", () => {
+    const show = {
+      startsAt: at("18:00").toISOString(),
+      endsAt: at("19:00").toISOString(),
+    };
+    expect(showPhase(show, at("17:59"))).toBe("upcoming");
+    expect(showPhase(show, at("18:00"))).toBe("playing");
+    expect(showPhase(show, at("18:59"))).toBe("playing");
+    expect(showPhase(show, at("19:00"))).toBe("past");
   });
 });

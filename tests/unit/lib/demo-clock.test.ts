@@ -11,10 +11,18 @@ import {
   DEMO_CLOCK_START,
   DEMO_FESTIVAL_DATES,
   demoInstant,
+  DEMO_SLIDER_MAX,
+  DEMO_SLIDER_STEP,
+  DEMO_SLIDER_TICKS,
+  clockToSliderMinutes,
   isDemoClockHello,
   parseDemoClockMessage,
+  parseManualClock,
   shiftDemoClock,
+  sliderMinutesToClock,
+  stageTimelineRows,
 } from "@/lib/demo-clock";
+import type { Schedule } from "@/lib/schedule-types";
 import { FESTIVAL_UTC_OFFSET, festivalDayAt, formatClock } from "@/lib/festival-time";
 
 const SCHEDULE_PATH = resolve(process.cwd(), "data/schedule.json");
@@ -135,5 +143,125 @@ describe("demo-clock", () => {
     expect(isDemoClockHello(null)).toBe(false);
     expect(isDemoClockHello([DEMO_CLOCK_HELLO])).toBe(false);
     expect(DEMO_CLOCK_MESSAGE).not.toBe(DEMO_CLOCK_HELLO);
+  });
+});
+
+describe("demo-clock: slider", () => {
+  it("demo-clock: el slider recorre 06:00 → 05:55 del día siguiente de a 5 minutos", () => {
+    expect(DEMO_SLIDER_STEP).toBe(5);
+    expect(DEMO_SLIDER_MAX).toBe(1435);
+    expect(clockToSliderMinutes("06:00")).toBe(0);
+    expect(clockToSliderMinutes("22:40")).toBe(1000);
+    // 00:00–05:59 belong to the previous festival day: they come after 23:59.
+    expect(clockToSliderMinutes("00:00")).toBe(1080);
+    expect(clockToSliderMinutes("05:55")).toBe(DEMO_SLIDER_MAX);
+    expect(sliderMinutesToClock(0)).toBe("06:00");
+    expect(sliderMinutesToClock(1000)).toBe("22:40");
+    expect(sliderMinutesToClock(1080)).toBe("00:00");
+    expect(sliderMinutesToClock(DEMO_SLIDER_MAX)).toBe("05:55");
+  });
+
+  it("demo-clock: las marcas del slider van cada 3 h, de 06:00 a 06:00", () => {
+    expect(DEMO_SLIDER_TICKS.map((tick) => tick.label)).toEqual([
+      "06:00",
+      "09:00",
+      "12:00",
+      "15:00",
+      "18:00",
+      "21:00",
+      "00:00",
+      "03:00",
+      "06:00",
+    ]);
+    expect(DEMO_SLIDER_TICKS[0]?.ratio).toBe(0);
+    expect(DEMO_SLIDER_TICKS[8]?.ratio).toBe(1);
+    expect(DEMO_SLIDER_TICKS[6]?.ratio).toBeCloseTo(0.75);
+  });
+});
+
+describe("demo-clock: parseManualClock", () => {
+  it("demo-clock: acepta HH:MM y HHMM y devuelve HH:MM", () => {
+    expect(parseManualClock("22:40")).toBe("22:40");
+    expect(parseManualClock("2240")).toBe("22:40");
+    expect(parseManualClock(" 0130 ")).toBe("01:30");
+    expect(parseManualClock("6:00")).toBe("06:00");
+    expect(parseManualClock("00:00")).toBe("00:00");
+    expect(parseManualClock("05:59")).toBe("05:59");
+    expect(parseManualClock("23:59")).toBe("23:59");
+  });
+
+  it("demo-clock: rechaza lo que no es una hora", () => {
+    for (const text of [
+      "",
+      "   ",
+      "24:00",
+      "12:60",
+      "2460",
+      "abc",
+      "12",
+      "12:3",
+      "22-40",
+      "1:2:3",
+    ]) {
+      expect(parseManualClock(text), text).toBeNull();
+    }
+  });
+});
+
+describe("demo-clock: stageTimelineRows", () => {
+  const schedule: Schedule = {
+    days: [{ id: "fri", name: "Viernes", date: "2026-03-13", position: 1 }],
+    stages: [
+      { id: "samsung", name: "Samsung", position: 2 },
+      { id: "flow", name: "Flow", position: 1 },
+    ],
+    shows: [
+      {
+        id: "a",
+        dayId: "fri",
+        stageId: "flow",
+        artist: "A",
+        subtitle: null,
+        startsAt: "2026-03-13T18:00:00-03:00",
+        endsAt: "2026-03-13T19:30:00-03:00",
+      },
+      {
+        id: "b",
+        dayId: "fri",
+        stageId: "samsung",
+        artist: "B",
+        subtitle: null,
+        startsAt: "2026-03-13T23:30:00-03:00",
+        endsAt: "2026-03-14T01:00:00-03:00",
+      },
+      {
+        id: "c",
+        dayId: "sat",
+        stageId: "flow",
+        artist: "C",
+        subtitle: null,
+        startsAt: "2026-03-14T18:00:00-03:00",
+        endsAt: "2026-03-14T19:00:00-03:00",
+      },
+    ],
+  };
+
+  it("demo-clock: una fila por escenario, en orden de columna, con los shows del día", () => {
+    const rows = stageTimelineRows(schedule, "fri");
+
+    expect(rows.map((row) => row.stageId)).toEqual(["flow", "samsung"]);
+    const flow = rows[0]?.spans ?? [];
+    expect(flow).toHaveLength(1);
+    expect(flow[0]?.left).toBeCloseTo(12 / 24);
+    expect(flow[0]?.width).toBeCloseTo(1.5 / 24);
+    // Past midnight still lies inside the festival day.
+    const samsung = rows[1]?.spans ?? [];
+    expect(samsung[0]?.left).toBeCloseTo(17.5 / 24);
+    expect(samsung[0]?.width).toBeCloseTo(1.5 / 24);
+  });
+
+  it("demo-clock: un día sin shows deja las filas vacías y un día desconocido también", () => {
+    expect(stageTimelineRows(schedule, "sun").map((row) => row.spans)).toEqual([[], []]);
+    expect(stageTimelineRows(schedule, "zzz").map((row) => row.spans)).toEqual([[], []]);
   });
 });

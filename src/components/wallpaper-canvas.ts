@@ -3,7 +3,7 @@
 // `wallpaperLayout` (src/lib): this file only paints it. No network in any step, so it works the
 // same offline. The font family is the one `next/font` registered on the body; if the faces cannot
 // be loaded the canvas falls back along that same family list and the image is still produced.
-import { BASE, FOAM, HIGHLIGHT_MED } from "@/lib/palette";
+import { BASE, HIGHLIGHT_MED } from "@/lib/palette";
 import {
   DIMMED_OPACITY,
   GRID_LEFT,
@@ -12,6 +12,7 @@ import {
   WALLPAPER_WIDTH,
   type WallpaperInput,
   type WallpaperLayout,
+  type WallpaperRect,
   type WallpaperText,
   wallpaperLayout,
 } from "@/lib/wallpaper-layout";
@@ -96,10 +97,26 @@ function drawText(ctx: CanvasRenderingContext2D, text: WallpaperText): void {
   ctx.fillText(text.text, text.x, text.y);
 }
 
+function fillBox(ctx: CanvasRenderingContext2D, box: WallpaperRect): void {
+  ctx.fillStyle = box.fill;
+  ctx.fillRect(box.x, box.y, box.width, box.height);
+}
+
 function draw(ctx: CanvasRenderingContext2D, layout: WallpaperLayout): void {
   ctx.globalAlpha = 1;
   ctx.fillStyle = BASE;
   ctx.fillRect(0, 0, layout.width, layout.height);
+
+  // Stage lanes and headers (with their top bar) first, then the day's bar: all under the text.
+  for (const lane of layout.lanes) {
+    fillBox(ctx, lane);
+  }
+  for (const header of layout.headers) {
+    fillBox(ctx, header);
+    ctx.fillStyle = header.barColor;
+    ctx.fillRect(header.x, header.y, header.width, header.barHeight);
+  }
+  fillBox(ctx, layout.titleBar);
 
   // Every text position in the layout is its top-left corner.
   ctx.textAlign = "left";
@@ -119,7 +136,7 @@ function draw(ctx: CanvasRenderingContext2D, layout: WallpaperLayout): void {
   for (const block of layout.blocks) {
     // The block and its text share the alpha: a show that was not chosen is dimmed as a whole.
     ctx.globalAlpha = block.lit ? 1 : DIMMED_OPACITY;
-    ctx.fillStyle = FOAM;
+    ctx.fillStyle = block.fill;
     roundedRect(ctx, block.x, block.y, block.width, block.height, BLOCK_RADIUS);
     for (const line of block.lines) {
       drawText(ctx, line);

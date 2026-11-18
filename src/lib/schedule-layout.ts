@@ -76,3 +76,20 @@ export function heightWithFriends(
   const height = Math.max(geometry.height, MIN_BLOCK_HEIGHT_WITH_FRIENDS);
   return nextTop === undefined ? height : Math.min(height, nextTop - geometry.top);
 }
+
+/** Offset of `now` from the axis start, in px; `null` when it falls outside the displayed axis. */
+export function nowOffset(axis: DayAxis, now: Date): number | null {
+  const time = now.getTime();
+  if (time < axis.start.getTime() || time > axis.end.getTime()) return null;
+  return ((time - axis.start.getTime()) / MINUTE_MS) * PX_PER_MINUTE;
+}
+
+export type ShowPhase = "past" | "playing" | "upcoming";
+
+/** Where a show stands at `now`: playing from its start (included) to its end (excluded). */
+export function showPhase(show: Timed, now: Date): ShowPhase {
+  const time = now.getTime();
+  if (time >= Date.parse(show.endsAt)) return "past";
+  if (time >= Date.parse(show.startsAt)) return "playing";
+  return "upcoming";
+}

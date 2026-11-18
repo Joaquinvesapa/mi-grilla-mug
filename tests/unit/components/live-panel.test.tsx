@@ -10,7 +10,9 @@ import {
   DONE_FOR_TODAY,
   FESTIVAL_OVER,
   NO_LIVE_SHOWS,
+  CLASH_LABEL,
   NOTHING_NOW,
+  PROGRESS_LABEL,
   SELECTED_LABEL,
 } from "@/lib/live-messages";
 import { liveNow } from "@/lib/live-now";
@@ -107,18 +109,19 @@ describe("LivePanel", () => {
     ]);
     expect(row(container, "flow")).toHaveTextContent("Flow");
 
-    expect(nowLine(container, "flow")).toHaveTextContent("Ahora: Tyler, The Creator 22:15 – 23:30");
+    expect(row(container, "flow")).toHaveTextContent("Ahora");
+    expect(nowLine(container, "flow")).toHaveTextContent(
+      "Tyler, The Creator 22:15 – 23:30 · quedan 60 min",
+    );
     expect(nextLine(container, "flow")).toHaveTextContent(`Sigue: ${DONE_FOR_TODAY}`);
 
-    expect(nowLine(container, "samsung")).toHaveTextContent(`Ahora: ${NOTHING_NOW}`);
+    expect(nowLine(container, "samsung")).toHaveTextContent(NOTHING_NOW);
     expect(nextLine(container, "samsung")).toHaveTextContent("Sigue: Peggy Gou 23:30 (en 60 min)");
 
-    expect(nowLine(container, "alternative")).toHaveTextContent("Ahora: Turf 22:15 – 23:30");
-    expect(nowLine(container, "perrys")).toHaveTextContent(
-      "Ahora: ¥ousuk€ ¥uk1mat$u 22:15 – 23:30",
-    );
+    expect(nowLine(container, "alternative")).toHaveTextContent("Turf 22:15 – 23:30");
+    expect(nowLine(container, "perrys")).toHaveTextContent("¥ousuk€ ¥uk1mat$u 22:15 – 23:30");
 
-    expect(nowLine(container, "kidzapalooza")).toHaveTextContent(`Ahora: ${NOTHING_NOW}`);
+    expect(nowLine(container, "kidzapalooza")).toHaveTextContent(NOTHING_NOW);
     expect(nextLine(container, "kidzapalooza")).toHaveTextContent(`Sigue: ${DONE_FOR_TODAY}`);
 
     // Texts wrap instead of scrolling sideways (NFR-04): no row has a horizontal scroll of its own.
@@ -154,28 +157,100 @@ describe("LivePanel", () => {
     ]);
   });
 
-  it("live-panel: ícono de elegido en ahora y en sigue", () => {
+  it("live-panel: elegido con ícono y texto visible en ahora, ícono en sigue", () => {
     const { container } = renderAt(
       "2026-03-13",
       "22:30",
       new Set(["fri-flow-2215", "fri-samsung-2330"]),
     );
 
-    const tyler = nowLine(container, "flow");
-    expect(within(tyler).getByText(SELECTED_LABEL)).toHaveClass("sr-only");
-    const tylerIcon = tyler.querySelector("svg.lucide-check");
+    // Playing and chosen: check + visible «Elegido» in the row's status, no clash.
+    const tyler = row(container, "flow");
+    const status = tyler.querySelector<HTMLElement>("[data-live-status]");
+    expect(status).not.toBeNull();
+    expect(within(status as HTMLElement).getByText(SELECTED_LABEL)).not.toHaveClass("sr-only");
+    const tylerIcon = status?.querySelector("svg.lucide-check");
     expect(tylerIcon).not.toBeNull();
     expect(tylerIcon).toHaveAttribute("aria-hidden", "true");
     expect(tylerIcon).toHaveClass("text-primary");
+    expect(within(tyler).queryByText(CLASH_LABEL)).toBeNull();
 
+    // The next show keeps the check and the hidden name.
     const peggy = nextLine(container, "samsung");
-    expect(within(peggy).getByText(SELECTED_LABEL)).toBeInTheDocument();
+    expect(within(peggy).getByText(SELECTED_LABEL)).toHaveClass("sr-only");
     expect(peggy.querySelector("svg.lucide-check")).not.toBeNull();
 
     // Only the chosen ones: Turf is not.
-    expect(within(nowLine(container, "alternative")).queryByText(SELECTED_LABEL)).toBeNull();
-    expect(nowLine(container, "alternative").querySelector("svg")).toBeNull();
+    expect(within(row(container, "alternative")).queryByText(SELECTED_LABEL)).toBeNull();
+    expect(row(container, "alternative").querySelector("svg.lucide-check")).toBeNull();
     expect(screen.getAllByText(SELECTED_LABEL)).toHaveLength(2);
+  });
+
+  it("live-panel: choque con ícono de triángulo en color de texto y texto «Choque»", () => {
+    const { container } = renderAt(
+      "2026-03-13",
+      "22:30",
+      new Set(["fri-flow-2215", "fri-alternative-2215"]),
+    );
+
+    for (const stageId of ["flow", "alternative"]) {
+      const status = row(container, stageId).querySelector<HTMLElement>("[data-live-status]");
+      expect(within(status as HTMLElement).getByText(CLASH_LABEL)).toBeInTheDocument();
+      const triangle = status?.querySelector("svg.lucide-triangle-alert");
+      expect(triangle).toHaveAttribute("aria-hidden", "true");
+      expect(triangle).toHaveClass("text-foreground");
+      expect(within(status as HTMLElement).getByText(SELECTED_LABEL)).toBeInTheDocument();
+    }
+    expect(screen.getAllByText(CLASH_LABEL)).toHaveLength(2);
+  });
+
+  it("live-panel: escenario sonando con punto, Ahora, chip y barra del color y avance love", () => {
+    const { container } = renderAt("2026-03-13", "22:30");
+
+    const flow = row(container, "flow");
+    expect(flow).toHaveAttribute("data-playing", "true");
+    // The stage's colors as custom properties: foam on base text.
+    expect(flow.style.getPropertyValue("--stage")).toBe("#9ccfd8");
+    expect(flow.style.getPropertyValue("--on-stage")).toBe("#191724");
+    const chip = flow.querySelector("[data-live-chip]");
+    expect(chip).toHaveTextContent("Flow");
+    expect(chip).toHaveClass("bg-(--stage)", "text-(--on-stage)");
+    expect(flow.querySelector("[data-live-bar]")).toHaveClass("w-1", "bg-(--stage)");
+    // Playing: live dot + «Ahora» in text, at full opacity.
+    const status = flow.querySelector("[data-live-status]");
+    expect(status).toHaveTextContent("Ahora");
+    expect(status?.querySelector("[data-live-dot]")).not.toBeNull();
+    expect(flow.querySelector(".opacity-60")).toBeNull();
+    // Progress: 15 of 75 minutes, love.
+    const bar = within(flow).getByRole("progressbar", { name: PROGRESS_LABEL });
+    expect(bar).toHaveAttribute("aria-valuenow", "20");
+    expect(bar).toHaveAttribute("aria-valuemin", "0");
+    expect(bar).toHaveAttribute("aria-valuemax", "100");
+    expect(bar.firstElementChild).toHaveClass("bg-rp-love");
+    expect((bar.firstElementChild as HTMLElement).style.width).toBe("20%");
+    // Perry's is pine, which reads with light text.
+    expect(row(container, "perrys").style.getPropertyValue("--on-stage")).toBe("#e0def4");
+  });
+
+  it("live-panel: escenario sin show queda atenuado, sin punto ni avance, y sigue mostrando Sigue", () => {
+    const { container } = renderAt("2026-03-13", "22:30");
+
+    const samsung = row(container, "samsung");
+    expect(samsung).toHaveAttribute("data-playing", "false");
+    expect(samsung.querySelector("[data-live-dot]")).toBeNull();
+    expect(samsung.querySelector("[data-live-status]")).toBeNull();
+    expect(within(samsung).queryByRole("progressbar")).toBeNull();
+    expect(samsung).not.toHaveTextContent("Ahora");
+    // Texts at ~60 %, the chip and the bar softer than the stage's color.
+    expect(samsung.querySelector(".opacity-60")).toHaveTextContent("Nada ahora");
+    expect(samsung.querySelector(".opacity-60")).toHaveTextContent("Sigue: Peggy Gou");
+    expect(samsung.querySelector("[data-live-chip]")).not.toHaveClass("bg-(--stage)");
+    expect(samsung.querySelector("[data-live-bar]")).not.toHaveClass("bg-(--stage)");
+    expect(samsung.querySelector("[data-live-chip]")).toHaveClass("text-(--on-stage)");
+    // No «live» marker anywhere on a stage that plays nothing; the done stage too.
+    expect(row(container, "kidzapalooza").querySelector("[data-live-dot]")).toBeNull();
+    expect(row(container, "kidzapalooza")).toHaveTextContent(`${NOTHING_NOW}`);
+    expect(row(container, "kidzapalooza")).toHaveTextContent(DONE_FOR_TODAY);
   });
 
   it("live-panel: idle y over", () => {
@@ -202,9 +277,9 @@ describe("LivePanel", () => {
     const { container } = renderAt("2026-03-13", "22:30", NONE, altered);
 
     // Tyler is gone, Flow says nothing plays, and the rest of the panel is there.
-    expect(nowLine(container, "flow")).toHaveTextContent(`Ahora: ${NOTHING_NOW}`);
+    expect(nowLine(container, "flow")).toHaveTextContent(NOTHING_NOW);
     expect(container).not.toHaveTextContent("Tyler");
-    expect(nowLine(container, "alternative")).toHaveTextContent("Ahora: Turf 22:15 – 23:30");
+    expect(nowLine(container, "alternative")).toHaveTextContent("Turf 22:15 – 23:30");
     expect(stageRows(container)).toHaveLength(5);
     expect(container.querySelector("img")).toBeNull();
   });

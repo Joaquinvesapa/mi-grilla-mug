@@ -90,4 +90,31 @@ describe("DayPicker", () => {
     // Outside the tab panel: it belongs to the row, not to the day's content.
     expect(screen.getByRole("tabpanel")).not.toContainElement(action);
   });
+
+  it("test-day-picker-colors: la pestaña activa se rellena con su día, las otras muestran un punto, y una barra de 2 px del día bajo las pestañas", () => {
+    const { container } = render(<Harness onChange={() => {}} />);
+
+    const friday = screen.getByRole("tab", { name: "Viernes" });
+    expect(friday.style.getPropertyValue("--day")).toBe("#f6c177");
+    expect(friday.style.getPropertyValue("--on-day")).toBe("#191724");
+    expect(friday.className).toContain("data-[state=active]:bg-(--day)");
+    expect(friday.className).toContain("data-[state=active]:text-(--on-day)");
+    const sunday = screen.getByRole("tab", { name: "Domingo" });
+    expect(sunday.style.getPropertyValue("--on-day")).toBe("#e0def4");
+
+    for (const tab of screen.getAllByRole("tab")) {
+      const dot = tab.querySelector("[data-day-dot]");
+      expect(dot).not.toBeNull();
+      expect(dot).toHaveAttribute("aria-hidden", "true");
+      expect(dot).toHaveClass("bg-(--day)", "in-data-[state=active]:hidden");
+    }
+
+    const bar = container.querySelector<HTMLElement>("[data-day-bar]")!;
+    expect(bar).toHaveClass("h-0.5", "bg-(--day)");
+    expect(bar.style.getPropertyValue("--day")).toBe("#f6c177");
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "Sábado" }), { button: 0 });
+    expect(
+      container.querySelector<HTMLElement>("[data-day-bar]")!.style.getPropertyValue("--day"),
+    ).toBe("#ebbcba");
+  });
 });

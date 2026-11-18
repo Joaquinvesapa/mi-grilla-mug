@@ -36,6 +36,13 @@ function clockControl(page: Page) {
   return page.getByRole("region", { name: "Reloj de la demo" });
 }
 
+/** Types a time in the manual field of the clock and applies it with «Ir». */
+async function setClock(page: Page, time: string) {
+  const control = clockControl(page);
+  await control.getByLabel("Poné la hora a mano").fill(time);
+  await control.getByRole("button", { name: "Ir", exact: true }).click();
+}
+
 /** Opens /demo and signs up a new account inside its iPhone; returns the app's frame. */
 async function signUpInDemo(page: Page, testInfo: TestInfo): Promise<Frame> {
   await page.goto("/demo");
@@ -163,7 +170,7 @@ test.describe("reloj de /demo (FEAT-005b)", () => {
     const control = clockControl(page);
 
     // Friday 23:00 first: Tyler still plays on Flow, so what changes below is only the day.
-    await control.getByLabel("Hora").fill("23:00");
+    await setClock(page, "23:00");
     await expect(control.locator("output")).toContainText("23:00");
     const panel = await openLiveInApp(app);
     const flowNow = panel.locator('[data-live-stage="flow"] [data-live-now]');
@@ -196,7 +203,10 @@ test.describe("reloj de /demo (FEAT-005b)", () => {
     await control.getByRole("button", { name: "+15 min" }).click();
 
     await expect(control.locator("output")).toContainText("22:45");
-    await expect(control.getByLabel("Hora")).toHaveValue("22:45");
+    await expect(control.getByRole("slider", { name: "Hora simulada" })).toHaveAttribute(
+      "aria-valuetext",
+      "Viernes 22:45",
+    );
     // The app takes the new time, without a reload: 45 min to go.
     await expect(samsungNext).toContainText(`${PEGGY.artist} 23:30 (en 45 min)`);
   });
@@ -209,7 +219,7 @@ test.describe("reloj de /demo (FEAT-005b)", () => {
     await expect(gridRegion(app, "fri")).toBeVisible();
 
     await control.getByRole("tab", { name: "Sábado", exact: true }).click();
-    await control.getByLabel("Hora").fill("18:00");
+    await setClock(page, "18:00");
     await expect(control.locator("output")).toContainText("18:00");
     await expect(control.locator("output")).toContainText(/sábado 14 de marzo/i);
     // The app already lives at Saturday 18:00 (Marina on Flow), so the check below cannot pass
@@ -248,7 +258,10 @@ test.describe("reloj de /demo (FEAT-005b)", () => {
 
     await expect(control.locator("output")).toContainText("22:30");
     await expect(control.locator("output")).toContainText(/viernes 13 de marzo/i);
-    await expect(control.getByLabel("Hora")).toHaveValue("22:30");
+    await expect(control.getByRole("slider", { name: "Hora simulada" })).toHaveAttribute(
+      "aria-valuetext",
+      "Viernes 22:30",
+    );
     await expect(control.getByRole("tab", { name: "Viernes", exact: true })).toHaveAttribute(
       "aria-selected",
       "true",

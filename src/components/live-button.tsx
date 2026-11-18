@@ -1,9 +1,10 @@
 "use client";
 
-import { Radio, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { useAppNow } from "@/components/demo-clock";
+import { LiveDot } from "@/components/live-dot";
 import { LivePanel } from "@/components/live-panel";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,6 +15,7 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "@/components/ui/drawer";
+import { formatClock } from "@/lib/festival-time";
 import { CLOSE_LABEL, LIVE_LABEL } from "@/lib/live-messages";
 import { liveNow, type LiveView } from "@/lib/live-now";
 import type { Schedule } from "@/lib/schedule-types";
@@ -29,9 +31,9 @@ export type LiveButtonProps = {
 };
 
 /**
- * The floating "En vivo" button and the sheet it opens (FEAT-005a). The button is 56 × 56
- * (`size-14`): `LIVE_BUTTON_CLEARANCE_PX` in `schedule-grid.tsx` is sized from it, so changing one
- * means changing the other. It is `absolute` in the grid's wrapper, not inside the grid's scroll
+ * The floating "En vivo" button and the sheet it opens (FEAT-005a). The button is a pill 48 px
+ * tall (`h-12`, within the 56 px `LIVE_BUTTON_CLEARANCE_PX` in `schedule-grid.tsx` is sized from): a love dot, the visible text «En vivo», a love border and ring that pulse only with
+ * motion allowed (design/color-en-vivo, artboard 02). It is `absolute` in the grid's wrapper, not inside the grid's scroll
  * (it would scroll away) nor `fixed` (it would leave the `max-w-md` column).
  *
  * The sheet is Vaul's, as in `AppMenu`: it follows the finger, closes with a swipe down, a tap
@@ -61,20 +63,32 @@ export function LiveButton({ schedule, selectedIds, clearHomeIndicator }: LiveBu
       <DrawerTrigger asChild>
         <Button
           type="button"
-          size="icon"
+          variant="ghost"
           aria-label={LIVE_LABEL}
           className={cn(
-            "absolute right-[max(1rem,env(safe-area-inset-right,0px))] z-20 size-14 touch-manipulation rounded-full shadow-lg shadow-rp-base/60 select-none",
+            "absolute right-[max(1rem,env(safe-area-inset-right,0px))] z-20 h-12 min-h-11 touch-manipulation gap-2.5 rounded-full border-[1.5px] border-rp-love bg-[color-mix(in_srgb,var(--color-rp-love)_16%,var(--color-rp-base))] pr-[18px] pl-3.5 text-[15px] font-bold text-foreground shadow-lg shadow-rp-base/60 select-none hover:bg-[color-mix(in_srgb,var(--color-rp-love)_24%,var(--color-rp-base))] hover:text-foreground motion-safe:animate-live-ring motion-safe:focus-visible:animate-none",
             clearHomeIndicator ? "bottom-[calc(1rem+env(safe-area-inset-bottom,0px))]" : "bottom-4",
           )}
         >
-          <Radio className="size-6" />
+          <LiveDot className="size-2.5" />
+          {LIVE_LABEL}
         </Button>
       </DrawerTrigger>
       <DrawerContent data-live-panel aria-describedby={undefined}>
         <div className="mx-auto flex min-h-0 w-full max-w-md flex-1 flex-col">
           <DrawerHeader className="flex-row items-center justify-between gap-3 px-5 pt-2 pb-2 group-data-[vaul-drawer-direction=bottom]/drawer-content:text-left">
-            <DrawerTitle className="text-xl">{LIVE_LABEL}</DrawerTitle>
+            <DrawerTitle className="flex items-center gap-2.5 text-xl">
+              {view?.kind === "live" && view.stages.some((row) => row.current !== null) ? (
+                <LiveDot className="size-2.5" />
+              ) : null}
+              {LIVE_LABEL}
+            </DrawerTitle>
+            <span
+              data-live-time
+              className="tabular ml-auto rounded-full bg-rp-overlay px-3 py-1 text-[13px] font-semibold text-foreground"
+            >
+              {formatClock(now)}
+            </span>
             <DrawerClose asChild>
               <Button
                 type="button"

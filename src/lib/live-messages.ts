@@ -13,8 +13,14 @@ export const CLOSE_LABEL = "Cerrar";
 /** Hidden text next to the icon of a chosen show (FR-08). */
 export const SELECTED_LABEL = "Elegido";
 
-/** The label of a stage's line with the show playing now (FR-03). */
-export const NOW_PREFIX = "Ahora:";
+/** The label next to the live dot of a stage with a show playing (FR-03). */
+export const NOW_LABEL = "Ahora";
+
+/** The visible mark of a chosen show that shares a minute with another chosen one. */
+export const CLASH_LABEL = "Choque";
+
+/** The accessible name of the playing show's progress bar. */
+export const PROGRESS_LABEL = "Avance del show";
 
 /** The label of a stage's line with the show that comes next (FR-04). */
 export const NEXT_PREFIX = "Sigue:";
@@ -34,6 +40,11 @@ export const FESTIVAL_OVER = "El festival terminó";
 /** "en 60 min": how long until the next show of a stage starts (FR-04). */
 export function minutesUntilLabel(minutes: number): string {
   return `en ${minutes} min`;
+}
+
+/** "quedan 15 min": what is left of the show playing now. */
+export function minutesLeftLabel(minutes: number): string {
+  return `quedan ${minutes} min`;
 }
 
 /**

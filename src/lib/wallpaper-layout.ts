@@ -14,6 +14,7 @@ import { type FriendPicks, indicatorParts } from "@/lib/group-picks";
 import { BASE, FOAM, SUBTLE, TEXT } from "@/lib/palette";
 import { dayAxis, hourMarks, type DayAxis } from "@/lib/schedule-layout";
 import type { FestivalDay, Show, Stage } from "@/lib/schedule-types";
+import { dayTint, stageTint } from "@/lib/stage-colors";
 
 /** Any current iPhone (FR-02). */
 export const WALLPAPER_WIDTH = 1290;
@@ -59,7 +60,17 @@ const TITLE_FONT_SIZE = 64;
 const BRAND_FONT_SIZE = 32;
 const STAGE_FONT_SIZE = 24;
 const TITLE_TOP = SAFE_TOP + 24;
-const STAGE_TOP = SAFE_TOP + 104;
+/** The bar under the day's title (≈ 3 px of the 390 px design, scaled to 1290). */
+const TITLE_BAR_TOP = TITLE_TOP + TITLE_FONT_SIZE + 4;
+const TITLE_BAR_HEIGHT = 8;
+/** A stage's header: its top bar, then its name; the lane of the stage starts right below it. */
+const HEADER_TOP = TITLE_BAR_TOP + TITLE_BAR_HEIGHT + 4;
+const HEADER_BAR_HEIGHT = 6;
+const STAGE_TOP = HEADER_TOP + HEADER_BAR_HEIGHT + 4;
+const HEADER_BOTTOM = AXIS_TOP - 3;
+/** How much of the stage color tints its lane and its header over BASE (artboard 02). */
+const LANE_TINT_PERCENT = 7;
+const HEADER_TINT_PERCENT = 9;
 const HOUR_LABEL_GAP = 4;
 const BRAND = "Mi Grilla";
 const ELLIPSIS = "…";
@@ -107,9 +118,26 @@ export type WallpaperBadge = {
   label: WallpaperText;
 };
 
-/** A show: a `FOAM` rectangle, at full opacity if `lit` and at `DIMMED_OPACITY` if not. */
+/** A plain filled rectangle (no rounding): lanes, headers, bars. */
+export type WallpaperRect = { x: number; y: number; width: number; height: number; fill: string };
+
+/** A stage's lane: its column tinted at 7 % over BASE, from its header down to the axis end. */
+type WallpaperLane = WallpaperRect & { stageId: string };
+
+/** A stage's header: tinted at 9 % over BASE, with a `barHeight` bar in the stage color on top. */
+type WallpaperStageHeader = WallpaperRect & {
+  stageId: string;
+  barColor: string;
+  barHeight: number;
+};
+
+/**
+ * A show: a rectangle of its stage's color (`fill`), at full opacity if `lit` and at
+ * `DIMMED_OPACITY` if not. Its text is in the stage's `onColor`.
+ */
 type WallpaperBlock = {
   showId: string;
+  fill: string;
   x: number;
   y: number;
   width: number;
@@ -130,6 +158,10 @@ export type WallpaperLayout = {
   brand: WallpaperText;
   /** The group's name, between the title and the brand; `null` without a group. */
   groupLabel: WallpaperText | null;
+  /** The bar under the title, in the day's color. */
+  titleBar: WallpaperRect;
+  lanes: WallpaperLane[];
+  headers: WallpaperStageHeader[];
   stageLabels: WallpaperStageLabel[];
   hourMarks: WallpaperHourMark[];
   blocks: WallpaperBlock[];
@@ -158,6 +190,17 @@ export type WallpaperInput = {
 
 function font(weight: number, size: number, family: string): string {
   return `${weight} ${size}px ${family}`;
+}
+
+/** `color` at `percent` % over BASE, as an opaque hex (what the canvas paints). */
+function overBase(color: string, percent: number): string {
+  const channels = [1, 3, 5].map((start) => {
+    const top = Number.parseInt(color.slice(start, start + 2), 16);
+    const bottom = Number.parseInt(BASE.slice(start, start + 2), 16);
+    const mixed = Math.round((top * percent) / 100 + (bottom * (100 - percent)) / 100);
+    return mixed.toString(16).padStart(2, "0");
+  });
+  return `#${channels.join("")}`;
 }
 
 /** Vertical position of an instant on the axis. Multiplies before dividing, so the axis end is exact. */
@@ -300,6 +343,7 @@ function artistLines(
   origin: { x: number; y: number },
   artistFont: string,
   measure: MeasureText,
+  color: string,
 ): WallpaperText[] {
   return wrap(show.artist, maxWidth, maxLines, artistFont, measure).map(
     (text, index): WallpaperText => ({
@@ -307,19 +351,25 @@ function artistLines(
       x: origin.x,
       y: origin.y + index * ARTIST_LINE_HEIGHT,
       font: artistFont,
-      color: BASE,
+      color,
     }),
   );
 }
 
 /** "23:30 – 01:00" at `x`, `y`. */
-function timeText(show: Show, x: number, y: number, timeFont: string): WallpaperText {
+function timeText(
+  show: Show,
+  x: number,
+  y: number,
+  timeFont: string,
+  color: string,
+): WallpaperText {
   return {
     text: `${formatClock(new Date(show.startsAt))} – ${formatClock(new Date(show.endsAt))}`,
     x,
     y,
     font: timeFont,
-    color: BASE,
+    color,
   };
 }
 
@@ -329,6 +379,7 @@ function blockTexts(
   fontFamily: string,
   measure: MeasureText,
 ): Pick<WallpaperBlock, "lines" | "time"> {
+  const { onColor } = stageTint(show.stageId);
   const artistFont = font(600, ARTIST_FONT_SIZE, fontFamily);
   const timeFont = font(600, TIME_FONT_SIZE, fontFamily);
   const inner = box.height - 2 * BLOCK_PADDING_Y;
@@ -347,9 +398,10 @@ function blockTexts(
     { x: textX, y: textTop },
     artistFont,
     measure,
+    onColor,
   );
   const time = withTime
-    ? timeText(show, textX, textTop + lines.length * ARTIST_LINE_HEIGHT, timeFont)
+    ? timeText(show, textX, textTop + lines.length * ARTIST_LINE_HEIGHT, timeFont, onColor)
     : null;
   return { lines, time };
 }
@@ -435,6 +487,7 @@ function blockWithBadges(
   fontFamily: string,
   measure: MeasureText,
 ): Pick<WallpaperBlock, "lines" | "time" | "badges"> {
+  const { onColor } = stageTint(show.stageId);
   const artistFont = font(600, ARTIST_FONT_SIZE, fontFamily);
   const timeFont = font(600, TIME_FONT_SIZE, fontFamily);
   const badgeFont = font(600, INITIALS_FONT_SIZE, fontFamily);
@@ -447,8 +500,14 @@ function blockWithBadges(
       1,
       Math.floor((inner - TIME_LINE_HEIGHT - BADGE_ROW_GAP - BADGE_HEIGHT) / ARTIST_LINE_HEIGHT),
     );
-    const lines = artistLines(show, innerWidth, maxLines, origin, artistFont, measure);
-    const time = timeText(show, origin.x, origin.y + lines.length * ARTIST_LINE_HEIGHT, timeFont);
+    const lines = artistLines(show, innerWidth, maxLines, origin, artistFont, measure, onColor);
+    const time = timeText(
+      show,
+      origin.x,
+      origin.y + lines.length * ARTIST_LINE_HEIGHT,
+      timeFont,
+      onColor,
+    );
     const rowTop = time.y + TIME_LINE_HEIGHT + BADGE_ROW_GAP;
     const badges = fitBadges(friends, innerWidth, badgeFont, measure);
     return { lines, time, badges: placeBadges(badges, origin.x, rowTop, badgeFont) };
@@ -463,14 +522,14 @@ function blockWithBadges(
   // `innerWidth / 2 - BADGE_GAP` (≈ 95 px): room for the start of its name and "…" at 28 px. Without
   // badges (not even "+N" fits) there is no gap to leave: the same width as without a group.
   const artistWidth = badges.length > 0 ? innerWidth - rowWidth(badges) - BADGE_GAP : innerWidth;
-  const lines = artistLines(show, artistWidth, 1, origin, artistFont, measure);
+  const lines = artistLines(show, artistWidth, 1, origin, artistFont, measure, onColor);
   const [line] = lines;
   const badgesX = line ? line.x + measure(line.text, line.font) + BADGE_GAP : origin.x;
   const badgesTop = origin.y + (ARTIST_LINE_HEIGHT - BADGE_HEIGHT) / 2;
   // The time keeps its place below the artist's line, even if the name did not fit at all.
   const time =
     inner >= ARTIST_LINE_HEIGHT + TIME_LINE_HEIGHT
-      ? timeText(show, origin.x, origin.y + ARTIST_LINE_HEIGHT, timeFont)
+      ? timeText(show, origin.x, origin.y + ARTIST_LINE_HEIGHT, timeFont, onColor)
       : null;
   return { lines, time, badges: placeBadges(badges, badgesX, badgesTop, badgeFont) };
 }
@@ -532,7 +591,14 @@ export function wallpaperLayout(input: WallpaperInput): WallpaperLayout {
     x: GUTTER_LEFT,
     y: TITLE_TOP,
     font: titleFont,
-    color: TEXT,
+    color: dayTint(day.id).color,
+  };
+  const titleBar: WallpaperRect = {
+    x: GUTTER_LEFT,
+    y: TITLE_BAR_TOP,
+    width: GRID_RIGHT - GUTTER_LEFT,
+    height: TITLE_BAR_HEIGHT,
+    fill: dayTint(day.id).color,
   };
   const brand: WallpaperText = {
     text: BRAND,
@@ -550,7 +616,29 @@ export function wallpaperLayout(input: WallpaperInput): WallpaperLayout {
       x: center - measureText(stage.name, stageFont) / 2,
       y: STAGE_TOP,
       font: stageFont,
-      color: SUBTLE,
+      color: TEXT,
+    };
+  });
+
+  const lanes = columns.map(({ stage, x }): WallpaperLane => ({
+    stageId: stage.id,
+    x,
+    y: HEADER_BOTTOM,
+    width: columnWidth,
+    height: AXIS_BOTTOM - HEADER_BOTTOM,
+    fill: overBase(stageTint(stage.id).color, LANE_TINT_PERCENT),
+  }));
+  const headers = columns.map(({ stage, x }): WallpaperStageHeader => {
+    const { color } = stageTint(stage.id);
+    return {
+      stageId: stage.id,
+      x,
+      y: HEADER_TOP,
+      width: columnWidth,
+      height: HEADER_BOTTOM - HEADER_TOP,
+      fill: overBase(color, HEADER_TINT_PERCENT),
+      barColor: color,
+      barHeight: HEADER_BAR_HEIGHT,
     };
   });
 
@@ -579,6 +667,7 @@ export function wallpaperLayout(input: WallpaperInput): WallpaperLayout {
     const friends = group?.friendsByShow.get(show.id) ?? [];
     return {
       showId: show.id,
+      fill: stageTint(show.stageId).color,
       ...box,
       lit: !anySelected || selectedIds.has(show.id),
       ...(friends.length > 0
@@ -593,6 +682,9 @@ export function wallpaperLayout(input: WallpaperInput): WallpaperLayout {
     title,
     brand,
     groupLabel: group ? groupLabelText(group.name, title, brand, fontFamily, measureText) : null,
+    titleBar,
+    lanes,
+    headers,
     stageLabels,
     hourMarks: marks,
     blocks,
