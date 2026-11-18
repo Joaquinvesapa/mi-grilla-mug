@@ -20,6 +20,7 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",
     "db:seed": "node prisma/seed.ts",
+    "db:test:prepare": "bash scripts/db-test-prepare.sh",
     "postinstall": "prisma generate"
   },
   "dependencies": {

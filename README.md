@@ -20,14 +20,19 @@ Prisma 7, Serwist (PWA), Vitest y Playwright. El detalle, las convenciones y las
 cp .env.example .env
 ```
 
-Completá `.env`: elegí una contraseña para `POSTGRES_PASSWORD` y usá la misma en `DATABASE_URL`.
-Con el `docker-compose.yml` del repo, el usuario y la base son `mi_grilla`. Las cuentas (Better Auth)
-necesitan además un secreto de 32 caracteres o más, que firma las cookies de sesión (generalo con
-`openssl rand -base64 32` y no lo reuses entre entornos), y la URL pública de la app:
+Completá `.env`: elegí una contraseña para `POSTGRES_PASSWORD` y usá la misma en `DATABASE_URL` y
+`TEST_DATABASE_URL`. Con el `docker-compose.yml` del repo, el usuario es `mi_grilla` y el mismo
+servidor tiene dos bases: `mi_grilla`, la de desarrollo (`DATABASE_URL`, la que usa la app), y
+`mi_grilla_test`, la de los tests (`TEST_DATABASE_URL`), que los tests de integración vacían antes de
+cada test y los E2E llenan de cuentas. Tienen que ser distintas: si son la misma, los tests se niegan
+a correr. Las cuentas (Better Auth) necesitan además un secreto de 32 caracteres o más, que firma las
+cookies de sesión (generalo con `openssl rand -base64 32` y no lo reuses entre entornos), y la URL
+pública de la app:
 
 ```sh
 DATABASE_URL=postgresql://mi_grilla:<tu-contraseña>@127.0.0.1:5432/mi_grilla
 POSTGRES_PASSWORD=<tu-contraseña>
+TEST_DATABASE_URL=postgresql://mi_grilla:<tu-contraseña>@127.0.0.1:5432/mi_grilla_test
 BETTER_AUTH_SECRET=<el-secreto-generado>
 BETTER_AUTH_URL=http://localhost:3000
 ```
@@ -39,8 +44,9 @@ Con `BETTER_AUTH_URL` en `https:`, la cookie de sesión es `Secure` y lleva el p
 ```sh
 docker compose up -d   # Postgres 17 en 127.0.0.1:5432 (o `pnpm db:up`, que espera a que esté sano)
 pnpm install           # también genera el cliente de Prisma (postinstall)
-pnpm db:migrate        # aplica las migraciones
-pnpm db:seed           # carga la grilla del festival (data/schedule.json)
+pnpm db:migrate        # aplica las migraciones a la base de desarrollo
+pnpm db:seed           # le carga la grilla del festival (data/schedule.json)
+pnpm db:test:prepare   # crea la base de tests, la migra y le carga la grilla
 pnpm dev               # http://localhost:3000
 ```
 
@@ -60,34 +66,41 @@ producción: `pnpm build && pnpm start`.
 - `pnpm typecheck`: `next typegen` + `tsc --noEmit` (TypeScript 7).
 - `pnpm test`: tests unitarios (Vitest, jsdom) con coverage; falla bajo 80 % líneas, 70 % ramas u
   80 % funciones.
-- `pnpm test:integration`: tests de integración contra la base PostgreSQL real de `DATABASE_URL`,
-  levantada, migrada y sembrada (`pnpm db:up && pnpm db:migrate && pnpm db:seed`).
+- `pnpm test:integration`: tests de integración contra la base PostgreSQL real de
+  `TEST_DATABASE_URL`, levantada y preparada (`pnpm db:up && pnpm db:test:prepare`). Nunca tocan la
+  base de desarrollo: sin `TEST_DATABASE_URL`, o si apunta a la misma base que `DATABASE_URL`, no
+  corren.
 - `pnpm test:e2e`: Playwright contra el build de producción (`pnpm build && pnpm start`, puerto
-  3100): iPhone (WebKit), Pixel 7, 360 px y desktop (`/demo`). Los tests crean cuentas y leen la
-  grilla, así que necesitan la base levantada, migrada y sembrada
-  (`pnpm db:up && pnpm db:migrate && pnpm db:seed`) y `BETTER_AUTH_SECRET` en
-  `.env`; `BETTER_AUTH_URL` la fija la config de Playwright (`http://127.0.0.1:3100`). La primera
-  vez: `pnpm exec playwright install webkit chromium`.
+  3100), que levanta la app con la base de tests: iPhone (WebKit), Pixel 7, 360 px y desktop
+  (`/demo`). Los tests crean cuentas y leen la grilla, así que necesitan la base de tests levantada y
+  preparada (`pnpm db:up && pnpm db:test:prepare`) y `BETTER_AUTH_SECRET` en `.env`;
+  `BETTER_AUTH_URL` la fija la config de Playwright (`http://127.0.0.1:3100`). La primera vez:
+  `pnpm exec playwright install webkit chromium`.
 - `pnpm test:e2e:docker`: la misma suite E2E dentro de la imagen oficial de Playwright, para hosts
   sin las bibliotecas de WebKit. Acepta los argumentos de `playwright test` (por ejemplo
   `--project iphone-webkit`). **Solo Linux:** el contenedor usa la red del host
   (`--network host`), así que llega a la base de `docker-compose.yml` en `127.0.0.1:5432` y necesita
-  el puerto 3100 libre en el host. Igual que `pnpm test:e2e`, pide la base levantada, migrada y sembrada antes.
-  `DATABASE_URL` y `BETTER_AUTH_SECRET` se pasan por nombre, sin mostrar sus valores: los del
-  entorno si están definidas, y si no, las de `.env`.
+  el puerto 3100 libre en el host. Igual que `pnpm test:e2e`, pide antes la base de tests levantada
+  y preparada (`pnpm db:up && pnpm db:test:prepare`). `TEST_DATABASE_URL` y `BETTER_AUTH_SECRET`
+  se pasan por nombre, sin mostrar sus valores: los del entorno si están definidas, y si no, las de
+  `.env`.
 - `pnpm db:up` / `pnpm db:down`: levanta (y espera) / baja el Postgres de `docker-compose.yml`.
 - `pnpm db:generate`: regenera el cliente de Prisma.
-- `pnpm db:migrate`: aplica las migraciones (`prisma migrate deploy`).
-- `pnpm db:seed`: carga la grilla de `data/schedule.json` (días, escenarios y shows) en la base. Se
-  puede correr de nuevo: actualiza lo que ya está. Si en la base hay un show que no está en el JSON,
-  falla sin tocar nada (`[seed] SCHEDULE_ORPHANED`).
+- `pnpm db:migrate`: aplica las migraciones (`prisma migrate deploy`) a la base de desarrollo.
+- `pnpm db:seed`: carga la grilla de `data/schedule.json` (días, escenarios y shows) en la base de
+  desarrollo. Se puede correr de nuevo: actualiza lo que ya está. Si en la base hay un show que no
+  está en el JSON, falla sin tocar nada (`[seed] SCHEDULE_ORPHANED`).
+- `pnpm db:test:prepare`: deja lista la base de tests de `TEST_DATABASE_URL`: la crea si no existe,
+  le aplica las migraciones y le carga la grilla. Se puede correr de nuevo. Antes de tocar nada
+  revisa que `TEST_DATABASE_URL` esté definida, sea local y no sea la base de `DATABASE_URL`.
 
 ## CI
 
 `.github/workflows/ci.yml` corre al abrir, actualizar o reabrir un PR, y al mergear a `main`, con
 tres jobs en paralelo: `quality` (lint, formato, tipos y unit con coverage), `integration`
-(migraciones y tests de integración contra Postgres 17) y `e2e` (migraciones y Playwright contra su
-propio Postgres 17, dentro de la imagen oficial de Playwright, que ya trae los navegadores: en un PR solo con WebKit, en el proyecto `iphone-webkit`; al mergear a `main`,
-con WebKit y Chromium en los 4 proyectos). `integration` y `e2e` reciben un `BETTER_AUTH_SECRET`
+(`pnpm db:test:prepare` y tests de integración contra Postgres 17) y `e2e` (`pnpm db:test:prepare` y
+Playwright contra su propio Postgres 17, dentro de la imagen oficial de Playwright, que ya trae los navegadores: en un PR solo con WebKit, en el proyecto `iphone-webkit`; al mergear a `main`,
+con WebKit y Chromium en los 4 proyectos). `integration` y `e2e` definen `TEST_DATABASE_URL`,
+apuntando al Postgres efímero de cada job, y no `DATABASE_URL`; reciben además un `BETTER_AUTH_SECRET`
 descartable escrito en el workflow, que no es un secreto, y su `BETTER_AUTH_URL`; `quality` no
 necesita ninguna de las dos.

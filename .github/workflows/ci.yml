@@ -71,8 +71,10 @@ jobs:
           --health-timeout 3s
           --health-retries 15
     env:
-      # Loopback del runner: sin TLS, como en local (R-04).
-      DATABASE_URL: postgresql://mi_grilla:ci-only-password@127.0.0.1:5432/mi_grilla
+      # La base de tests (FIX-004): el setup de integración la pasa como DATABASE_URL. Sin
+      # DATABASE_URL en el job: acá no hay base de desarrollo. Loopback del runner, sin TLS, como en
+      # local (R-04).
+      TEST_DATABASE_URL: postgresql://mi_grilla:ci-only-password@127.0.0.1:5432/mi_grilla
       # Secreto de prueba descartable, NO es un secreto: firma cookies de sesiones que solo existen
       # en la base efímera de este job. Nunca se usa fuera de la CI (R-13).
       BETTER_AUTH_SECRET: ci-only-better-auth-secret-not-a-real-one
@@ -87,9 +89,9 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm db:migrate
-      # La grilla (data/schedule.json): la leen los tests de la selección (FEAT-003a).
-      - run: pnpm db:seed
+      # Migra la base de tests y le carga la grilla (data/schedule.json), que leen los tests de la
+      # selección (FEAT-003a).
+      - run: pnpm db:test:prepare
       - run: pnpm test:integration
 
   e2e:
@@ -119,8 +121,9 @@ jobs:
           --health-timeout 3s
           --health-retries 15
     env:
-      # Desde el container, el service se alcanza por su nombre, no por 127.0.0.1.
-      DATABASE_URL: postgresql://mi_grilla:ci-only-password@postgres:5432/mi_grilla
+      # La base de tests (FIX-004): la config de Playwright se la pasa a `next start` como
+      # DATABASE_URL. Desde el container, el service se alcanza por su nombre, no por 127.0.0.1.
+      TEST_DATABASE_URL: postgresql://mi_grilla:ci-only-password@postgres:5432/mi_grilla
       # Secreto de prueba descartable, NO es un secreto (ver el job integration).
       BETTER_AUTH_SECRET: ci-only-better-auth-secret-not-a-real-one
       # La URL que sirve `next start` en los E2E (playwright.config.ts), en el mismo container.
@@ -135,10 +138,9 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # Las cuentas (FEAT-002) viven en la base: el esquema tiene que estar antes del primer registro.
-      - run: pnpm db:migrate
-      # La grilla (FEAT-003a) también vive en la base: `/` la lee en cada pedido.
-      - run: pnpm db:seed
+      # Las cuentas (FEAT-002) y la grilla (FEAT-003a) viven en la base: el esquema y la grilla
+      # tienen que estar antes del primer registro, y `/` lee la grilla en cada pedido.
+      - run: pnpm db:test:prepare
       # Build de producción + `next start` en el puerto 3100 (ADR-002). En un PR, solo
       # `iphone-webkit`; al mergear a `main`, los 4 proyectos (FIX-001). El evento llega por `env:`,
       # nunca interpolado en `run:`.

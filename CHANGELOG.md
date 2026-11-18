@@ -87,3 +87,7 @@ Todos los cambios notables de Mi Grilla se registran en este archivo. El formato
   bibliotecas, sin `playwright install` ni cache de navegadores.
 - [FIX-003] En la pantalla de bloqueo del iPhone, la linterna y la cámara ya no tapan la última hora
   del fondo de pantalla: la grilla deja libre el 14 % inferior (392 px) en vez del 8 %.
+- [FIX-004] Los tests ya no borran ni ensucian la base de desarrollo: la integración y los E2E usan
+  una base aparte (`TEST_DATABASE_URL`, `mi_grilla_test` en el mismo Postgres del compose), que se
+  prepara con `pnpm db:test:prepare`. Si falta, es remota o es la misma que `DATABASE_URL`, los tests
+  no corren.
