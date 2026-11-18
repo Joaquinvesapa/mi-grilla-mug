@@ -59,6 +59,42 @@ async function groupCountOf(userId: string): Promise<number> {
   return rows[0]?.count ?? -1;
 }
 
+/** The group's members as the database has them, oldest first. */
+async function membersOf(groupId: string): Promise<{ user_id: string; is_admin: boolean }[]> {
+  return getDb().$queryRaw<{ user_id: string; is_admin: boolean }[]>`
+    SELECT user_id, is_admin FROM group_members WHERE group_id = ${groupId}
+    ORDER BY joined_at, user_id`;
+}
+
+async function groupExists(groupId: string): Promise<boolean> {
+  const rows = await getDb().$queryRaw<{ count: number }[]>`
+    SELECT (SELECT count(*) FROM groups WHERE id = ${groupId})::int
+         + (SELECT count(*) FROM group_invites WHERE group_id = ${groupId})::int AS count`;
+  return (rows[0]?.count ?? 0) > 0;
+}
+
+async function groupIdsOf(userId: string): Promise<string[]> {
+  const result = await groups.listGroups(userId);
+  if (!result.ok) {
+    throw new Error(result.code);
+  }
+  return result.groups.map((group) => group.id);
+}
+
+/** Ana creates a group and the given users join it, one minute apart, in that order. */
+async function groupWith(admin: string, ...others: string[]): Promise<string> {
+  const groupId = await createGroupOf(admin, "Los del Lolla");
+  const token = await tokenOf(admin, groupId);
+  for (const [index, user] of others.entries()) {
+    clock = new Date(START.getTime() + (index + 1) * MINUTE_MS);
+    const joined = await groups.joinGroup(user, token);
+    if (!joined.ok) {
+      throw new Error(`joinGroup failed: ${joined.code}`);
+    }
+  }
+  return groupId;
+}
+
 /** A plain `pg` connection, to hold a transaction open while the service runs. */
 async function connect(): Promise<pg.Client> {
   const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
@@ -80,6 +116,21 @@ async function waitUntilBlocked(probe: pg.Client, settled: () => boolean): Promi
        WHERE datname = current_database() AND wait_event_type = 'Lock'`,
     );
     if ((rows[0]?.waiting ?? 0) > 0) {
+      return true;
+    }
+    await new Promise((resolve) => setTimeout(resolve, LOCK_POLL_MS));
+  }
+  return false;
+}
+
+/** Waits until at least `count` backends of this database wait on a lock; false if never. */
+async function waitUntilWaiting(probe: pg.Client, count: number): Promise<boolean> {
+  for (let poll = 0; poll < LOCK_WAIT_POLLS; poll += 1) {
+    const { rows } = await probe.query<{ waiting: number }>(
+      `SELECT count(*)::int AS waiting FROM pg_stat_activity
+       WHERE datname = current_database() AND wait_event_type = 'Lock'`,
+    );
+    if ((rows[0]?.waiting ?? 0) >= count) {
       return true;
     }
     await new Promise((resolve) => setTimeout(resolve, LOCK_POLL_MS));
@@ -122,7 +173,7 @@ describe("groups", () => {
     expect(group.ok && group.group.name).toBe("Los del Lolla");
     expect(group.ok && group.group.isAdmin).toBe(true);
     expect(group.ok && group.group.members).toStrictEqual([
-      { name: "Ana Pérez", initials: "AP", isAdmin: true },
+      { name: "Ana Pérez", initials: "AP", isAdmin: true, userId: ana, isSelf: true },
     ]);
   });
 
@@ -235,8 +286,8 @@ describe("groups", () => {
     expect(rows).toStrictEqual([{ is_admin: false, joined_at: clock }]);
     const group = await groups.getGroup(beto, groupId);
     expect(group.ok && group.group.members).toStrictEqual([
-      { name: "Ana Pérez", initials: "AP", isAdmin: true },
-      { name: "Bruno", initials: "BR", isAdmin: false },
+      { name: "Ana Pérez", initials: "AP", isAdmin: true, userId: ana, isSelf: false },
+      { name: "Bruno", initials: "BR", isAdmin: false, userId: beto, isSelf: true },
     ]);
   });
 
@@ -449,6 +500,264 @@ describe("groups", () => {
   });
 });
 
+describe("administrar y salir de un grupo", () => {
+  const notFound = { ok: false, code: "NOT_FOUND" } as const;
+
+  it("groups: test-remove-member-ac14: el admin saca a un integrante y ya no figura", async () => {
+    const ana = await createUser("ana", "Ana Pérez");
+    const beto = await createUser("beto", "Bruno");
+    const carla = await createUser("carla", "Carla");
+    const groupId = await groupWith(ana, beto, carla);
+
+    expect(await groups.removeMember(ana, groupId, beto)).toStrictEqual({ ok: true });
+
+    const group = await groups.getGroup(ana, groupId);
+    expect(group.ok && group.group.members).toStrictEqual([
+      { name: "Ana Pérez", initials: "AP", isAdmin: true, userId: ana, isSelf: true },
+      { name: "Carla", initials: "CA", isAdmin: false, userId: carla, isSelf: false },
+    ]);
+  });
+
+  it("groups: test-delete-group-ac15: el admin borra el grupo y desaparece para todos", async () => {
+    const ana = await createUser("ana");
+    const beto = await createUser("beto");
+    const groupId = await groupWith(ana, beto);
+    const token = await tokenOf(ana, groupId);
+
+    expect(await groups.deleteGroup(ana, groupId)).toStrictEqual({ ok: true });
+
+    for (const user of [ana, beto]) {
+      expect(await groups.getGroup(user, groupId)).toStrictEqual(notFound);
+      expect(await groupIdsOf(user)).toStrictEqual([]);
+    }
+    expect(await groupExists(groupId)).toBe(false);
+    expect(await memberCount(groupId)).toBe(0);
+    // The link no longer exists: nobody can preview it or join with it.
+    const carla = await createUser("carla");
+    expect(await groups.getInvitePreview(carla, token)).toStrictEqual({
+      ok: false,
+      code: "INVALID_INVITE",
+    });
+    expect(await groups.joinGroup(carla, token)).toStrictEqual({
+      ok: false,
+      code: "INVALID_INVITE",
+    });
+  });
+
+  it("groups: test-admin-leaves-ac17: sale el admin y el integrante más antiguo pasa a administrar", async () => {
+    const ana = await createUser("ana");
+    // `zoe` joins before `beto`: the oldest `joined_at` wins, not the lowest id.
+    const zoe = await createUser("zoe");
+    const beto = await createUser("beto");
+    const groupId = await groupWith(ana, zoe, beto);
+
+    expect(await groups.leaveGroup(ana, groupId)).toStrictEqual({ ok: true });
+
+    expect(await membersOf(groupId)).toStrictEqual([
+      { user_id: zoe, is_admin: true },
+      { user_id: beto, is_admin: false },
+    ]);
+    const group = await groups.getGroup(zoe, groupId);
+    expect(group.ok && group.group.isAdmin).toBe(true);
+  });
+
+  it("groups: test-admin-leaves-ac17: con dos integrantes que entraron a la vez desempata el user_id", async () => {
+    const ana = await createUser("ana");
+    const zoe = await createUser("zoe");
+    const beto = await createUser("beto");
+    const groupId = await createGroupOf(ana);
+    const token = await tokenOf(ana, groupId);
+    clock = new Date(START.getTime() + MINUTE_MS);
+    expect((await groups.joinGroup(zoe, token)).ok).toBe(true);
+    expect((await groups.joinGroup(beto, token)).ok).toBe(true);
+
+    expect(await groups.leaveGroup(ana, groupId)).toStrictEqual({ ok: true });
+
+    expect(await membersOf(groupId)).toStrictEqual([
+      { user_id: beto, is_admin: true },
+      { user_id: zoe, is_admin: false },
+    ]);
+  });
+
+  it("groups: test-last-member-leaves-ac18: sale el último integrante y el grupo y su link dejan de existir", async () => {
+    const ana = await createUser("ana");
+    const beto = await createUser("beto");
+    const groupId = await createGroupOf(ana);
+    const token = await tokenOf(ana, groupId);
+
+    expect(await groups.leaveGroup(ana, groupId)).toStrictEqual({ ok: true });
+
+    expect(await groupExists(groupId)).toBe(false);
+    expect(await memberCount(groupId)).toBe(0);
+    expect(await groups.getInvitePreview(beto, token)).toStrictEqual({
+      ok: false,
+      code: "INVALID_INVITE",
+    });
+  });
+
+  it("groups: test-left-member-rejected-ac19: quien salió y quien fue sacado no ven más el grupo", async () => {
+    const ana = await createUser("ana");
+    const beto = await createUser("beto");
+    const carla = await createUser("carla");
+    const groupId = await groupWith(ana, beto, carla);
+
+    expect(await groups.leaveGroup(beto, groupId)).toStrictEqual({ ok: true });
+    expect(await groups.removeMember(ana, groupId, carla)).toStrictEqual({ ok: true });
+
+    for (const user of [beto, carla]) {
+      expect(await groups.getGroup(user, groupId)).toStrictEqual(notFound);
+      expect(await groupIdsOf(user)).toStrictEqual([]);
+    }
+    expect(await groupIdsOf(ana)).toStrictEqual([groupId]);
+  });
+
+  it("groups: test-rejoin-after-leave: quien salió vuelve a unirse con un link vigente", async () => {
+    const ana = await createUser("ana");
+    const beto = await createUser("beto");
+    const groupId = await groupWith(ana, beto);
+    expect(await groups.leaveGroup(beto, groupId)).toStrictEqual({ ok: true });
+
+    const token = await tokenOf(ana, groupId);
+    expect(await groups.joinGroup(beto, token)).toStrictEqual({
+      ok: true,
+      groupId,
+      alreadyMember: false,
+    });
+    expect(await membersOf(groupId)).toStrictEqual([
+      { user_id: ana, is_admin: true },
+      { user_id: beto, is_admin: false },
+    ]);
+  });
+
+  it("groups: test-rename-group: el admin renombra y el grupo tiene el nombre nuevo", async () => {
+    const ana = await createUser("ana");
+    const beto = await createUser("beto");
+    const groupId = await groupWith(ana, beto);
+
+    expect(await groups.renameGroup(ana, groupId, "  Los de siempre ")).toStrictEqual({ ok: true });
+
+    for (const user of [ana, beto]) {
+      const group = await groups.getGroup(user, groupId);
+      expect(group.ok && group.group.name).toBe("Los de siempre");
+    }
+  });
+
+  it("groups: test-member-leaves-keeps-admin: sale un integrante común y el admin sigue siendo el mismo", async () => {
+    const ana = await createUser("ana");
+    const beto = await createUser("beto");
+    const carla = await createUser("carla");
+    const groupId = await groupWith(ana, beto, carla);
+
+    expect(await groups.leaveGroup(beto, groupId)).toStrictEqual({ ok: true });
+
+    expect(await membersOf(groupId)).toStrictEqual([
+      { user_id: ana, is_admin: true },
+      { user_id: carla, is_admin: false },
+    ]);
+  });
+
+  it("groups: test-non-admin-rejected: un integrante común no renombra, no saca ni borra", async () => {
+    const ana = await createUser("ana");
+    const beto = await createUser("beto");
+    const carla = await createUser("carla");
+    const groupId = await groupWith(ana, beto, carla);
+    const token = await tokenOf(ana, groupId);
+    const notAdmin = { ok: false, code: "NOT_ADMIN" };
+
+    expect(await groups.renameGroup(beto, groupId, "Mío")).toStrictEqual(notAdmin);
+    expect(await groups.removeMember(beto, groupId, carla)).toStrictEqual(notAdmin);
+    expect(await groups.removeMember(beto, groupId, ana)).toStrictEqual(notAdmin);
+    expect(await groups.deleteGroup(beto, groupId)).toStrictEqual(notAdmin);
+
+    // Nothing changed.
+    const group = await groups.getGroup(ana, groupId);
+    expect(group.ok && group.group.name).toBe("Los del Lolla");
+    expect(await membersOf(groupId)).toStrictEqual([
+      { user_id: ana, is_admin: true },
+      { user_id: beto, is_admin: false },
+      { user_id: carla, is_admin: false },
+    ]);
+    expect(await tokenOf(ana, groupId)).toBe(token);
+  });
+
+  it("groups: test-foreign-group-rejected: un no integrante y un groupId inválido reciben NOT_FOUND", async () => {
+    const ana = await createUser("ana");
+    const beto = await createUser("beto");
+    const intruso = await createUser("intruso");
+    const groupId = await groupWith(ana, beto);
+
+    for (const target of [groupId, crypto.randomUUID(), "not-a-uuid", groupId.toUpperCase()]) {
+      expect(await groups.renameGroup(intruso, target, "Mío")).toStrictEqual(notFound);
+      expect(await groups.removeMember(intruso, target, beto)).toStrictEqual(notFound);
+      expect(await groups.deleteGroup(intruso, target)).toStrictEqual(notFound);
+      expect(await groups.leaveGroup(intruso, target)).toStrictEqual(notFound);
+    }
+    // Ana is the admin of her own group, but a malformed id is still nobody's group.
+    expect(await groups.deleteGroup(ana, "not-a-uuid")).toStrictEqual(notFound);
+
+    const group = await groups.getGroup(ana, groupId);
+    expect(group.ok && group.group.name).toBe("Los del Lolla");
+    expect(await memberCount(groupId)).toBe(2);
+  });
+
+  it("groups: test-invalid-name-rejected: renombrar con un nombre vacío o de 41 puntos de código es rechazado", async () => {
+    const ana = await createUser("ana");
+    const groupId = await createGroupOf(ana, "Los del Lolla");
+
+    for (const name of ["", "   ", "a".repeat(41), "🎸".repeat(41)]) {
+      expect(await groups.renameGroup(ana, groupId, name)).toStrictEqual({
+        ok: false,
+        code: "INVALID_NAME",
+      });
+    }
+    const group = await groups.getGroup(ana, groupId);
+    expect(group.ok && group.group.name).toBe("Los del Lolla");
+  });
+
+  it("groups: test-member-not-found-rejected: sacarse a uno mismo, a alguien que no está o un id inválido", async () => {
+    const ana = await createUser("ana");
+    const beto = await createUser("beto");
+    const otro = await createUser("otro");
+    const groupId = await groupWith(ana, beto);
+    const memberNotFound = { ok: false, code: "MEMBER_NOT_FOUND" };
+
+    for (const memberUserId of [ana, otro, "nadie", "", "beto; DROP TABLE users", "x".repeat(65)]) {
+      expect(await groups.removeMember(ana, groupId, memberUserId)).toStrictEqual(memberNotFound);
+    }
+    expect(await membersOf(groupId)).toStrictEqual([
+      { user_id: ana, is_admin: true },
+      { user_id: beto, is_admin: false },
+    ]);
+  });
+
+  it("groups: test-regenerate-after-leave-rejected: el admin que salió no regenera y el promovido sí", async () => {
+    const ana = await createUser("ana");
+    const beto = await createUser("beto");
+    const groupId = await groupWith(ana, beto);
+    const token = await tokenOf(ana, groupId);
+
+    expect(await groups.leaveGroup(ana, groupId)).toStrictEqual({ ok: true });
+
+    expect(await groups.regenerateInvite(ana, groupId)).toStrictEqual(notFound);
+    expect(await tokenOf(beto, groupId)).toBe(token);
+    expect(await groups.regenerateInvite(beto, groupId)).toStrictEqual({ ok: true });
+    expect(await tokenOf(beto, groupId)).not.toBe(token);
+  });
+
+  it("groups: las operaciones de administrar y salir no registran nada", async () => {
+    const ana = await createUser("ana");
+    const beto = await createUser("beto");
+    const carla = await createUser("carla");
+    const groupId = await groupWith(ana, beto, carla);
+    await groups.renameGroup(ana, groupId, "Otro");
+    await groups.removeMember(ana, groupId, carla);
+    await groups.leaveGroup(ana, groupId);
+    await groups.deleteGroup(beto, groupId);
+    expect(await groupExists(groupId)).toBe(false);
+    expect(logged).toStrictEqual([]);
+  });
+});
+
 describe("groups under concurrency", () => {
   it("groups: con el grupo bloqueado, la unión número 21 espera y es rechazada", async () => {
     const ana = await createUser("ana");
@@ -517,6 +826,70 @@ describe("groups under concurrency", () => {
     expect(waited).toBe(true);
     expect(await groupCountOf(beto)).toBe(10);
     expect(await memberCount(second)).toBe(1);
+  });
+
+  it("groups: test-concurrent-leaves: el admin y el más antiguo salen a la vez y queda un solo admin", async () => {
+    const ana = await createUser("ana");
+    const beto = await createUser("beto");
+    const carla = await createUser("carla");
+    const groupId = await groupWith(ana, beto, carla);
+
+    // Something else holds the group's lock, so both leaves queue up behind it: ana first, then
+    // beto, who waits for ana's promotion of him to commit.
+    aux = await connect();
+    probe = await connect();
+    await aux.query("BEGIN");
+    await aux.query("SELECT id FROM groups WHERE id = $1 FOR UPDATE", [groupId]);
+
+    const adminLeaves = groups.leaveGroup(ana, groupId);
+    const firstWaits = await waitUntilWaiting(probe, 1);
+    const oldestLeaves = groups.leaveGroup(beto, groupId);
+    const secondWaits = await waitUntilWaiting(probe, 2);
+    await aux.query("COMMIT");
+    const results = await Promise.all([adminLeaves, oldestLeaves]);
+
+    expect(firstWaits).toBe(true);
+    expect(secondWaits).toBe(true);
+    expect(results).toStrictEqual([{ ok: true }, { ok: true }]);
+    expect(await membersOf(groupId)).toStrictEqual([{ user_id: carla, is_admin: true }]);
+    const admins = await getDb().$queryRaw<{ count: number }[]>`
+      SELECT count(*)::int AS count FROM group_members WHERE group_id = ${groupId} AND is_admin`;
+    expect(admins[0]?.count).toBe(1);
+    expect(logged).toStrictEqual([]);
+  });
+
+  it("groups: test-concurrent-leaves: si la promoción commitea mientras espera, quien sale la ve", async () => {
+    const ana = await createUser("ana");
+    const beto = await createUser("beto");
+    const carla = await createUser("carla");
+    const groupId = await groupWith(ana, beto, carla);
+
+    // Ana's leave in flight, by hand: the group locked, her row gone and beto promoted, not
+    // committed. Beto's leave waits for it and must see that he is the admin now (spec round 1, F1).
+    aux = await connect();
+    probe = await connect();
+    await aux.query("BEGIN");
+    await aux.query("SELECT id FROM groups WHERE id = $1 FOR UPDATE", [groupId]);
+    await aux.query("DELETE FROM group_members WHERE group_id = $1 AND user_id = $2", [
+      groupId,
+      ana,
+    ]);
+    await aux.query(
+      "UPDATE group_members SET is_admin = true WHERE group_id = $1 AND user_id = $2",
+      [groupId, beto],
+    );
+
+    let settled = false;
+    const leaving = groups.leaveGroup(beto, groupId).finally(() => {
+      settled = true;
+    });
+    const waited = await waitUntilBlocked(probe, () => settled);
+    await aux.query("COMMIT");
+    const result = await leaving;
+
+    expect(waited).toBe(true);
+    expect(result).toStrictEqual({ ok: true });
+    expect(await membersOf(groupId)).toStrictEqual([{ user_id: carla, is_admin: true }]);
   });
 
   it("groups: unirse con el link viejo mientras se regenera es rechazado", async () => {

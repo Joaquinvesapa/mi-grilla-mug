@@ -5,7 +5,16 @@ import type { JoinGroupState } from "@/app/group-actions";
 import { JoinGroupForm } from "@/components/join-group-form";
 import { joinGroupMessageFor } from "@/lib/group-messages";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
+
+const OFFLINE = "Necesitás conexión para hacer esto";
+
+function setOnline(value: boolean) {
+  vi.spyOn(navigator, "onLine", "get").mockReturnValue(value);
+}
 
 const TOKEN = "AbCdEfGhIjKlMnOpQrStUvWxYz0123456789_-AbCdE";
 
@@ -72,6 +81,18 @@ describe("JoinGroupForm", () => {
     expect(screen.getByRole("alert")).toHaveTextContent(
       "No pudimos unirte. Probá de nuevo en un rato.",
     );
+    expect(screen.getByRole("button", { name: "Unirme" })).toBeEnabled();
+  });
+
+  it("test-forms-offline-ac28: unirse sin conexión avisa y no llama a la acción", async () => {
+    setOnline(false);
+    const action = fakeAction({ error: null });
+    render(<JoinGroupForm action={action} token={TOKEN} />);
+
+    await join();
+
+    expect(action).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toHaveTextContent(OFFLINE);
     expect(screen.getByRole("button", { name: "Unirme" })).toBeEnabled();
   });
 });
