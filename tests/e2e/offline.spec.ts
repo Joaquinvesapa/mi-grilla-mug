@@ -1,15 +1,17 @@
-import {
-  expect,
-  test,
-  type Browser,
-  type BrowserContext,
-  type Page,
-  type Route,
-} from "@playwright/test";
+import { expect, test, type Browser, type Page, type Route } from "@playwright/test";
 
-import { signUp, submitLogin, type TestAccount } from "./auth";
+import { submitLogin, type TestAccount } from "./auth";
 import { pendingBar, saveSelection, showBlock, showById, tapLogout } from "./grid";
-import { waitForServiceWorker } from "./pwa";
+import {
+  expectChosen,
+  goOffline,
+  notice,
+  readDeviceCopy,
+  readPendingIds,
+  reopenOffline,
+  saveOffline,
+  signUpControlled,
+} from "./offline";
 
 // FEAT-003b, AC-20 to AC-27 and NFR-02, end to end with the production build's service worker
 // (ADR-002, ADR-004). Runs in the three mobile projects (iphone-webkit, mobile-chromium,
@@ -17,9 +19,6 @@ import { waitForServiceWorker } from "./pwa";
 // up accounts of its own, so no test sees another's selection, and nothing that already exists in
 // the database is touched.
 
-const NOTICE_TITLE = "Guardado solo en este celular";
-const SNAPSHOT_KEY = "mi-grilla:snapshot";
-const PENDING_PREFIX = "mi-grilla:pending:";
 /** NFR-01 of FEAT-003a, which the sync reuses: one save answers in a second at most. */
 const SAVE_BUDGET_MS = 1000;
 const PHONE_WIDTHS = [
@@ -32,110 +31,13 @@ const PHONE_WIDTHS = [
 const SHOW_X = showById("fri-flow-1800").id;
 const SHOW_Y = showById("fri-samsung-2100").id;
 
-/** The notice of a selection saved only on this device (FR-04). */
-function notice(page: Page) {
-  return page.getByRole("status").filter({ hasText: NOTICE_TITLE });
-}
-
 function offlineCardHeading(page: Page) {
   return page.getByRole("heading", { level: 1, name: "Sin conexión" });
-}
-
-async function expectChosen(page: Page, showId: string, chosen: boolean) {
-  await expect(showBlock(page, showId)).toHaveAttribute("aria-pressed", String(chosen));
 }
 
 /** The shows marked as chosen on screen (the day on screen only). */
 function chosenBlocks(page: Page) {
   return page.locator('[data-show-id][aria-pressed="true"]');
-}
-
-/** The device copy as stored, or `null`. */
-async function readDeviceCopy(
-  page: Page,
-): Promise<{ userId: string; userName: string; savedShowIds: string[] } | null> {
-  return page.evaluate((key) => {
-    const raw = localStorage.getItem(key);
-    return raw
-      ? (JSON.parse(raw) as { userId: string; userName: string; savedShowIds: string[] })
-      : null;
-  }, SNAPSHOT_KEY);
-}
-
-/** The pending selection stored for `userId`, or `null`. */
-async function readPendingIds(page: Page, userId: string): Promise<string[] | null> {
-  return page.evaluate((key) => {
-    const raw = localStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as { showIds: string[] }).showIds : null;
-  }, `${PENDING_PREFIX}${userId}`);
-}
-
-/**
- * Signs up on a page controlled by the service worker and waits until `/` has written the device
- * copy of the new account (FR-01). Returns the account and its user id, read from the copy.
- *
- * Every test account is called "Ana", so the copy is told apart by its user id: the ui has no other
- * place that shows it. The new id is unknown until `/` writes it, so the copy counts as the new
- * account's once it holds an id that is not any of `previousUserIds` (the accounts this page
- * already used) nor the one of the copy stored before signing up.
- */
-async function signUpControlled(
-  page: Page,
-  testInfo: Parameters<typeof signUp>[1],
-  previousUserIds: readonly string[] = [],
-): Promise<{ account: TestAccount; userId: string }> {
-  await page.goto("/login");
-  await waitForServiceWorker(page);
-  const before = await readDeviceCopy(page);
-  const known = new Set([...previousUserIds, ...(before ? [before.userId] : [])]);
-  const account = await signUp(page, testInfo);
-  await expect(page.getByRole("tab", { name: "Viernes", exact: true })).toBeVisible();
-  await expect
-    .poll(
-      async () => {
-        const userId = (await readDeviceCopy(page))?.userId ?? null;
-        return userId !== null && !known.has(userId);
-      },
-      { message: "la pantalla no guardó la copia del dispositivo de la cuenta nueva" },
-    )
-    .toBe(true);
-  const copy = await readDeviceCopy(page);
-  expect(copy, "la copia del dispositivo desapareció después de escribirse").not.toBeNull();
-  expect(copy!.userName).toBe(account.name);
-  return { account, userId: copy!.userId };
-}
-
-/**
- * Cuts the connection and waits until the page itself sees it (`navigator.onLine` false), so that a
- * `setOffline(false)` right after is a real change the page announces with `online`.
- */
-async function goOffline(page: Page, context: BrowserContext): Promise<void> {
-  await context.setOffline(true);
-  await expect
-    .poll(() => page.evaluate(() => navigator.onLine), {
-      message: "la página no se enteró de que se cortó la conexión",
-    })
-    .toBe(false);
-}
-
-/**
- * Without a connection, marks `showId` and taps "Guardar": the selection stays on the device, with
- * the notice (FR-02, FR-04).
- */
-async function saveOffline(page: Page, context: BrowserContext, showId: string): Promise<void> {
-  await goOffline(page, context);
-  await showBlock(page, showId).click();
-  await expectChosen(page, showId, true);
-  await saveSelection(page);
-  await expect(notice(page)).toBeVisible();
-}
-
-/** Without a connection, opens `/` again: the service worker answers with the offline screen. */
-async function reopenOffline(page: Page): Promise<void> {
-  await page.goto("/");
-  await expect(page).toHaveURL("/");
-  // The grid from the device copy, not the "Sin conexión" card.
-  await expect(page.getByRole("tab", { name: "Viernes", exact: true })).toBeVisible();
 }
 
 /** The Server Action calls: POSTs carrying Next's `Next-Action` header. */

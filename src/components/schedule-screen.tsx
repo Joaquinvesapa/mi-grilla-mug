@@ -16,6 +16,7 @@ import { clearPending, readPending, writePending, writeSnapshot } from "@/compon
 import { OfflinePendingNotice } from "@/components/offline-pending-notice";
 import { PendingBar } from "@/components/pending-bar";
 import { ScheduleGrid } from "@/components/schedule-grid";
+import { WallpaperButton } from "@/components/wallpaper-button";
 import { findClashes } from "@/lib/clashes";
 import type { Schedule } from "@/lib/schedule-types";
 import { selectionMessageFor } from "@/lib/selection-messages";
@@ -305,7 +306,22 @@ export function ScheduleScreen({
         </p>
       ) : null}
       {onDevice ? <OfflinePendingNotice /> : null}
-      <DayPicker days={schedule.days} value={dayId} onChange={setDayId}>
+      <DayPicker
+        days={schedule.days}
+        value={dayId}
+        onChange={setDayId}
+        action={
+          day ? (
+            // The draft, as on screen: unsaved marks and a pending selection included (FR-09).
+            <WallpaperButton
+              day={day}
+              stages={schedule.stages}
+              shows={dayShows}
+              selectedIds={draft}
+            />
+          ) : undefined
+        }
+      >
         {day ? (
           <ScheduleGrid
             day={day}

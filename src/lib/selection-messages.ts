@@ -44,6 +44,6 @@ export function pendingChangesLabel(count: number): string {
 /** The notice while a selection is saved only on this device (FR-04). */
 export const OFFLINE_PENDING_TITLE = "Guardado solo en este celular";
 
-// The wallpaper is PRD 04: until it exists, the notice only suggests it.
+// The wallpaper (FEAT-004) is "Descargar fondo", next to the days: it works offline too.
 export const OFFLINE_PENDING_BODY =
   "Tus cambios se suben solos cuando vuelva la conexión. Mientras tanto, descargá la grilla como fondo de pantalla para tenerla a mano.";

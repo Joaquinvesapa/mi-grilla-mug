@@ -36,6 +36,14 @@ Todos los cambios notables de Mi Grilla se registran en este archivo. El formato
 - [FEAT-003b] "Guardar" sin conexión deja la selección guardada en el celular, con un aviso, y se
   sincroniza sola con la cuenta al abrir la app con conexión o al volver la señal; si otra cuenta
   entra en ese celular, no la ve ni se le sincroniza.
+- [FEAT-004] "Descargar fondo", al lado de los días: genera la grilla del día en pantalla como
+  imagen de 1290 × 2796 para la pantalla de bloqueo del iPhone, con los shows elegidos encendidos
+  y el resto opacos (todos encendidos si no hay elegidos), libre arriba y abajo para la hora y los
+  botones, y con la marca "Mi Grilla".
+- [FEAT-004] El fondo usa lo que se ve en pantalla, incluidos los cambios sin guardar y la
+  selección pendiente de sincronizar, y se genera también sin conexión.
+- [FEAT-004] En el iPhone se guarda en Fotos con la hoja de compartir; en una computadora se
+  descarga como `mi-grilla-<día>.png`. Después, una guía de 4 pasos para ponerlo de fondo.
 
 ### Changed
 
