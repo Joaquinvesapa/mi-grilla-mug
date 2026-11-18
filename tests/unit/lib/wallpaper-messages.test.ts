@@ -1,14 +1,19 @@
 import { describe, expect, it } from "vitest";
 
+import { GROUP_PICKER_LABEL } from "@/lib/group-messages";
 import {
   DOWNLOAD_IMAGE_LABEL,
   GENERATING_LABEL,
+  PERSONAL_OPTION_LABEL,
   RETRY_LABEL,
   SAVE_TO_PHOTOS_LABEL,
   WALLPAPER_BUTTON_LABEL,
+  WALLPAPER_CHOICE_LABEL,
   WALLPAPER_DONE_LABEL,
+  WALLPAPER_GROUP_LABEL,
   WALLPAPER_GUIDE_STEPS,
   WALLPAPER_SHEET_TITLE,
+  WITH_FRIENDS_OPTION_LABEL,
   type WallpaperMessageCode,
   wallpaperMessageFor,
   wallpaperPreviewAlt,
@@ -47,6 +52,23 @@ describe("wallpaper-messages", () => {
     expect(RETRY_LABEL).toBe("Reintentar");
     expect(WALLPAPER_DONE_LABEL).toBe("Listo. Así lo ponés de fondo:");
     expect(wallpaperPreviewAlt("Viernes")).toBe("Vista previa del fondo del Viernes");
+  });
+
+  it("test-wallpaper-messages-group: los textos de la pregunta y del selector, y el alt con y sin grupo", () => {
+    expect(WALLPAPER_CHOICE_LABEL).toBe("¿Qué fondo querés?");
+    expect(PERSONAL_OPTION_LABEL).toBe("Grilla sola");
+    expect(WITH_FRIENDS_OPTION_LABEL).toBe("Con amigos");
+    expect(WALLPAPER_GROUP_LABEL).toBe("Grupo del fondo");
+    // Not the grid picker's accessible name: the sheet's select is a different control.
+    expect(WALLPAPER_GROUP_LABEL).not.toBe(GROUP_PICKER_LABEL);
+
+    expect(wallpaperPreviewAlt("Viernes", "Los del Lolla")).toBe(
+      "Vista previa del fondo del Viernes con Los del Lolla",
+    );
+    expect(wallpaperPreviewAlt("Viernes")).toBe("Vista previa del fondo del Viernes");
+    expect(wallpaperPreviewAlt("Sábado", undefined)).toBe("Vista previa del fondo del Sábado");
+    // `null` is the preview's "no group" (`Preview.groupName`): no "con null".
+    expect(wallpaperPreviewAlt("Sábado", null)).toBe("Vista previa del fondo del Sábado");
   });
 
   it("test-wallpaper-guide-delivery: step 1 depends on how the image was saved, the other 3 are the same, and the perspective zoom step says where it is", () => {

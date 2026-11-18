@@ -10,7 +10,7 @@ import { groupChoiceKey, type GroupPicks } from "@/lib/group-picks";
 import { CLOSE_LABEL, LIVE_LABEL, SELECTED_LABEL } from "@/lib/live-messages";
 import { pendingKey, SNAPSHOT_KEY } from "@/lib/offline-selection";
 import { selectionMessageFor } from "@/lib/selection-messages";
-import { WALLPAPER_BUTTON_LABEL } from "@/lib/wallpaper-messages";
+import { WALLPAPER_BUTTON_LABEL, WITH_FRIENDS_OPTION_LABEL } from "@/lib/wallpaper-messages";
 
 import { blockOf, SCHEDULE, showsOf } from "./schedule-fixture";
 import { endVaulCloseAnimation, stubMatchMedia } from "./vaul-env";
@@ -748,6 +748,66 @@ describe("ScheduleScreen y el fondo de pantalla", () => {
     const input = wallpaperInput();
     expect(input.day.id).toBe("sat");
     expect(input.shows.map((show) => show.id)).toStrictEqual(["sat-flow-1800"]);
+  });
+
+  async function pressWithFriends() {
+    await act(async () => {
+      fireEvent.click(
+        within(screen.getByRole("dialog")).getByRole("button", { name: WITH_FRIENDS_OPTION_LABEL }),
+      );
+    });
+  }
+
+  it("test-schedule-screen-wallpaper-groups: el fondo recibe los grupos y el grupo del selector de la grilla", async () => {
+    storeChoice(USER_ID, FACU_ID);
+    renderScreen({ groups: GROUPS });
+    await settle();
+    expect(picker()).toHaveValue(FACU_ID);
+
+    await openWallpaper();
+    // With groups the sheet asks first: nothing is drawn yet.
+    expect(renderWallpaper).not.toHaveBeenCalled();
+    await pressWithFriends();
+
+    const input = wallpaperInput();
+    expect(input.group?.name).toBe("Facu y amigos");
+    expect([...(input.group?.friendsByShow.keys() ?? [])]).toStrictEqual(["fri-perrys-1815"]);
+  });
+
+  it('test-schedule-screen-wallpaper-groups: con "Sin grupo" en la grilla, el fondo usa el grupo más reciente', async () => {
+    storeChoice(USER_ID, null);
+    renderScreen({ groups: GROUPS });
+    await settle();
+
+    await openWallpaper();
+    await pressWithFriends();
+
+    expect(wallpaperInput().group?.name).toBe("Los del colegio");
+  });
+
+  it("test-schedule-screen-wallpaper-groups: en modo offline, con los grupos de la copia del dispositivo, el fondo ofrece el del grupo", async () => {
+    setOnline(false);
+    // `/~offline` hands the screen the groups of the device copy (offline-app.tsx).
+    renderScreen({ mode: "offline", saved: ["fri-flow-1800"], groups: [GROUPS[1]!] });
+    await settle();
+
+    await openWallpaper();
+    await pressWithFriends();
+
+    const input = wallpaperInput();
+    expect(input.group?.name).toBe("Facu y amigos");
+    expect([...input.selectedIds]).toStrictEqual(["fri-flow-1800"]);
+  });
+
+  it("test-schedule-screen-wallpaper-groups: con groups null el fondo personal se genera al abrir, sin pregunta", async () => {
+    renderScreen({ groups: null });
+
+    await openWallpaper();
+
+    expect(wallpaperInput()).not.toHaveProperty("group");
+    expect(
+      within(screen.getByRole("dialog")).queryByRole("button", { name: WITH_FRIENDS_OPTION_LABEL }),
+    ).toBeNull();
   });
 });
 

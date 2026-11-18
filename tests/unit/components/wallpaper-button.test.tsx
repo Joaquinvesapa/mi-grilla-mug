@@ -9,15 +9,20 @@ import {
   wallpaperFile,
 } from "@/components/wallpaper-delivery";
 import { WallpaperButton } from "@/components/wallpaper-button";
+import type { GroupPicks } from "@/lib/group-picks";
 import {
   DOWNLOAD_IMAGE_LABEL,
   GENERATING_LABEL,
+  PERSONAL_OPTION_LABEL,
   RETRY_LABEL,
   SAVE_TO_PHOTOS_LABEL,
   WALLPAPER_BUTTON_LABEL,
+  WALLPAPER_CHOICE_LABEL,
   WALLPAPER_DONE_LABEL,
+  WALLPAPER_GROUP_LABEL,
   WALLPAPER_GUIDE_STEPS,
   WALLPAPER_SHEET_TITLE,
+  WITH_FRIENDS_OPTION_LABEL,
   wallpaperMessageFor,
 } from "@/lib/wallpaper-messages";
 
@@ -90,9 +95,20 @@ afterEach(() => {
   }
 });
 
-function renderButton(selectedIds: ReadonlySet<string> = new Set(["fri-flow-1800"])) {
+function renderButton(
+  selectedIds: ReadonlySet<string> = new Set(["fri-flow-1800"]),
+  groups: readonly GroupPicks[] | null = null,
+  groupId?: string | null,
+) {
   return render(
-    <WallpaperButton day={FRIDAY} stages={STAGES} shows={FRIDAY_SHOWS} selectedIds={selectedIds} />,
+    <WallpaperButton
+      day={FRIDAY}
+      stages={STAGES}
+      shows={FRIDAY_SHOWS}
+      selectedIds={selectedIds}
+      groups={groups}
+      groupId={groupId}
+    />,
   );
 }
 
@@ -446,6 +462,8 @@ describe("WallpaperButton", () => {
         stages={STAGES}
         shows={FRIDAY_SHOWS.slice(0, 1)}
         selectedIds={new Set(["otro-show"])}
+        groups={null}
+        groupId={undefined}
       />,
     );
     await press(sheet, RETRY_LABEL);
@@ -541,5 +559,394 @@ describe("WallpaperButton", () => {
     expect(preview.closest("[data-vaul-no-drag]")).not.toBeNull();
     // The preview stays long-pressable ("Agregar a Fotos" is the iPhone fallback).
     expect(preview).not.toHaveClass("select-none");
+  });
+});
+
+/** Two groups, the most recent first, as `listGroupPicks` returns them. */
+const LOLLA: GroupPicks = {
+  id: "11111111-1111-4111-8111-111111111111",
+  name: "Los del Lolla",
+  friends: [
+    { name: "Ana Pérez", initials: "AP", showIds: ["fri-flow-1800"] },
+    { name: "Bruno Gómez", initials: "BG", showIds: ["fri-flow-1800", "fri-samsung-1700"] },
+  ],
+};
+const FACU: GroupPicks = {
+  id: "22222222-2222-4222-8222-222222222222",
+  name: "Facu y cía",
+  friends: [{ name: "Facu Ruiz", initials: "FR", showIds: ["fri-perrys-1815"] }],
+};
+const GROUP_FILE_NAME = "mi-grilla-viernes-los-del-lolla.png";
+const LOLLA_ALT = "Vista previa del fondo del Viernes con Los del Lolla";
+
+/** The two options of the sheet: "Grilla sola" and "Con amigos". */
+function options(scope: HTMLElement) {
+  return {
+    personal: within(scope).getByRole("button", { name: PERSONAL_OPTION_LABEL }),
+    group: within(scope).getByRole("button", { name: WITH_FRIENDS_OPTION_LABEL }),
+  };
+}
+
+function sheetPicker(scope: HTMLElement) {
+  return within(scope).queryByRole<HTMLSelectElement>("combobox", { name: WALLPAPER_GROUP_LABEL });
+}
+
+/** The group of the `call`-th drawing: its name and, per show, the friends' initials. */
+function drawnGroup(call: number) {
+  const input = render$.mock.calls[call]![0];
+  if (!input.group) {
+    return undefined;
+  }
+  return {
+    name: input.group.name,
+    byShow: Object.fromEntries(
+      [...input.group.friendsByShow].map(([showId, friends]) => [
+        showId,
+        friends.map((friend) => friend.initials),
+      ]),
+    ),
+  };
+}
+
+async function choose(scope: HTMLElement, groupId: string) {
+  await act(async () => {
+    fireEvent.change(sheetPicker(scope)!, { target: { value: groupId } });
+  });
+}
+
+describe("WallpaperButton con grupos", () => {
+  it("test-wallpaper-sheet-asks-choice: con un grupo, la hoja pregunta Grilla sola o Con amigos y no genera todavía", async () => {
+    renderButton(new Set(["fri-flow-1800"]), [LOLLA], LOLLA.id);
+
+    const sheet = await openSheet();
+
+    expect(within(sheet).getByText(WALLPAPER_CHOICE_LABEL)).toBeInTheDocument();
+    const { personal, group } = options(sheet);
+    expect(personal).toHaveAttribute("aria-pressed", "false");
+    expect(group).toHaveAttribute("aria-pressed", "false");
+    // Nothing drawn, nothing busy: the placeholder waits for the answer.
+    expect(render$).not.toHaveBeenCalled();
+    expect(sheet.querySelector("[aria-busy='true']")).toBeNull();
+    expect(within(sheet).queryByRole("img")).not.toBeInTheDocument();
+    expect(within(sheet).queryByRole("button", { name: GENERATING_LABEL })).toBeNull();
+    expect(within(sheet).queryByRole("button", { name: DOWNLOAD_IMAGE_LABEL })).toBeNull();
+    // 44 px or more, no tap delay nor text selection, and not dragging the sheet (mobile-native).
+    for (const option of [personal, group]) {
+      expect(option).toHaveClass("h-12", "touch-manipulation", "select-none");
+      expect(option.closest("[data-vaul-no-drag]")).not.toBeNull();
+    }
+  });
+
+  it("test-wallpaper-sheet-switch-option: se pasa de Con amigos a Grilla sola sin cerrar la hoja ni perder el foco; generando, las opciones y el selector están deshabilitados", async () => {
+    const finish = deferredRender();
+    renderButton(new Set(["fri-flow-1800"]), [LOLLA, FACU], LOLLA.id);
+
+    const sheet = await openSheet();
+    const { personal, group } = options(sheet);
+    await press(sheet, WITH_FRIENDS_OPTION_LABEL);
+
+    // Drawing: both options and the picker refuse, and a second tap does not draw again.
+    expect(render$).toHaveBeenCalledTimes(1);
+    expect(personal).toHaveAttribute("aria-disabled", "true");
+    expect(group).toHaveAttribute("aria-disabled", "true");
+    expect(sheetPicker(sheet)).toHaveAttribute("aria-disabled", "true");
+    await press(sheet, PERSONAL_OPTION_LABEL);
+    await choose(sheet, FACU.id);
+    expect(render$).toHaveBeenCalledTimes(1);
+
+    await finish();
+    expect(group).toHaveAttribute("aria-pressed", "true");
+    expect(within(sheet).getByRole("img", { name: LOLLA_ALT })).toBeInTheDocument();
+    expect(personal).not.toHaveAttribute("aria-disabled", "true");
+
+    personal.focus();
+    await press(sheet, PERSONAL_OPTION_LABEL);
+    await finish();
+
+    // The same buttons, never unmounted: the focus stays where it was.
+    expect(options(sheet).personal).toBe(personal);
+    expect(document.activeElement).toBe(personal);
+    expect(personal).toHaveAttribute("aria-pressed", "true");
+    expect(group).toHaveAttribute("aria-pressed", "false");
+    expect(render$).toHaveBeenCalledTimes(2);
+    expect(drawnGroup(1)).toBeUndefined();
+    expect(screen.getByRole("dialog")).toBe(sheet);
+    expect(within(sheet).getByRole("img", { name: PREVIEW_ALT })).toBeInTheDocument();
+    // No picker for the personal one.
+    expect(sheetPicker(sheet)).toBeNull();
+  });
+
+  it("test-wallpaper-sheet-null-groups-personal: con groups null genera el personal al abrir, sin pregunta", async () => {
+    renderButton(new Set(["fri-flow-1800"]), null, undefined);
+
+    const sheet = await openSheet();
+
+    expect(render$).toHaveBeenCalledTimes(1);
+    expect(drawnGroup(0)).toBeUndefined();
+    expect(within(sheet).queryByText(WALLPAPER_CHOICE_LABEL)).toBeNull();
+    expect(within(sheet).queryByRole("button", { name: WITH_FRIENDS_OPTION_LABEL })).toBeNull();
+    expect(within(sheet).getByRole("img", { name: PREVIEW_ALT })).toBeInTheDocument();
+  });
+
+  it("test-wallpaper-sheet-default-from-picker: Con amigos dibuja el grupo del selector de la grilla, y el selector de la hoja lo muestra y lo cambia", async () => {
+    renderButton(new Set(["fri-flow-1800"]), [LOLLA, FACU], FACU.id);
+
+    const sheet = await openSheet();
+    // The picker only shows up for "Con amigos".
+    expect(sheetPicker(sheet)).toBeNull();
+    await press(sheet, WITH_FRIENDS_OPTION_LABEL);
+
+    expect(drawnGroup(0)).toStrictEqual({
+      name: "Facu y cía",
+      byShow: { "fri-perrys-1815": ["FR"] },
+    });
+    const picker = sheetPicker(sheet)!;
+    expect(picker).toHaveValue(FACU.id);
+    // Without "Sin grupo": the wallpaper of a group always has a group.
+    expect(
+      within(picker)
+        .getAllByRole("option")
+        .map((option) => option.textContent),
+    ).toEqual(["Los del Lolla", "Facu y cía"]);
+    expect(within(sheet).getByRole("img", { name: /con Facu y cía$/ })).toBeInTheDocument();
+    expect(file$).toHaveBeenLastCalledWith(BLOB, "mi-grilla-viernes-facu-y-cia.png");
+
+    await choose(sheet, LOLLA.id);
+
+    expect(render$).toHaveBeenCalledTimes(2);
+    expect(drawnGroup(1)?.name).toBe("Los del Lolla");
+    expect(picker).toHaveValue(LOLLA.id);
+    expect(within(sheet).getByRole("img", { name: LOLLA_ALT })).toBeInTheDocument();
+    expect(file$).toHaveBeenLastCalledWith(BLOB, GROUP_FILE_NAME);
+    // The redraw released the previous preview.
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:wallpaper-1");
+  });
+
+  it("test-wallpaper-sheet-single-group-no-picker: con un solo grupo, Con amigos dibuja ese grupo y no hay selector", async () => {
+    renderButton(new Set(["fri-flow-1800"]), [LOLLA], LOLLA.id);
+
+    const sheet = await openSheet();
+    await press(sheet, WITH_FRIENDS_OPTION_LABEL);
+
+    expect(drawnGroup(0)?.name).toBe("Los del Lolla");
+    expect(sheetPicker(sheet)).toBeNull();
+    expect(within(sheet).queryByRole("combobox")).toBeNull();
+    expect(within(sheet).getByRole("img", { name: LOLLA_ALT })).toBeInTheDocument();
+  });
+
+  it("test-wallpaper-sheet-no-group-uses-latest: con Sin grupo en la grilla, Con amigos dibuja el grupo más reciente", async () => {
+    renderButton(new Set(["fri-flow-1800"]), [LOLLA, FACU], null);
+
+    const sheet = await openSheet();
+    await press(sheet, WITH_FRIENDS_OPTION_LABEL);
+
+    expect(drawnGroup(0)?.name).toBe("Los del Lolla");
+    expect(sheetPicker(sheet)).toHaveValue(LOLLA.id);
+  });
+
+  it("test-wallpaper-sheet-no-groups-direct: sin grupos genera el personal al abrir, sin pregunta", async () => {
+    renderButton(new Set(["fri-flow-1800"]), [], undefined);
+
+    const sheet = await openSheet();
+
+    expect(render$).toHaveBeenCalledTimes(1);
+    expect(drawnGroup(0)).toBeUndefined();
+    expect(within(sheet).queryByText(WALLPAPER_CHOICE_LABEL)).toBeNull();
+    expect(within(sheet).queryByRole("button", { name: PERSONAL_OPTION_LABEL })).toBeNull();
+    expect(file$).toHaveBeenCalledWith(BLOB, FILE_NAME);
+  });
+
+  it("test-wallpaper-sheet-personal-option: Grilla sola dibuja sin group y con el nombre de archivo personal", async () => {
+    renderButton(new Set(["fri-flow-1800"]), [LOLLA], LOLLA.id);
+
+    const sheet = await openSheet();
+    await press(sheet, PERSONAL_OPTION_LABEL);
+
+    expect(render$).toHaveBeenCalledTimes(1);
+    const input = render$.mock.calls[0]![0];
+    expect(input).not.toHaveProperty("group");
+    expect([...input.selectedIds]).toStrictEqual(["fri-flow-1800"]);
+    expect(file$).toHaveBeenCalledWith(BLOB, FILE_NAME);
+    expect(options(sheet).personal).toHaveAttribute("aria-pressed", "true");
+    expect(within(sheet).getByRole("img", { name: PREVIEW_ALT })).toBeInTheDocument();
+
+    await press(sheet, DOWNLOAD_IMAGE_LABEL);
+    expect(download$).toHaveBeenCalledWith(BLOB, FILE_NAME);
+    expect(guideItems(sheet)).toStrictEqual([...WALLPAPER_GUIDE_STEPS.download]);
+  });
+
+  it("test-wallpaper-sheet-draft-and-saved-picks: el show marcado sin guardar va en selectedIds y las iniciales de Bruno salen de sus showIds guardados", async () => {
+    // The draft on screen: DJO saved, Easykid marked and not saved yet.
+    renderButton(new Set(["fri-flow-1800", "fri-perrys-1815"]), [LOLLA], LOLLA.id);
+
+    const sheet = await openSheet();
+    await press(sheet, WITH_FRIENDS_OPTION_LABEL);
+
+    const input = render$.mock.calls[0]![0];
+    expect([...input.selectedIds].sort()).toStrictEqual(["fri-flow-1800", "fri-perrys-1815"]);
+    expect(drawnGroup(0)).toStrictEqual({
+      name: "Los del Lolla",
+      byShow: { "fri-flow-1800": ["AP", "BG"], "fri-samsung-1700": ["BG"] },
+    });
+  });
+
+  it("test-wallpaper-sheet-group-share: con share de archivos, el fondo del grupo se llama mi-grilla-viernes-los-del-lolla.png y se entrega con Guardar en Fotos", async () => {
+    canShare$.mockReturnValue(true);
+    renderButton(new Set(["fri-flow-1800"]), [LOLLA], LOLLA.id);
+
+    const sheet = await openSheet();
+    await press(sheet, WITH_FRIENDS_OPTION_LABEL);
+
+    expect(file$).toHaveBeenCalledWith(BLOB, GROUP_FILE_NAME);
+    await press(sheet, SAVE_TO_PHOTOS_LABEL);
+
+    expect(share$).toHaveBeenCalledTimes(1);
+    expect(share$.mock.calls[0]![0].name).toBe(GROUP_FILE_NAME);
+    expect(download$).not.toHaveBeenCalled();
+    expect(guideItems(sheet)).toStrictEqual([...WALLPAPER_GUIDE_STEPS.share]);
+    expect(liveRegion(sheet)).toHaveTextContent(WALLPAPER_DONE_LABEL);
+  });
+
+  it("test-wallpaper-sheet-picker-rejects-invalid: un valor inválido en el selector de la hoja se rechaza y no redibuja", async () => {
+    renderButton(new Set(["fri-flow-1800"]), [LOLLA, FACU], LOLLA.id);
+
+    const sheet = await openSheet();
+    await press(sheet, WITH_FRIENDS_OPTION_LABEL);
+    const picker = sheetPicker(sheet)!;
+
+    // Values the options do not carry, as a tampered DOM would send them.
+    for (const value of ["33333333-3333-4333-8333-333333333333", ""]) {
+      const forged = document.createElement("option");
+      forged.value = value;
+      picker.append(forged);
+      await choose(sheet, value);
+    }
+
+    expect(render$).toHaveBeenCalledTimes(1);
+    expect(picker).toHaveValue(LOLLA.id);
+    expect(within(sheet).getByRole("img", { name: LOLLA_ALT })).toBeInTheDocument();
+  });
+
+  it("test-wallpaper-sheet-retry-keeps-group: tras ENCODE_FAILED, Reintentar redibuja con el mismo grupo", async () => {
+    render$.mockResolvedValueOnce({ ok: false, code: "ENCODE_FAILED" });
+    render$.mockResolvedValueOnce({ ok: false, code: "ENCODE_FAILED" });
+    renderButton(new Set(["fri-flow-1800"]), [LOLLA, FACU], FACU.id);
+
+    const sheet = await openSheet();
+    await press(sheet, WITH_FRIENDS_OPTION_LABEL);
+    expect(within(sheet).getByRole("alert")).toHaveTextContent(
+      wallpaperMessageFor("ENCODE_FAILED"),
+    );
+
+    // Another group chosen in the sheet, which fails too: the retry draws that one.
+    await choose(sheet, LOLLA.id);
+    expect(drawnGroup(1)?.name).toBe("Los del Lolla");
+    await press(sheet, RETRY_LABEL);
+
+    expect(render$).toHaveBeenCalledTimes(3);
+    expect(render$.mock.calls[2]![0]).toStrictEqual(render$.mock.calls[1]![0]);
+    expect(options(sheet).group).toHaveAttribute("aria-pressed", "true");
+    expect(within(sheet).getByRole("img", { name: LOLLA_ALT })).toBeInTheDocument();
+    expect(file$).toHaveBeenLastCalledWith(BLOB, GROUP_FILE_NAME);
+  });
+
+  it("test-wallpaper-sheet-retap-option: tocar la opción que ya está en pantalla no redibuja ni revoca su URL; tras un fallo, tocarla reintenta", async () => {
+    renderButton(new Set(["fri-flow-1800"]), [LOLLA], LOLLA.id);
+
+    const sheet = await openSheet();
+    await press(sheet, WITH_FRIENDS_OPTION_LABEL);
+    expect(render$).toHaveBeenCalledTimes(1);
+    const preview = within(sheet).getByRole("img", { name: LOLLA_ALT });
+    expect(preview).toHaveAttribute("src", "blob:wallpaper-1");
+
+    // Already on screen: no second drawing, and the preview's URL stays alive.
+    await press(sheet, WITH_FRIENDS_OPTION_LABEL);
+    expect(render$).toHaveBeenCalledTimes(1);
+    expect(revokeObjectURL).not.toHaveBeenCalled();
+    expect(within(sheet).getByRole("img", { name: LOLLA_ALT })).toHaveAttribute(
+      "src",
+      "blob:wallpaper-1",
+    );
+
+    // "Grilla sola" fails: tapping it again is a retry, not "already on screen".
+    render$.mockResolvedValueOnce({ ok: false, code: "ENCODE_FAILED" });
+    await press(sheet, PERSONAL_OPTION_LABEL);
+    expect(render$).toHaveBeenCalledTimes(2);
+    expect(within(sheet).getByRole("alert")).toHaveTextContent(
+      wallpaperMessageFor("ENCODE_FAILED"),
+    );
+    await press(sheet, PERSONAL_OPTION_LABEL);
+    expect(render$).toHaveBeenCalledTimes(3);
+    expect(drawnGroup(2)).toBeUndefined();
+    expect(within(sheet).getByRole("img", { name: PREVIEW_ALT })).toBeInTheDocument();
+  });
+
+  it("test-wallpaper-sheet-late-result-dropped: un redibujo que termina después de cerrar la hoja no se muestra y su URL queda revocada", async () => {
+    const finish = deferredRender();
+    renderButton(new Set(["fri-flow-1800"]), [LOLLA], LOLLA.id);
+
+    let sheet = await openSheet();
+    await press(sheet, WITH_FRIENDS_OPTION_LABEL);
+    await finish();
+    expect(within(sheet).getByRole("img", { name: LOLLA_ALT })).toHaveAttribute(
+      "src",
+      "blob:wallpaper-1",
+    );
+
+    // A redraw for "Grilla sola", closed before it ends.
+    await press(sheet, PERSONAL_OPTION_LABEL);
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:wallpaper-1");
+    await closeSheet();
+    await finish();
+
+    expect(createObjectURL).toHaveBeenCalledTimes(1);
+    // Opened again: back to the question, nothing pressed and nothing drawn.
+    sheet = await openSheet();
+    expect(render$).toHaveBeenCalledTimes(2);
+    expect(within(sheet).queryByRole("img")).not.toBeInTheDocument();
+    expect(options(sheet).personal).toHaveAttribute("aria-pressed", "false");
+    expect(options(sheet).group).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("test-wallpaper-sheet-action-sticky: la acción principal queda fija abajo del cuerpo con scroll, opaca y sin doblar la safe area, generando, lista y tras un fallo, con grupo y sin grupo", async () => {
+    /** The action's box: the same element in every state, stuck to the bottom of the body. */
+    function expectSticky(button: HTMLElement): HTMLElement {
+      const box = button.parentElement!;
+      // jsdom has no layout: the stickiness is read from the classes.
+      expect(box).toHaveClass("sticky", "bottom-0", "bg-card");
+      // Inside the body that scrolls, so the preview and the question scroll above it.
+      const body = box.closest(".overflow-y-auto");
+      expect(body).not.toBeNull();
+      expect(body).toHaveClass("overscroll-contain");
+      // The drawer already pads the home indicator: neither the box nor the body pads it again.
+      expect(box.className).not.toContain("safe-area-inset-bottom");
+      expect(body!.className).not.toContain("safe-area-inset-bottom");
+      // Still out of the sheet's drag, and 44 px or more.
+      expect(button.closest("[data-vaul-no-drag]")).not.toBeNull();
+      expect(button).toHaveClass("h-12");
+      return box;
+    }
+
+    // With a group: generating, failed (Reintentar) and ready keep the same box, no jump.
+    const finish = deferredRender();
+    renderButton(new Set(["fri-flow-1800"]), [LOLLA, FACU], LOLLA.id);
+    let sheet = await openSheet();
+    await press(sheet, WITH_FRIENDS_OPTION_LABEL);
+    const box = expectSticky(within(sheet).getByRole("button", { name: GENERATING_LABEL }));
+    await finish({ ok: false, code: "ENCODE_FAILED" });
+    expect(expectSticky(within(sheet).getByRole("button", { name: RETRY_LABEL }))).toBe(box);
+    await press(sheet, RETRY_LABEL);
+    await finish();
+    expect(expectSticky(within(sheet).getByRole("button", { name: DOWNLOAD_IMAGE_LABEL }))).toBe(
+      box,
+    );
+    cleanup();
+
+    // The personal one, without groups, is stuck the same way.
+    render$.mockReset();
+    render$.mockResolvedValue(OK);
+    renderButton();
+    sheet = await openSheet();
+    expectSticky(within(sheet).getByRole("button", { name: DOWNLOAD_IMAGE_LABEL }));
   });
 });

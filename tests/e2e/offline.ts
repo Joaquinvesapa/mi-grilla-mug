@@ -23,15 +23,19 @@ export async function expectChosen(page: Page, showId: string, chosen: boolean) 
   await expect(showBlock(page, showId)).toHaveAttribute("aria-pressed", String(chosen));
 }
 
+/** The fields of the device copy the specs read; `groups` only once `/` stored them (ADR-008). */
+type DeviceCopy = {
+  userId: string;
+  userName: string;
+  savedShowIds: string[];
+  groups?: { id: string; name: string }[];
+};
+
 /** The device copy as stored, or `null`. */
-export async function readDeviceCopy(
-  page: Page,
-): Promise<{ userId: string; userName: string; savedShowIds: string[] } | null> {
+export async function readDeviceCopy(page: Page): Promise<DeviceCopy | null> {
   return page.evaluate((key) => {
     const raw = localStorage.getItem(key);
-    return raw
-      ? (JSON.parse(raw) as { userId: string; userName: string; savedShowIds: string[] })
-      : null;
+    return raw ? (JSON.parse(raw) as DeviceCopy) : null;
   }, SNAPSHOT_KEY);
 }
 

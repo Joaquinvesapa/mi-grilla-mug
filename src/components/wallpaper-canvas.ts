@@ -63,19 +63,23 @@ async function loadFonts(family: string): Promise<boolean> {
   }
 }
 
-/** A rounded rectangle path, with `roundRect` when the context has it (older WebKit does not). */
+/**
+ * A filled rounded rectangle, with `roundRect` when the context has it (older WebKit does not).
+ * The blocks use `BLOCK_RADIUS`; the badges, their own `radius`.
+ */
 function roundedRect(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
   width: number,
   height: number,
+  cornerRadius: number,
 ): void {
   ctx.beginPath();
   if (typeof ctx.roundRect === "function") {
-    ctx.roundRect(x, y, width, height, BLOCK_RADIUS);
+    ctx.roundRect(x, y, width, height, cornerRadius);
   } else {
-    const radius = Math.min(BLOCK_RADIUS, width / 2, height / 2);
+    const radius = Math.min(cornerRadius, width / 2, height / 2);
     ctx.moveTo(x + radius, y);
     ctx.arcTo(x + width, y, x + width, y + height, radius);
     ctx.arcTo(x + width, y + height, x, y + height, radius);
@@ -116,15 +120,27 @@ function draw(ctx: CanvasRenderingContext2D, layout: WallpaperLayout): void {
     // The block and its text share the alpha: a show that was not chosen is dimmed as a whole.
     ctx.globalAlpha = block.lit ? 1 : DIMMED_OPACITY;
     ctx.fillStyle = FOAM;
-    roundedRect(ctx, block.x, block.y, block.width, block.height);
+    roundedRect(ctx, block.x, block.y, block.width, block.height, BLOCK_RADIUS);
     for (const line of block.lines) {
       drawText(ctx, line);
     }
     if (block.time) {
       drawText(ctx, block.time);
     }
+    // The friends' badges are always at full opacity, even on a dimmed show (NFR-03). Their label
+    // is already centered by the layout: it is painted where it is, nothing is measured here.
+    ctx.globalAlpha = 1;
+    for (const badge of block.badges) {
+      ctx.fillStyle = badge.fill;
+      roundedRect(ctx, badge.x, badge.y, badge.width, badge.height, badge.radius);
+      drawText(ctx, badge.label);
+    }
   }
   ctx.globalAlpha = 1;
+  // The group's name, untrusted text, only ever reaches the image through `fillText` (R-02).
+  if (layout.groupLabel) {
+    drawText(ctx, layout.groupLabel);
+  }
 }
 
 /** The canvas as a PNG Blob, or `null` when the browser cannot encode it (or refuses to). */

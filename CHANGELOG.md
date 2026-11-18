@@ -71,8 +71,17 @@ Todos los cambios notables de Mi Grilla se registran en este archivo. El formato
   recuerda en el celular; la primera vez se muestra el grupo al que se unió último.
 - [FEAT-006c] Sin conexión, el selector y las iniciales usan los últimos datos del grupo cargados;
   cerrar sesión borra esos datos del celular.
+- [FEAT-007] Fondo de pantalla del grupo: si el usuario está en algún grupo, "Descargar fondo"
+  pregunta "Grilla sola" o "Con amigos". "Con amigos" dibuja el fondo con el nombre del grupo y, en
+  cada show, las iniciales de los amigos que lo eligieron (hasta 3 y "+N"), también en los shows
+  opacos. Usa el grupo del selector de la grilla o, con "Sin grupo", el último al que se unió; con
+  2 o más grupos se puede cambiar en la hoja. Se descarga como `mi-grilla-<día>-<grupo>.png`.
+- [FEAT-007] Sin conexión, el fondo del grupo se genera con los últimos datos del grupo cargados.
 
 ### Changed
+
+- [FEAT-007] En la hoja de "Descargar fondo", el botón principal ("Guardar en Fotos", "Descargar
+  imagen", "Reintentar") queda fijo abajo y siempre visible, también en el fondo personal.
 
 - [FEAT-006b] El mensaje para quien no administra un grupo pasa a ser genérico ("Solo quien
   administra el grupo puede hacer esto."), y "Generar link nuevo" lee el permiso del administrador
