@@ -2,6 +2,9 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/rea
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { LIVE_BUTTON_CLEARANCE_PX, ScheduleGrid } from "@/components/schedule-grid";
+import { posterTimeToInstant } from "@/lib/festival-time";
+import type { FriendPicks } from "@/lib/group-picks";
+import type { Show } from "@/lib/schedule-types";
 
 import { blockOf, DAYS, showsOf, STAGES } from "./schedule-fixture";
 
@@ -9,11 +12,36 @@ afterEach(cleanup);
 
 const FRIDAY = DAYS[0]!;
 const CLASH_TEXT = "Choca con otro show elegido";
+const SUNDAY = DAYS[2]!;
+
+function friend(name: string, initials: string): FriendPicks {
+  return { name, initials, showIds: [] };
+}
+
+/** Sunday's two 20-minute Kidzapalooza shows, as in data/schedule.json: 10 minutes apart. */
+function sundayShort(id: string, start: string, end: string): Show {
+  return {
+    id,
+    dayId: "sun",
+    stageId: "kidzapalooza",
+    artist: "Show corto",
+    subtitle: null,
+    startsAt: posterTimeToInstant(SUNDAY.date, start).toISOString(),
+    endsAt: posterTimeToInstant(SUNDAY.date, end).toISOString(),
+  };
+}
+
+/** The chips of a block's initials row, as drawn. */
+function chipsOf(block: HTMLElement): string[] {
+  const row = block.querySelector("[data-friend-picks]");
+  return [...(row?.children ?? [])].map((chip) => chip.textContent ?? "");
+}
 
 function renderFriday({
   selected = [] as string[],
   pending = [] as string[],
   clashes = [] as string[],
+  friendPicks = new Map<string, FriendPicks[]>(),
   onToggle = vi.fn<(showId: string) => void>(),
 } = {}) {
   const view = render(
@@ -24,6 +52,7 @@ function renderFriday({
       selectedIds={new Set(selected)}
       pendingIds={new Set(pending)}
       clashIds={new Set(clashes)}
+      friendPicks={friendPicks}
       onToggle={onToggle}
     />,
   );
@@ -150,6 +179,7 @@ describe("ScheduleGrid", () => {
         selectedIds={new Set()}
         pendingIds={new Set()}
         clashIds={new Set()}
+        friendPicks={new Map()}
         onToggle={() => {}}
       />,
     );
@@ -210,5 +240,233 @@ describe("ScheduleGrid", () => {
     expect(block).toHaveAttribute("data-pressed", "true");
     fireEvent.pointerCancel(block);
     expect(block).not.toHaveAttribute("data-pressed");
+  });
+
+  it("test-grid-friend-initials: con un grupo elegido, el bloque muestra las iniciales de quienes lo eligieron y su descripción las nombra", () => {
+    const { container } = renderFriday({
+      selected: ["fri-perrys-1815"],
+      friendPicks: new Map([
+        ["fri-flow-1800", [friend("Ana Pérez", "AP"), friend("Bruno", "B")]],
+        ["fri-perrys-1815", [friend("Carla Díaz", "CD")]],
+      ]),
+    });
+
+    const block = blockOf(container, "fri-flow-1800");
+    const row = block.querySelector("[data-friend-picks]");
+    expect(row).not.toBeNull();
+    // Decorative: the description names them, so a screen reader does not read "AP B" too.
+    expect(row).toHaveAttribute("aria-hidden", "true");
+    expect(chipsOf(block)).toEqual(["AP", "B"]);
+    for (const chip of row?.children ?? []) {
+      expect(chip).toHaveClass("text-[12px]", "bg-rp-overlay", "text-foreground");
+    }
+    // Below the time line, which stays visible (FR-03 of FEAT-003a).
+    const timeLine = block.querySelector("[data-time-line]");
+    expect(timeLine).toHaveTextContent("18:00 – 19:00");
+    expect(timeLine?.compareDocumentPosition(row!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(block).toHaveAccessibleDescription("Lo eligieron: Ana Pérez, Bruno");
+    // The name does not change: the show first, the friends in the description.
+    expect(block).toHaveAccessibleName("DJO 18:00 – 19:00");
+
+    // On a chosen (foam) block the chips darken the foam instead.
+    const chosen = blockOf(container, "fri-perrys-1815");
+    const chosenChip = chosen.querySelector("[data-friend-picks]")?.firstElementChild;
+    expect(chosenChip).toHaveClass("bg-rp-base/25");
+    expect(chosenChip).not.toHaveClass("bg-rp-overlay");
+    expect(chosen).toHaveAccessibleDescription("Lo eligieron: Carla Díaz");
+  });
+
+  it("test-grid-friend-initials: con choque y amigos, el ícono sigue en el horario y la descripción suma las dos cosas", () => {
+    const { container } = renderFriday({
+      selected: ["fri-flow-1800", "fri-perrys-1815"],
+      clashes: ["fri-flow-1800", "fri-perrys-1815"],
+      friendPicks: new Map([["fri-flow-1800", [friend("Ana Pérez", "AP")]]]),
+    });
+
+    const block = blockOf(container, "fri-flow-1800");
+    expect(block.querySelector("[data-time-line] svg.lucide-triangle-alert")).not.toBeNull();
+    expect(block.querySelector("[data-friend-picks] svg")).toBeNull();
+    expect(block).toHaveAccessibleDescription(/Choca con otro show elegido/);
+    expect(block).toHaveAccessibleDescription(/Lo eligieron: Ana Pérez/);
+    expect(block).toHaveAccessibleName("DJO 18:00 – 19:00");
+  });
+
+  it('test-grid-friend-extra: con 5 amigos el bloque muestra 3 iniciales y "+2"', () => {
+    const five = [
+      friend("Ana", "A"),
+      friend("Bruno", "B"),
+      friend("Carla", "C"),
+      friend("Dani", "D"),
+      friend("Eva", "E"),
+    ];
+    const { container } = renderFriday({ friendPicks: new Map([["fri-flow-1800", five]]) });
+
+    const block = blockOf(container, "fri-flow-1800");
+    expect(chipsOf(block)).toEqual(["A", "B", "C", "+2"]);
+    // The description still names all five.
+    expect(block).toHaveAccessibleDescription("Lo eligieron: Ana, Bruno, Carla, Dani, Eva");
+  });
+
+  it("test-grid-friend-height: un bloque corto con amigos mide 60 px sin pasar del show siguiente y conserva el horario", () => {
+    const first = sundayShort("sun-kidzapalooza-1800", "18:00", "18:20");
+    const second = sundayShort("sun-kidzapalooza-1830", "18:30", "18:50");
+    const { container } = render(
+      <ScheduleGrid
+        day={SUNDAY}
+        stages={STAGES}
+        shows={[first, second]}
+        selectedIds={new Set()}
+        pendingIds={new Set()}
+        clashIds={new Set()}
+        friendPicks={new Map([[first.id, [friend("Ana Pérez", "AP")]]])}
+        onToggle={() => {}}
+      />,
+    );
+
+    const short = blockOf(container, first.id);
+    const next = blockOf(container, second.id);
+    // 20 minutes measure 44 px (the tap target); with the row of initials, 60 px, which is exactly
+    // where the next show of the stage starts (18:30, 60 px below).
+    expect(short.style.top).toBe("0px");
+    expect(short.style.height).toBe("60px");
+    expect(next.style.top).toBe("60px");
+    expect(within(short).getByText("18:00 – 18:20")).toBeVisible();
+    expect(chipsOf(short)).toEqual(["AP"]);
+    // Without friends the next one keeps its 44 px.
+    expect(next.style.height).toBe("44px");
+  });
+
+  it("test-grid-friend-height: con amigos y subtítulo, el subtítulo se recorta a 1 línea", () => {
+    const { container } = renderFriday({
+      friendPicks: new Map([["fri-kidzapalooza-1500", [friend("Ana Pérez", "AP")]]]),
+    });
+
+    const block = blockOf(container, "fri-kidzapalooza-1500");
+    expect(within(block).getByText("Franco y Mateo Trocca - B2B")).toHaveClass("line-clamp-1");
+    // Already taller than 60 px: it keeps its duration at scale.
+    expect(block.style.height).toBe("90px");
+    // The name keeps its own row.
+    expect(block.querySelector(":scope > span > span")).toHaveTextContent("Arjaus Crew");
+  });
+
+  it("test-grid-no-friends: sin amigos el bloque no tiene fila de iniciales y su nombre accesible no cambia", () => {
+    const { container } = renderFriday({
+      friendPicks: new Map([["fri-flow-1800", [friend("Ana Pérez", "AP")]]]),
+    });
+
+    expect(container.querySelectorAll("[data-friend-picks]")).toHaveLength(1);
+    const quiet = blockOf(container, "fri-samsung-1700");
+    expect(quiet.querySelector("[data-friend-picks]")).toBeNull();
+    expect(quiet).toHaveAccessibleName("Royel Otis 17:00 – 18:00");
+    expect(quiet).toHaveAccessibleDescription("");
+    expect(quiet.style.height).toBe("120px");
+
+    const plain = blockOf(container, "fri-kidzapalooza-1500");
+    expect(within(plain).getByText("Franco y Mateo Trocca - B2B")).not.toHaveClass("line-clamp-1");
+
+    // An empty map (no group, or "Sin grupo"): the grid as it was.
+    cleanup();
+    const empty = renderFriday();
+    expect(empty.container.querySelector("[data-friend-picks]")).toBeNull();
+    expect(blockOf(empty.container, "fri-flow-1800")).toHaveAccessibleName("DJO 18:00 – 19:00");
+  });
+
+  it("test-grid-short-name-clamp: un bloque corto con amigos recorta el nombre a 1 línea y conserva el nombre accesible completo", () => {
+    const first = {
+      ...sundayShort("sun-kidzapalooza-1800", "18:00", "18:20"),
+      artist: "¡Qué Lío, Hugo!",
+    };
+    const second = sundayShort("sun-kidzapalooza-1830", "18:30", "18:50");
+    const { container } = render(
+      <ScheduleGrid
+        day={SUNDAY}
+        stages={STAGES}
+        shows={[first, second]}
+        selectedIds={new Set()}
+        pendingIds={new Set()}
+        clashIds={new Set()}
+        friendPicks={new Map([[first.id, [friend("Ana Pérez", "AP")]]])}
+        onToggle={() => {}}
+      />,
+    );
+
+    const short = blockOf(container, first.id);
+    // 60 px: under the 76 px the name needs in 2 lines with the time line and the initials.
+    expect(short.style.height).toBe("60px");
+    const name = short.querySelector(":scope > span > span");
+    expect(name).toHaveTextContent("¡Qué Lío, Hugo!");
+    expect(name).toHaveClass("line-clamp-1");
+    // The clamp is only visual: the accessible name is still the whole name and the time.
+    expect(short).toHaveAccessibleName("¡Qué Lío, Hugo! 18:00 – 18:20");
+    expect(within(short).getByText("18:00 – 18:20")).toBeVisible();
+    // The next one has no friends: its name is not clamped.
+    const next = blockOf(container, second.id);
+    expect(next.querySelector(":scope > span > span")).not.toHaveClass("line-clamp-1");
+  });
+
+  it("test-grid-short-name-clamp: con amigos, un bloque de 75 px recorta el nombre y uno de 76 px no", () => {
+    const at = (minutes: number): Show => {
+      const start = posterTimeToInstant(SUNDAY.date, "18:00");
+      return {
+        ...sundayShort(`sun-kidzapalooza-${minutes}`, "18:00", "18:20"),
+        // 2 px per minute: 37.5 minutes measure 75 px, 38 minutes 76 px.
+        endsAt: new Date(start.getTime() + minutes * 60_000).toISOString(),
+      };
+    };
+    const nameOf = (minutes: number) => {
+      const show = at(minutes);
+      const { container } = render(
+        <ScheduleGrid
+          day={SUNDAY}
+          stages={STAGES}
+          shows={[show]}
+          selectedIds={new Set()}
+          pendingIds={new Set()}
+          clashIds={new Set()}
+          friendPicks={new Map([[show.id, [friend("Ana Pérez", "AP")]]])}
+          onToggle={() => {}}
+        />,
+      );
+      const block = blockOf(container, show.id);
+      return { height: block.style.height, name: block.querySelector(":scope > span > span") };
+    };
+
+    const short = nameOf(37.5);
+    expect(short.height).toBe("75px");
+    expect(short.name).toHaveClass("line-clamp-1");
+    cleanup();
+    const tall = nameOf(38);
+    expect(tall.height).toBe("76px");
+    expect(tall.name).not.toHaveClass("line-clamp-1");
+  });
+
+  it("test-grid-tall-name-unclamped: un bloque con amigos y altura suficiente, o sin amigos, no recorta el nombre", () => {
+    const { container } = renderFriday({
+      friendPicks: new Map([
+        // 45 minutes: 90 px, enough for the name in 2 lines.
+        ["fri-kidzapalooza-1500", [friend("Ana Pérez", "AP")]],
+        ["fri-flow-1800", [friend("Bruno", "B")]],
+      ]),
+    });
+
+    for (const id of ["fri-kidzapalooza-1500", "fri-flow-1800", "fri-samsung-1700"]) {
+      const name = blockOf(container, id).querySelector(":scope > span > span");
+      expect(name).not.toHaveClass("line-clamp-1");
+    }
+    expect(blockOf(container, "fri-flow-1800")).toHaveAccessibleName("DJO 18:00 – 19:00");
+  });
+
+  it("test-grid-time-line-height: la línea del horario tiene leading-tight y no hereda el alto de línea del body", () => {
+    const { container } = renderFriday({
+      friendPicks: new Map([["fri-flow-1800", [friend("Ana Pérez", "AP")]]]),
+    });
+
+    const lines = container.querySelectorAll("[data-time-line]");
+    expect(lines.length).toBeGreaterThan(0);
+    for (const line of lines) {
+      // 12 px × 1.25 = 15 px: the line itself carries the 12 px, or its strut keeps the inherited
+      // 16 px and measures 20 px even with leading-tight.
+      expect(line).toHaveClass("text-[12px]", "leading-tight");
+    }
   });
 });

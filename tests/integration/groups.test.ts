@@ -59,6 +59,21 @@ async function groupCountOf(userId: string): Promise<number> {
   return rows[0]?.count ?? -1;
 }
 
+/** Seeded show ids (the base is migrated and seeded), sorted as the query sorts them. */
+async function seededShowIds(): Promise<string[]> {
+  const rows = await getDb().$queryRaw<{ id: string }[]>`SELECT id FROM shows ORDER BY id`;
+  expect(rows.length, "seeded shows (pnpm db:seed)").toBeGreaterThanOrEqual(6);
+  return rows.map((row) => row.id);
+}
+
+/** A saved selection, straight in `selected_shows`. */
+async function saveSelection(userId: string, showIds: string[]): Promise<void> {
+  for (const showId of showIds) {
+    await getDb().$executeRaw`
+      INSERT INTO selected_shows (user_id, show_id) VALUES (${userId}, ${showId})`;
+  }
+}
+
 /** The group's members as the database has them, oldest first. */
 async function membersOf(groupId: string): Promise<{ user_id: string; is_admin: boolean }[]> {
   return getDb().$queryRaw<{ user_id: string; is_admin: boolean }[]>`
@@ -497,6 +512,179 @@ describe("groups", () => {
       INSERT INTO group_members (group_id, user_id, is_admin, joined_at)
       VALUES (${groupId}, ${beto}, false, ${clock})`;
     expect(await memberCount(groupId)).toBe(2);
+  });
+});
+
+describe("listGroupPicks", () => {
+  it("test-groups-picks-friends — listGroupPicks devuelve los demás integrantes con su selección guardada y sin el propio usuario", async () => {
+    const [s1 = "", s2 = "", s3 = ""] = await seededShowIds();
+    const ana = await createUser("ana", "Ana Pérez");
+    const beto = await createUser("beto", "Bruno");
+    const carla = await createUser("carla", "Carla Sofía Ruiz");
+    const groupId = await createGroupOf(ana, "Los del Lolla");
+    const token = await tokenOf(ana, groupId);
+    clock = new Date(START.getTime() + MINUTE_MS);
+    expect((await groups.joinGroup(beto, token)).ok).toBe(true);
+    clock = new Date(START.getTime() + 2 * MINUTE_MS);
+    expect((await groups.joinGroup(carla, token)).ok).toBe(true);
+    await saveSelection(ana, [s1]);
+    await saveSelection(beto, [s3, s1]);
+    await saveSelection(carla, [s2]);
+
+    expect(await groups.listGroupPicks(ana)).toStrictEqual({
+      ok: true,
+      groups: [
+        {
+          id: groupId,
+          name: "Los del Lolla",
+          friends: [
+            { name: "Bruno", initials: "BR", showIds: [s1, s3] },
+            { name: "Carla Sofía Ruiz", initials: "CR", showIds: [s2] },
+          ],
+        },
+      ],
+    });
+    // From Bruno's side, Ana is a friend and he is not.
+    const fromBeto = await groups.listGroupPicks(beto);
+    expect(fromBeto.ok && fromBeto.groups[0]?.friends.map((friend) => friend.name)).toStrictEqual([
+      "Ana Pérez",
+      "Carla Sofía Ruiz",
+    ]);
+    expect(logged).toStrictEqual([]);
+  });
+
+  it("test-groups-picks-order — listGroupPicks ordena los grupos del más reciente al más viejo y los amigos por fecha de unión", async () => {
+    const ana = await createUser("ana", "Ana Pérez");
+    const beto = await createUser("beto", "Bruno");
+    const dani = await createUser("dani", "Dani");
+    // Their ids sort opposite to their names and to the order they join in, so only the
+    // user-id tie-break can put Valen first.
+    const valen = await createUser("friend-a", "Valen");
+    const bauti = await createUser("friend-b", "Bauti");
+
+    clock = new Date(START.getTime() + 1 * MINUTE_MS);
+    const g1 = await createGroupOf(ana, "Uno");
+    clock = new Date(START.getTime() + 2 * MINUTE_MS);
+    const g2 = await createGroupOf(beto, "Dos");
+    const g2Token = await tokenOf(beto, g2);
+    clock = new Date(START.getTime() + 3 * MINUTE_MS);
+    expect((await groups.joinGroup(ana, g2Token)).ok).toBe(true);
+    expect((await groups.joinGroup(dani, g2Token)).ok).toBe(true);
+    // Two friends (not the viewer) join at the same instant: the tie is broken by user id.
+    clock = new Date(START.getTime() + 4 * MINUTE_MS);
+    expect((await groups.joinGroup(bauti, g2Token)).ok).toBe(true);
+    expect((await groups.joinGroup(valen, g2Token)).ok).toBe(true);
+    // Two groups created at the same instant: the tie is broken by group id.
+    clock = new Date(START.getTime() + 5 * MINUTE_MS);
+    const g3 = await createGroupOf(ana, "Tres");
+    const g4 = await createGroupOf(ana, "Cuatro");
+    const [tieFirst, tieSecond] = [g3, g4].sort();
+
+    const result = await groups.listGroupPicks(ana);
+    expect(result.ok).toBe(true);
+    const list = result.ok ? result.groups : [];
+    // The first one is the group Ana joined last (FR-04).
+    expect(list.map((group) => group.id)).toStrictEqual([tieFirst, tieSecond, g2, g1]);
+    expect(
+      list.find((group) => group.id === g2)?.friends.map((friend) => friend.name),
+    ).toStrictEqual(["Bruno", "Dani", "Valen", "Bauti"]);
+  });
+
+  it("test-groups-picks-privacy — listGroupPicks no incluye a quien está en otro grupo ni grupos ajenos", async () => {
+    const [s1 = "", s2 = "", , , s5 = "", s6 = ""] = await seededShowIds();
+    const ana = await createUser("ana", "Ana Pérez");
+    const beto = await createUser("beto", "Bruno");
+    const tercero = await createUser("tercero", "Tercero Ajeno");
+    const ours = await createGroupOf(ana, "Los del Lolla");
+    expect((await groups.joinGroup(beto, await tokenOf(ana, ours))).ok).toBe(true);
+    // A third user, in another group with Bruno, with a saved selection of their own.
+    const theirs = await createGroupOf(tercero, "Grupo ajeno");
+    const theirsWithBeto = await createGroupOf(tercero, "Otro ajeno");
+    expect((await groups.joinGroup(beto, await tokenOf(tercero, theirsWithBeto))).ok).toBe(true);
+    await saveSelection(tercero, [s5, s6]);
+    await saveSelection(beto, [s1, s2]);
+
+    const result = await groups.listGroupPicks(ana);
+    expect(result).toStrictEqual({
+      ok: true,
+      groups: [
+        {
+          id: ours,
+          name: "Los del Lolla",
+          friends: [{ name: "Bruno", initials: "BR", showIds: [s1, s2] }],
+        },
+      ],
+    });
+    const text = JSON.stringify(result);
+    expect(text).not.toContain("Tercero");
+    expect(text).not.toContain(theirs);
+    expect(text).not.toContain(theirsWithBeto);
+    expect(text).not.toContain(s5);
+    expect(text).not.toContain(s6);
+
+    // The unauthorized side: the third user does not get Ana's group nor her selection.
+    const fromTercero = await groups.listGroupPicks(tercero);
+    expect(JSON.stringify(fromTercero)).not.toContain(ours);
+    expect(JSON.stringify(fromTercero)).not.toContain("Ana");
+    // Someone in no group gets nothing.
+    expect(await groups.listGroupPicks(await createUser("nadie"))).toStrictEqual({
+      ok: true,
+      groups: [],
+    });
+  });
+
+  it("test-groups-picks-saved-only — listGroupPicks solo trae lo guardado en selected_shows", async () => {
+    const [s1 = "", s2 = "", s3 = ""] = await seededShowIds();
+    const ana = await createUser("ana", "Ana Pérez");
+    const beto = await createUser("beto", "Bruno");
+    const carla = await createUser("carla", "Carla");
+    const groupId = await createGroupOf(ana, "Los del Lolla");
+    const token = await tokenOf(ana, groupId);
+    expect((await groups.joinGroup(beto, token)).ok).toBe(true);
+    expect((await groups.joinGroup(carla, token)).ok).toBe(true);
+    await saveSelection(beto, [s2]);
+
+    const before = await groups.listGroupPicks(ana);
+    expect(before.ok && before.groups[0]?.friends).toStrictEqual([
+      { name: "Bruno", initials: "BR", showIds: [s2] },
+      // Carla saved nothing: she is a friend with an empty selection.
+      { name: "Carla", initials: "CA", showIds: [] },
+    ]);
+
+    // What Bruno saves next shows up; what he removes, disappears.
+    await saveSelection(beto, [s1, s3]);
+    await getDb().$executeRaw`
+      DELETE FROM selected_shows WHERE user_id = ${beto} AND show_id = ${s2}`;
+    const after = await groups.listGroupPicks(ana);
+    expect(after.ok && after.groups[0]?.friends[0]?.showIds).toStrictEqual([s1, s3]);
+  });
+
+  it("test-groups-picks-alone — un grupo sin otros integrantes aparece con friends vacío", async () => {
+    const [s1 = ""] = await seededShowIds();
+    const ana = await createUser("ana", "Ana Pérez");
+    await saveSelection(ana, [s1]);
+    const groupId = await createGroupOf(ana, "Solo yo");
+
+    expect(await groups.listGroupPicks(ana)).toStrictEqual({
+      ok: true,
+      groups: [{ id: groupId, name: "Solo yo", friends: [] }],
+    });
+  });
+
+  it("test-groups-picks-no-user-ids — el resultado no tiene ids de cuenta de los amigos", async () => {
+    const [s1 = ""] = await seededShowIds();
+    const ana = await createUser("acct-ana-7f3a91", "Ana Pérez");
+    const beto = await createUser("acct-beto-c42e08", "Bruno");
+    const groupId = await createGroupOf(ana, "Los del Lolla");
+    expect((await groups.joinGroup(beto, await tokenOf(ana, groupId))).ok).toBe(true);
+    await saveSelection(beto, [s1]);
+
+    const result = await groups.listGroupPicks(ana);
+    expect(result.ok && result.groups[0]?.friends).toHaveLength(1);
+    const text = JSON.stringify(result);
+    expect(text).not.toContain(beto);
+    expect(text).not.toContain(ana);
+    expect(text).not.toContain("acct-");
   });
 });
 

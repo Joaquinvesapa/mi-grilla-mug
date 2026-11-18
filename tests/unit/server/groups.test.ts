@@ -19,6 +19,7 @@ import {
   getInvitePreview,
   joinGroup,
   leaveGroup,
+  listGroupPicks,
   listGroups,
   regenerateInvite,
   removeMember,
@@ -333,6 +334,124 @@ describe("listGroups", () => {
       ok: true,
       groups: [],
     });
+  });
+});
+
+describe("listGroupPicks", () => {
+  const PICKS = /FROM group_members me JOIN groups g .* LEFT JOIN selected_shows s/;
+  const anaRows = [
+    { group_id: "g2", group_name: "Segundo", member_name: "Bruno", show_ids: ["s-1", "s-3"] },
+    { group_id: "g2", group_name: "Segundo", member_name: "Carla Sofía Ruiz", show_ids: [] },
+    { group_id: "g1", group_name: "Primero", member_name: "Dani", show_ids: ["s-2"] },
+  ];
+
+  it("test-groups-picks-friends — listGroupPicks devuelve los demás integrantes con su selección guardada y sin el propio usuario", async () => {
+    const { db } = fakeDb([[PICKS, anaRows]]);
+    const { service } = serviceOver(db);
+
+    expect(await service.listGroupPicks(USER_ID)).toStrictEqual({
+      ok: true,
+      groups: [
+        {
+          id: "g2",
+          name: "Segundo",
+          friends: [
+            { name: "Bruno", initials: "BR", showIds: ["s-1", "s-3"] },
+            { name: "Carla Sofía Ruiz", initials: "CR", showIds: [] },
+          ],
+        },
+        {
+          id: "g1",
+          name: "Primero",
+          friends: [{ name: "Dani", initials: "DA", showIds: ["s-2"] }],
+        },
+      ],
+    });
+    expect(db.$queryRaw).toHaveBeenCalledTimes(1);
+    const call = db.$queryRaw.mock.calls[0];
+    const sql = sqlOf(call);
+    // Anchored on the session's own membership, without the user among the friends, and only
+    // the saved selection (R-01, FR-02, FR-05).
+    expect(sql).toMatch(/FROM group_members me JOIN groups g ON g\.id = me\.group_id/);
+    expect(sql).toMatch(
+      /LEFT JOIN group_members m ON m\.group_id = g\.id AND m\.user_id <> me\.user_id/,
+    );
+    expect(sql).toMatch(/LEFT JOIN selected_shows s ON s\.user_id = m\.user_id/);
+    expect(sql).toMatch(
+      /array_agg\(s\.show_id ORDER BY s\.show_id\) FILTER \(WHERE s\.show_id IS NOT NULL\)/,
+    );
+    expect(sql).toMatch(/WHERE me\.user_id = \$ GROUP BY/);
+    // Parameterized: the id travels as a parameter, never inside the SQL text.
+    expect(paramsOf(call)).toStrictEqual([USER_ID]);
+    expect(sql).not.toContain(USER_ID);
+  });
+
+  it("test-groups-picks-order — listGroupPicks ordena los grupos del más reciente al más viejo y los amigos por fecha de unión", async () => {
+    // The rows of one group may be split by the database order; a group starts where its id first
+    // appears and keeps the friends in the order they come.
+    const { db } = fakeDb([[PICKS, anaRows]]);
+    const { service } = serviceOver(db);
+    const result = await service.listGroupPicks(USER_ID);
+
+    expect(result.ok && result.groups.map((group) => group.id)).toStrictEqual(["g2", "g1"]);
+    expect(result.ok && result.groups[0]?.friends.map((friend) => friend.name)).toStrictEqual([
+      "Bruno",
+      "Carla Sofía Ruiz",
+    ]);
+    expect(sqlOf(db.$queryRaw.mock.calls[0])).toMatch(
+      /ORDER BY me\.joined_at DESC, g\.id, m\.joined_at, m\.user_id$/,
+    );
+  });
+
+  it("test-groups-picks-alone — un grupo sin otros integrantes aparece con friends vacío", async () => {
+    const { db } = fakeDb([
+      [PICKS, [{ group_id: "g1", group_name: "Solo yo", member_name: null, show_ids: [] }]],
+    ]);
+    expect(await serviceOver(db).service.listGroupPicks(USER_ID)).toStrictEqual({
+      ok: true,
+      groups: [{ id: "g1", name: "Solo yo", friends: [] }],
+    });
+
+    const none = fakeDb([[PICKS, []]]);
+    expect(await serviceOver(none.db).service.listGroupPicks(USER_ID)).toStrictEqual({
+      ok: true,
+      groups: [],
+    });
+  });
+
+  it("test-groups-picks-no-user-ids — el resultado no tiene ids de cuenta de los amigos", async () => {
+    // Even if a row carried an account id, it would not leave the function (R-02).
+    const rows = [
+      { ...anaRows[0], user_id: "user-bruno-secret-id", member_id: "user-bruno-secret-id" },
+    ];
+    const { db } = fakeDb([[PICKS, rows]]);
+    const result = await serviceOver(db).service.listGroupPicks(USER_ID);
+
+    expect(JSON.stringify(result)).not.toContain("user-bruno-secret-id");
+    expect(result.ok && Object.keys(result.groups[0] ?? {})).toStrictEqual([
+      "id",
+      "name",
+      "friends",
+    ]);
+    expect(result.ok && Object.keys(result.groups[0]?.friends[0] ?? {})).toStrictEqual([
+      "name",
+      "initials",
+      "showIds",
+    ]);
+    // Nor does the query select one: the only user id it reads is the session's, in the filter.
+    const select = sqlOf(db.$queryRaw.mock.calls[0]).split(" FROM ")[0] ?? "";
+    expect(select).not.toMatch(/user_id/);
+  });
+
+  it("test-groups-picks-unavailable — con la base caída devuelve SERVICE_UNAVAILABLE, rechazado sin datos, y registra una línea genérica", async () => {
+    const { service, log } = serviceOver(brokenDb());
+    expect(await service.listGroupPicks(USER_ID)).toStrictEqual({
+      ok: false,
+      code: "SERVICE_UNAVAILABLE",
+    });
+    expect(log).toHaveBeenCalledTimes(1);
+    expect(log).toHaveBeenCalledWith(LOG_LINE);
+    expect(String(log.mock.calls[0]?.[0])).not.toContain("hunter2");
   });
 });
 
@@ -807,6 +926,7 @@ describe("errors", () => {
       await service.regenerateInvite(USER_ID, GROUP_ID),
       await service.getInvitePreview(USER_ID, TOKEN),
       await service.joinGroup(USER_ID, TOKEN),
+      await service.listGroupPicks(USER_ID),
       await service.renameGroup(USER_ID, GROUP_ID, "Los de siempre"),
       await service.removeMember(USER_ID, GROUP_ID, OTHER_USER_ID),
       await service.deleteGroup(USER_ID, GROUP_ID),
@@ -815,7 +935,7 @@ describe("errors", () => {
     for (const result of results) {
       expect(result).toStrictEqual({ ok: false, code: "SERVICE_UNAVAILABLE" });
     }
-    expect(log).toHaveBeenCalledTimes(10);
+    expect(log).toHaveBeenCalledTimes(11);
     for (const [line] of log.mock.calls) {
       expect(line).toBe(LOG_LINE);
       expect(line).not.toContain("hunter2");
@@ -847,6 +967,10 @@ describe("shared functions", () => {
     });
 
     expect(await listGroups(USER_ID)).toStrictEqual({ ok: false, code: "SERVICE_UNAVAILABLE" });
+    expect(await listGroupPicks(USER_ID)).toStrictEqual({
+      ok: false,
+      code: "SERVICE_UNAVAILABLE",
+    });
     expect(await createGroup(USER_ID, "")).toStrictEqual({ ok: false, code: "INVALID_NAME" });
     expect(await createGroup(USER_ID, "Los del Lolla")).toStrictEqual({
       ok: false,
@@ -875,6 +999,7 @@ describe("shared functions", () => {
         /^\[groups\] SERVICE_UNAVAILABLE at=\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/,
       );
     }
-    expect(errors).toHaveBeenCalledTimes(3);
+    // listGroups, listGroupPicks (FEAT-006c), createGroup and leaveGroup (FEAT-006b) reach the base.
+    expect(errors).toHaveBeenCalledTimes(4);
   });
 });

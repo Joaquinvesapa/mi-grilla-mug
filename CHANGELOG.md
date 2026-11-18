@@ -65,6 +65,12 @@ Todos los cambios notables de Mi Grilla se registran en este archivo. El formato
   último el grupo se borra. Quien sale o es sacado deja de ver el grupo y puede volver con un link.
 - [FEAT-006b] Sin conexión, crear, unirse, generar link, renombrar, sacar, salir y borrar dicen
   "Necesitás conexión para hacer esto" y no hacen el cambio.
+- [FEAT-006c] El grupo en la grilla: si el usuario está en algún grupo, arriba de los días aparece
+  el selector "Grupo" (con "Sin grupo") y cada show muestra las iniciales de los amigos que lo
+  eligieron, hasta 3 y "+N". Solo cuenta la selección guardada de cada amigo. El grupo elegido se
+  recuerda en el celular; la primera vez se muestra el grupo al que se unió último.
+- [FEAT-006c] Sin conexión, el selector y las iniciales usan los últimos datos del grupo cargados;
+  cerrar sesión borra esos datos del celular.
 
 ### Changed
 
@@ -95,3 +101,6 @@ Todos los cambios notables de Mi Grilla se registran en este archivo. El formato
   una base aparte (`TEST_DATABASE_URL`, `mi_grilla_test` en el mismo Postgres del compose), que se
   prepara con `pnpm db:test:prepare`. Si falta, es remota o es la misma que `DATABASE_URL`, los tests
   no corren.
+- [FEAT-006c] La línea del horario de cada show mide 15 px en vez de heredar 24 px; en los bloques
+  cortos con amigos que no tienen alto para el nombre en dos líneas, el nombre se recorta a una
+  línea con "…", así entran el horario y las iniciales.

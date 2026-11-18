@@ -88,6 +88,8 @@ export function OfflineApp({ saveAction, logoutAction }: OfflineAppProps) {
       userName={snapshot.userName}
       userId={snapshot.userId}
       mode="offline"
+      // The groups the copy carries: the picker and the initials work without signal (FR-06).
+      groups={snapshot.groups}
       saveAction={saveAction}
       logoutAction={logoutAction}
     />

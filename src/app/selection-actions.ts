@@ -2,7 +2,7 @@
 
 import { headers } from "next/headers";
 
-import { USER_ID_MAX_LENGTH } from "@/lib/offline-selection";
+import { USER_ID_MAX_LENGTH } from "@/lib/stored-value";
 import { AccountsUnavailableError, type CurrentUser, getAccounts } from "@/server/accounts";
 import { saveSelection } from "@/server/selection";
 

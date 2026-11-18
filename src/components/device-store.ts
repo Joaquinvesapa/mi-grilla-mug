@@ -3,6 +3,7 @@
 // mode) or full (quota), so every access is guarded: writes report `STORAGE_UNAVAILABLE` for the
 // screen to show (Block 2) and reads fall back to "nothing stored". Everything read goes through
 // `src/lib/offline-selection.ts` before anyone sees it (R-02).
+import { type GroupChoice, groupChoiceKey, parseGroupChoice } from "@/lib/group-picks";
 import {
   type DeviceSnapshot,
   parsePending,
@@ -73,4 +74,20 @@ export function writePending(pending: PendingSelection): DeviceStoreResult {
 /** Forgets the pending selection of `userId` only. */
 export function clearPending(userId: string): DeviceStoreResult {
   return remove(pendingKey(userId));
+}
+
+/**
+ * The group `userId` chose on the grid (FEAT-006c, FR-04): `undefined` when they never chose, or
+ * what is stored is invalid or another account's; `{ groupId: null }` for "Sin grupo" (R-05).
+ */
+export function readGroupChoice(userId: string): GroupChoice | undefined {
+  return parseGroupChoice(read(groupChoiceKey(userId)), userId);
+}
+
+/**
+ * Remembers the group `userId` chose, or `null` for "Sin grupo". Kept when signing out, like the
+ * pending selections (ADR-008): it names a group, never what its members picked.
+ */
+export function writeGroupChoice(userId: string, groupId: string | null): DeviceStoreResult {
+  return write(groupChoiceKey(userId), JSON.stringify({ version: 1, userId, groupId }));
 }

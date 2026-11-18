@@ -2,8 +2,11 @@ import { act, cleanup, fireEvent, render, screen, within } from "@testing-librar
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { AppBar, AppMenu } from "@/components/app-menu";
+import { readSnapshot, writeSnapshot } from "@/components/device-store";
+import { groupChoiceKey } from "@/lib/group-picks";
 import { pendingKey, SNAPSHOT_KEY } from "@/lib/offline-selection";
 
+import { SCHEDULE } from "./schedule-fixture";
 import { stubMatchMedia } from "./vaul-env";
 
 afterEach(cleanup);
@@ -25,6 +28,30 @@ function expectCopyGonePendingsKept() {
   expect(localStorage.getItem(SNAPSHOT_KEY)).toBeNull();
   expect(localStorage.getItem(pendingKey("user-ana"))).toBe("pending-of-ana");
   expect(localStorage.getItem(pendingKey("user-beto"))).toBe("pending-of-beto");
+}
+
+const GROUP_ID = "11111111-1111-4111-8111-111111111111";
+const CHOICE_OF_ANA = JSON.stringify({ version: 1, userId: "user-ana", groupId: GROUP_ID });
+
+/** A real device copy, with a group and its friends' picks, and the group chosen on the grid. */
+function storeCopyWithGroups() {
+  writeSnapshot({
+    version: 1,
+    userId: "user-ana",
+    userName: "Ana",
+    schedule: SCHEDULE,
+    savedShowIds: [],
+    groups: [
+      {
+        id: GROUP_ID,
+        name: "Los del colegio",
+        friends: [{ name: "Beto Gómez", initials: "BG", showIds: ["fri-flow-1800"] }],
+      },
+    ],
+  });
+  localStorage.setItem(groupChoiceKey("user-ana"), CHOICE_OF_ANA);
+  // Guard: the copy is a valid one, groups included.
+  expect(readSnapshot()?.groups).toHaveLength(1);
 }
 
 function openMenu() {
@@ -111,6 +138,35 @@ describe("AppMenu sin conexión y la copia del dispositivo", () => {
     });
     expect(confirmed).toHaveBeenCalledTimes(1);
     expectCopyGonePendingsKept();
+  });
+
+  it("test-logout-clears-groups: los dos caminos de Cerrar sesión borran la copia con los grupos y conservan la elección de grupo (R-03, ADR-008)", async () => {
+    storeCopyWithGroups();
+    render(<AppMenu userName="Ana" logoutAction={vi.fn(async () => {})} pendingCount={0} />);
+
+    const sheet = openMenu();
+    await act(async () => {
+      fireEvent.click(within(sheet).getByRole("button", { name: "Cerrar sesión" }));
+    });
+    expect(localStorage.getItem(SNAPSHOT_KEY)).toBeNull();
+    expect(readSnapshot()).toBeNull();
+    expect(localStorage.getItem(groupChoiceKey("user-ana"))).toBe(CHOICE_OF_ANA);
+
+    cleanup();
+    storeCopyWithGroups();
+    render(<AppMenu userName="Ana" logoutAction={vi.fn(async () => {})} pendingCount={2} />);
+
+    const confirmSheet = openMenu();
+    await act(async () => {
+      fireEvent.click(within(confirmSheet).getByRole("button", { name: "Cerrar sesión" }));
+    });
+    await act(async () => {
+      fireEvent.click(
+        within(screen.getByRole("alertdialog")).getByRole("button", { name: "Salir sin guardar" }),
+      );
+    });
+    expect(localStorage.getItem(SNAPSHOT_KEY)).toBeNull();
+    expect(localStorage.getItem(groupChoiceKey("user-ana"))).toBe(CHOICE_OF_ANA);
   });
 
   it("test-app-menu-offline-disabled: sin conexión Cerrar sesión está deshabilitado con su texto y no borra la copia", async () => {
