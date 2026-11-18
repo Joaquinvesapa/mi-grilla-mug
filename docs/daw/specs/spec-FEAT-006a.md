@@ -6,8 +6,20 @@
 | PRD | docs/daw/prd/prd-FEAT-006a.md |
 | Tier | FEATURE |
 | Date | 2026-11-18 |
-| Spec loops | 2 |
-| Loops since last human decision | 2 |
+| Spec loops | 3 |
+| Loops since last human decision | 0 |
+
+## Vuelta 3 (VERIFY → PLAN, decisiones del usuario, 2026-11-18)
+
+- **"Generar link nuevo" sin confirmación.** El usuario no confirmó el `AlertDialog` de R-14: al
+  tocar "Generar link nuevo" se genera el link y el anterior deja de funcionar en el momento. R-14
+  pasa a riesgo aceptado en el modelo de amenazas.
+- **Ids de test.** Cada test de **Required tests** abre con un identificador `test-…`, porque
+  F-VER-06 (`validate_verify.py`) solo reconoce nombres con esa forma. El nombre descriptivo sigue a
+  continuación y es el nombre real del test en el código.
+- Las otras decisiones de VERIFY (AC-13 cumple con la lista actual; la parte de selecciones de AC-29
+  pasa a FEAT-006c; la clave del token derivada de `BETTER_AUTH_SECRET` y el integrante con link
+  vencido que va al grupo) no cambian la spec.
 
 ## Summary
 Tres tablas nuevas en PostgreSQL (`groups`, `group_members`, `group_invites`) y un servicio
@@ -79,8 +91,8 @@ auditoría de arquitectura de PLAN (ronda 2 de esta spec).
   toque si existe (patrón de `wallpaper-delivery.ts`; `AbortError` = la persona canceló, sin
   mensaje); si no, `navigator.clipboard.writeText` y "Link copiado"; si falla, el link queda
   visible y seleccionable con "No pudimos copiarlo: mantené apretado el link para copiarlo".
-- **Técnica — "Generar link nuevo" pide confirmación (R-14).** Un `AlertDialog`: "El link actual
-  deja de funcionar. ¿Generar uno nuevo?".
+- **Técnica — "Generar link nuevo" sin confirmación (R-14, riesgo aceptado por el usuario en la
+  vuelta 3).** Tocarlo genera el link nuevo en el momento; no hay `AlertDialog`.
 - **Técnica — sin conexión.** `/grupos` e `/invitacion/*` sin conexión caen en la tarjeta "Sin
   conexión" del service worker (`sw.ts`, `offline-app.tsx`), sin cambios. El aviso "Necesitás
   conexión" de las acciones es FEAT-006b.
@@ -198,41 +210,41 @@ Implementa FR-01, FR-02, FR-03, FR-05, FR-06, FR-08 a FR-12 en el servidor, con 
 - Base caída: `SERVICE_UNAVAILABLE` con el log genérico.
 
 **Required tests**
-- [ ] `groups: crear "Los del Lolla" deja al usuario como único integrante y administrador` —
+- [ ] `test-groups-crear-los-del-lolla-deja-al-usuario-como-unico` — `groups: crear "Los del Lolla" deja al usuario como único integrante y administrador` —
   validates AC-01
-- [ ] `groups: nombre vacío, de 41 puntos de código o con emojis que pasan de 40 es inválido` —
+- [ ] `test-groups-nombre-vacio-de-41-puntos-de-codigo-o-con-emojis` — `groups: nombre vacío, de 41 puntos de código o con emojis que pasan de 40 es inválido` —
   validates AC-02
-- [ ] `groups: el grupo nace con un link que vence a las 72 h` — validates AC-03
-- [ ] `groups: generar un link nuevo invalida el anterior` — validates AC-05
-- [ ] `groups: un integrante común que genera un link es rechazado (NOT_ADMIN)` — validates AC-06
-- [ ] `groups: unirse con un link vigente suma al usuario` — validates AC-07
-- [ ] `groups: un link de hace 72 h es inválido y no une; a las 71 h 59 min todavía vale` —
+- [ ] `test-groups-el-grupo-nace-con-un-link-que-vence-a-las-72-h` — `groups: el grupo nace con un link que vence a las 72 h` — validates AC-03
+- [ ] `test-groups-generar-un-link-nuevo-invalida-el-anterior` — `groups: generar un link nuevo invalida el anterior` — validates AC-05
+- [ ] `test-groups-un-integrante-comun-que-genera-un-link-es` — `groups: un integrante común que genera un link es rechazado (NOT_ADMIN)` — validates AC-06
+- [ ] `test-groups-unirse-con-un-link-vigente-suma-al-usuario` — `groups: unirse con un link vigente suma al usuario` — validates AC-07
+- [ ] `test-groups-un-link-de-hace-72-h-es-invalido-y-no-une-a-las` — `groups: un link de hace 72 h es inválido y no une; a las 71 h 59 min todavía vale` —
   validates AC-09
-- [ ] `groups: con 20 integrantes el grupo está completo y unirse es rechazado` — validates AC-10
-- [ ] `groups: con 10 grupos unirse y crear son rechazados` — validates AC-11
-- [ ] `groups: el integrante que abre su propio link, vigente o vencido, no se duplica` — validates
+- [ ] `test-groups-con-20-integrantes-el-grupo-esta-completo-y` — `groups: con 20 integrantes el grupo está completo y unirse es rechazado` — validates AC-10
+- [ ] `test-groups-con-10-grupos-unirse-y-crear-son-rechazados` — `groups: con 10 grupos unirse y crear son rechazados` — validates AC-11
+- [ ] `test-groups-el-integrante-que-abre-su-propio-link-vigente-o` — `groups: el integrante que abre su propio link, vigente o vencido, no se duplica` — validates
   AC-12
-- [ ] `groups: la lista trae los grupos con integrantes, iniciales y administrador, en orden` —
+- [ ] `test-groups-la-lista-trae-los-grupos-con-integrantes` — `groups: la lista trae los grupos con integrantes, iniciales y administrador, en orden` —
   validates AC-13
-- [ ] `groups: un no integrante es rechazado y no recibe nombre ni integrantes` — validates AC-29
-- [ ] `invite-crypto: el generador por defecto usa 32 bytes de randomBytes y 1000 tokens no se
+- [ ] `test-groups-un-no-integrante-es-rechazado-y-no-recibe-nombre` — `groups: un no integrante es rechazado y no recibe nombre ni integrantes` — validates AC-29
+- [ ] `test-invite-crypto-generador-32-bytes-y-1000-tokens-distintos` — `invite-crypto: el generador por defecto usa 32 bytes de randomBytes y 1000 tokens no se
   repiten` — validates AC-31
-- [ ] `groups: la fila de la invitación no contiene el token en claro` — R-12
-- [ ] `groups: con el grupo bloqueado, la unión número 21 espera y es rechazada` — R-03 (una
+- [ ] `test-groups-la-fila-de-la-invitacion-no-contiene-el-token-en` — `groups: la fila de la invitación no contiene el token en claro` — R-12
+- [ ] `test-groups-con-el-grupo-bloqueado-la-union-numero-21-espera` — `groups: con el grupo bloqueado, la unión número 21 espera y es rechazada` — R-03 (una
   transacción auxiliar toma el `FOR UPDATE` del grupo, se lanza la unión, se suma el integrante 20 y
   se libera; sin el lock el test falla)
-- [ ] `groups: con el usuario bloqueado, unirse a dos grupos en 9 deja una rechazada` — R-03
-- [ ] `groups: unirse con el link viejo mientras se regenera es rechazado` — R-13 (el lock del grupo
+- [ ] `test-groups-con-el-usuario-bloqueado-unirse-a-dos-grupos-en` — `groups: con el usuario bloqueado, unirse a dos grupos en 9 deja una rechazada` — R-03
+- [ ] `test-groups-unirse-con-el-link-viejo-mientras-se-regenera-es` — `groups: unirse con el link viejo mientras se regenera es rechazado` — R-13 (el lock del grupo
   tomado por `regenerateInvite` se fuerza con una transacción auxiliar)
-- [ ] `groups: token mal formado es inválido sin consultar la base` — sad path (R-05)
-- [ ] `groups: id de grupo mal formado es rechazado sin consultar la base` — sad path
-- [ ] `groups: un ciphertext que no abre muestra el grupo sin link` — error
-- [ ] `groups: con la base caída devuelve SERVICE_UNAVAILABLE y registra solo el código` — error
+- [ ] `test-groups-token-mal-formado-es-invalido-sin-consultar-la` — `groups: token mal formado es inválido sin consultar la base` — sad path (R-05)
+- [ ] `test-groups-id-de-grupo-mal-formado-es-rechazado-sin` — `groups: id de grupo mal formado es rechazado sin consultar la base` — sad path
+- [ ] `test-groups-un-ciphertext-que-no-abre-muestra-el-grupo-sin` — `groups: un ciphertext que no abre muestra el grupo sin link` — error
+- [ ] `test-groups-con-la-base-caida-devuelve-service-unavailable-y` — `groups: con la base caída devuelve SERVICE_UNAVAILABLE y registra solo el código` — error
   (R-08)
-- [ ] `groups: un segundo administrador en el mismo grupo es rechazado por el índice parcial` —
+- [ ] `test-groups-un-segundo-administrador-en-el-mismo-grupo-es` — `groups: un segundo administrador en el mismo grupo es rechazado por el índice parcial` —
   error (en `tests/integration/groups.test.ts`)
-- [ ] `group-rules: iniciales de una, dos y más palabras, con tildes y emojis` — validates AC-13
-- [ ] `group-messages: vencimiento en hora de Argentina y texto de cada código` — validates AC-04
+- [ ] `test-group-rules-iniciales-de-una-dos-y-mas-palabras-con` — `group-rules: iniciales de una, dos y más palabras, con tildes y emojis` — validates AC-13
+- [ ] `test-group-messages-vencimiento-en-hora-de-argentina-y-texto` — `group-messages: vencimiento en hora de Argentina y texto de cada código` — validates AC-04
 
 **Completion criterion**
 Los tests de Block 1 pasan (unit en `pnpm test`, integración en `pnpm test:integration` contra la
@@ -248,7 +260,7 @@ propone cambios salvo el índice parcial documentado, y `pnpm typecheck` y `pnpm
 - `src/components/create-group-form.tsx` (new)
 - `src/components/group-members.tsx` (new)
 - `src/components/invite-link.tsx` (new) — link, vencimiento, compartir/copiar y, para el
-  administrador, "Generar link nuevo" con confirmación.
+  administrador, "Generar link nuevo" sin confirmación.
 - `src/components/app-menu.tsx` (modified) — entrada "Grupos".
 - `tests/unit/components/create-group-form.test.tsx` (new), `group-members.test.tsx` (new),
   `invite-link.test.tsx` (new), `tests/unit/components/app-menu.test.tsx` (modified)
@@ -264,8 +276,8 @@ Implementa FR-01, FR-04, FR-05, FR-11 y FR-12 en la UI.
   iniciales; abajo, `CreateGroupForm`. Sin grupos: "Todavía no estás en ningún grupo".
 - `/grupos/[groupId]`: `getGroup(user.id, groupId)`; `NOT_FOUND` → `notFound()` (R-04).
   `GroupMembers` lista nombre visible, iniciales y "Administrador". `InviteLink` muestra el link,
-  "Vence el …" y "Compartir link"; si `isAdmin`, "Generar link nuevo" con confirmación (FR-05,
-  R-14; un integrante común no lo ve, AC-06).
+  "Vence el …" y "Compartir link"; si `isAdmin`, "Generar link nuevo" sin confirmación (FR-05;
+  R-14 aceptado; un integrante común no lo ve, AC-06).
 - `createGroupAction(prev, formData)` (con `useActionState`): sesión → `createGroup` →
   `redirect("/grupos/<id>")`; si no, `{ error }` con el mensaje del código.
   `regenerateInviteAction(prev, formData)` con `groupId` oculto: sesión → `regenerateInvite` →
@@ -303,23 +315,23 @@ Implementa FR-01, FR-04, FR-05, FR-11 y FR-12 en la UI.
 - Base caída: "No pudimos guardar. Probá de nuevo en un rato".
 
 **Required tests**
-- [ ] `create-group-form: nombre inválido muestra el largo permitido y conserva lo escrito` —
+- [ ] `test-create-group-form-nombre-invalido-muestra-el-largo` — `create-group-form: nombre inválido muestra el largo permitido y conserva lo escrito` —
   validates AC-02
-- [ ] `create-group-form: con 10 grupos crear es rechazado y muestra el máximo` — sad path
-- [ ] `group-actions: crear un grupo redirige a su pantalla` — validates AC-01
-- [ ] `group-actions: sin sesión crear es rechazado (no autorizado)` — sad path (R-01)
-- [ ] `group-actions: crear con la base caída devuelve el error genérico` — error
-- [ ] `group-actions: un integrante común que regenera el link es rechazado` — validates AC-06
-- [ ] `invite-link: muestra el link, el vencimiento y Compartir` — validates AC-04
-- [ ] `invite-link: Compartir usa la hoja del sistema y si no copia el link` — validates AC-04
-- [ ] `invite-link: si copiar da error, el link queda visible con el aviso` — sad path
-- [ ] `invite-link: el administrador ve Generar link nuevo con confirmación y el integrante común
-  no` — validates AC-05, AC-06
-- [ ] `group-members: nombre, iniciales y marca de administrador` — validates AC-13
-- [ ] `groups-page: lista todos los grupos del usuario` — validates AC-13
-- [ ] `group-page: un grupo ajeno responde not found sin nombre ni integrantes` — validates AC-29
-- [ ] `group-page: sin sesión redirige a /login` — sad path
-- [ ] `app-menu: la entrada Grupos lleva a /grupos` — validates AC-13
+- [ ] `test-create-group-form-con-10-grupos-crear-es-rechazado-y` — `create-group-form: con 10 grupos crear es rechazado y muestra el máximo` — sad path
+- [ ] `test-group-actions-crear-un-grupo-redirige-a-su-pantalla` — `group-actions: crear un grupo redirige a su pantalla` — validates AC-01
+- [ ] `test-group-actions-sin-sesion-crear-es-rechazado-no` — `group-actions: sin sesión crear es rechazado (no autorizado)` — sad path (R-01)
+- [ ] `test-group-actions-crear-con-la-base-caida-devuelve-el-error` — `group-actions: crear con la base caída devuelve el error genérico` — error
+- [ ] `test-group-actions-un-integrante-comun-que-regenera-el-link` — `group-actions: un integrante común que regenera el link es rechazado` — validates AC-06
+- [ ] `test-invite-link-muestra-el-link-el-vencimiento-y-compartir` — `invite-link: muestra el link, el vencimiento y Compartir` — validates AC-04
+- [ ] `test-invite-link-compartir-usa-la-hoja-del-sistema-y-si-no` — `invite-link: Compartir usa la hoja del sistema y si no copia el link` — validates AC-04
+- [ ] `test-invite-link-si-copiar-da-error-el-link-queda-visible` — `invite-link: si copiar da error, el link queda visible con el aviso` — sad path
+- [ ] `test-invite-link-admin-genera-link-sin-confirmacion` — `invite-link: el administrador genera un link nuevo sin confirmación y el integrante común
+  no lo ve` — validates AC-05, AC-06
+- [ ] `test-group-members-nombre-iniciales-y-marca-de-administrador` — `group-members: nombre, iniciales y marca de administrador` — validates AC-13
+- [ ] `test-groups-page-lista-todos-los-grupos-del-usuario` — `groups-page: lista todos los grupos del usuario` — validates AC-13
+- [ ] `test-group-page-un-grupo-ajeno-responde-not-found-sin-nombre` — `group-page: un grupo ajeno responde not found sin nombre ni integrantes` — validates AC-29
+- [ ] `test-group-page-sin-sesion-redirige-a-login` — `group-page: sin sesión redirige a /login` — sad path
+- [ ] `test-app-menu-la-entrada-grupos-lleva-a-grupos` — `app-menu: la entrada Grupos lleva a /grupos` — validates AC-13
 
 **Completion criterion**
 Los tests de Block 2 pasan, la cobertura sigue sobre los pisos de `vitest.config.ts`, y
@@ -397,28 +409,28 @@ Implementa FR-06 a FR-10 en la UI.
 - Base caída: "No pudimos unirte. Probá de nuevo en un rato".
 
 **Required tests**
-- [ ] `invitation-page: con sesión y link vigente muestra el nombre, los integrantes y Unirme` —
+- [ ] `test-invitation-page-con-sesion-y-link-vigente-muestra-el` — `invitation-page: con sesión y link vigente muestra el nombre, los integrantes y Unirme` —
   validates AC-07
-- [ ] `group-actions: Unirme suma al usuario y redirige al grupo` — validates AC-07
-- [ ] `invitation-page: sin sesión redirige a /login con next de la invitación` — validates AC-08
-- [ ] `auth-actions: entrar con next válido vuelve a la invitación` — validates AC-08
-- [ ] `login-form: lleva next oculto y el link a registrarse lo conserva codificado` — validates
+- [ ] `test-group-actions-unirme-suma-al-usuario-y-redirige-al` — `group-actions: Unirme suma al usuario y redirige al grupo` — validates AC-07
+- [ ] `test-invitation-page-sin-sesion-redirige-a-login-con-next-de` — `invitation-page: sin sesión redirige a /login con next de la invitación` — validates AC-08
+- [ ] `test-auth-actions-entrar-con-next-valido-vuelve-a-la` — `auth-actions: entrar con next válido vuelve a la invitación` — validates AC-08
+- [ ] `test-login-form-lleva-next-oculto-y-el-link-a-registrarse-lo` — `login-form: lleva next oculto y el link a registrarse lo conserva codificado` — validates
   AC-08
-- [ ] `login-page: con sesión y next válido redirige a la invitación` — validates AC-08
-- [ ] `invitation-page: un link vencido o reemplazado muestra el mensaje de link inválido` —
+- [ ] `test-login-page-con-sesion-y-next-valido-redirige-a-la` — `login-page: con sesión y next válido redirige a la invitación` — validates AC-08
+- [ ] `test-invitation-page-un-link-vencido-o-reemplazado-muestra` — `invitation-page: un link vencido o reemplazado muestra el mensaje de link inválido` —
   validates AC-09
-- [ ] `join-group-form: grupo completo y máximo de grupos muestran cuál límite se alcanzó` —
+- [ ] `test-join-group-form-grupo-completo-y-maximo-de-grupos` — `join-group-form: grupo completo y máximo de grupos muestran cuál límite se alcanzó` —
   validates AC-10, AC-11
-- [ ] `invitation-page: un integrante que abre su link va al grupo sin duplicarse` — validates AC-12
-- [ ] `return-path: rechaza URLs externas, //, otras rutas, arrays y tokens inválidos` — sad path
+- [ ] `test-invitation-page-un-integrante-que-abre-su-link-va-al` — `invitation-page: un integrante que abre su link va al grupo sin duplicarse` — validates AC-12
+- [ ] `test-return-path-rechaza-urls-externas-otras-rutas-arrays-y` — `return-path: rechaza URLs externas, //, otras rutas, arrays y tokens inválidos` — sad path
   (R-10)
-- [ ] `auth-actions: un next inválido es rechazado y el destino es /` — sad path (R-10)
-- [ ] `login-page: un next inválido no llega al formulario (rechazado)` — sad path (R-10)
-- [ ] `proxy: sin cookie, /invitacion/<token> va a /login con next y /grupos sin next` — validates
+- [ ] `test-auth-actions-un-next-invalido-es-rechazado-y-el-destino` — `auth-actions: un next inválido es rechazado y el destino es /` — sad path (R-10)
+- [ ] `test-login-page-un-next-invalido-no-llega-al-formulario` — `login-page: un next inválido no llega al formulario (rechazado)` — sad path (R-10)
+- [ ] `test-proxy-sin-cookie-invitacion-token-va-a-login-con-next-y` — `proxy: sin cookie, /invitacion/<token> va a /login con next y /grupos sin next` — validates
   AC-08
-- [ ] `proxy: un token mal formado no se lleva en next (rechazado)` — sad path
-- [ ] `group-actions: Unirme sin sesión es rechazado (no autorizado)` — sad path
-- [ ] `group-actions: Unirme con la base caída devuelve el error genérico` — error
+- [ ] `test-proxy-un-token-mal-formado-no-se-lleva-en-next` — `proxy: un token mal formado no se lleva en next (rechazado)` — sad path
+- [ ] `test-group-actions-unirme-sin-sesion-es-rechazado-no` — `group-actions: Unirme sin sesión es rechazado (no autorizado)` — sad path
+- [ ] `test-group-actions-unirme-con-la-base-caida-devuelve-el` — `group-actions: Unirme con la base caída devuelve el error genérico` — error
 
 **Completion criterion**
 Los tests de Block 3 pasan, los tests existentes de login, registro y del proxy siguen en verde, y
@@ -441,7 +453,7 @@ el presupuesto de 10 min del job `e2e`. Los elementos se buscan por rol y nombre
 - crear "Los del Lolla" (AC-01) y ver el link con vencimiento y "Compartir link" (AC-04);
 - la segunda cuenta abre el link con sesión y se une (AC-07); una tercera, sin sesión, entra y
   vuelve a la invitación (AC-08);
-- el administrador genera un link nuevo (con la confirmación) y el anterior muestra el mensaje de
+- el administrador genera un link nuevo (sin confirmación) y el anterior muestra el mensaje de
   link inválido para quien no es integrante (AC-05; AC-09 por reemplazo; el vencimiento a las 72 h
   se prueba en integración), y la segunda cuenta no ve "Generar link nuevo" (AC-06);
 - abrir el link del propio grupo lleva al grupo sin duplicar (AC-12);
@@ -453,13 +465,13 @@ el presupuesto de 10 min del job `e2e`. Los elementos se buscan por rol y nombre
   integrante).
 
 **Required tests**
-- [ ] `groups e2e: crear un grupo y ver su link con vencimiento` — validates AC-01, AC-04
-- [ ] `groups e2e: unirse con sesión y volver a la invitación sin sesión` — validates AC-07, AC-08
-- [ ] `groups e2e: el link reemplazado deja de funcionar y el no administrador no lo regenera` —
+- [ ] `test-groups-e2e-crear-un-grupo-y-ver-su-link-con-vencimiento` — `groups e2e: crear un grupo y ver su link con vencimiento` — validates AC-01, AC-04
+- [ ] `test-groups-e2e-unirse-con-sesion-y-volver-a-la-invitacion` — `groups e2e: unirse con sesión y volver a la invitación sin sesión` — validates AC-07, AC-08
+- [ ] `test-groups-e2e-el-link-reemplazado-deja-de-funcionar-y-el` — `groups e2e: el link reemplazado deja de funcionar y el no administrador no lo regenera` —
   validates AC-05, AC-06, AC-09
-- [ ] `groups e2e: abrir el link propio no duplica y la lista muestra iniciales y administrador` —
+- [ ] `test-groups-e2e-abrir-el-link-propio-no-duplica-y-la-lista` — `groups e2e: abrir el link propio no duplica y la lista muestra iniciales y administrador` —
   validates AC-12, AC-13
-- [ ] `groups e2e: un no integrante no ve el grupo` — validates AC-29
+- [ ] `test-groups-e2e-un-no-integrante-no-ve-el-grupo` — `groups e2e: un no integrante no ve el grupo` — validates AC-29
 
 **Completion criterion**
 `pnpm test:e2e tests/e2e/groups.spec.ts --project=iphone-webkit` pasa en el bloque; en el cierre de

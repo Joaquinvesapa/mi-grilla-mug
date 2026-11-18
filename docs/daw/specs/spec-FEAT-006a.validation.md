@@ -14,10 +14,10 @@
   ✅ F-SPEC-10: every block documents its error handling
   ✅ F-SPEC-16: every documented error is named by a test
   ✅ F-SPEC-11: dependencies between blocks are declared
-  ⚠️ W-SPEC-02: large block, consider splitting: Block 1 (Datos y servicio de grupos) (11 files, 1127 words), Block 2 (Pantallas "Grupos" y detalle del grupo) (10 files, 721 words), Block 3 (Invitación y vuelta después de entrar) (9 files, 845 words)
+  ⚠️ W-SPEC-02: large block, consider splitting: Block 1 (Datos y servicio de grupos) (11 files, 1175 words), Block 2 (Pantallas "Grupos" y detalle del grupo) (10 files, 754 words), Block 3 (Invitación y vuelta después de entrar) (9 files, 877 words)
   👁  F-SPEC-12 (contradicts the PRD) and F-SPEC-13 (terminology diverging from
       the PRD) are MANUAL: judge them and say so explicitly in your report.
-  ✅ F-SPEC-LOOP: 2 loop(s) since a human decided, under the ceiling of 3; 2 in total for this document
+  ✅ F-SPEC-LOOP: 0 loop(s) since a human decided, under the ceiling of 3; 3 in total for this document
 ────────────────────────────────────────────────────────────────
 Total: 13 passed, 0 failed, 1 warnings
 Result: PASSED

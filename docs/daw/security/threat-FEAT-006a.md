@@ -98,7 +98,7 @@ sesión con `getAccounts().getCurrentUser()`.
 | R-11 | el token queda en el historial o en un link reenviado | I | M | L | aceptado, ver abajo |
 | R-12 | una base filtrada expone tokens vigentes | I | L | M | el token se guarda como HMAC (para buscar) y cifrado con AES-256-GCM (para mostrar), con claves fuera de la base (ADR-006); test de que la fila no contiene el token |
 | R-13 | unirse con un link que el administrador está reemplazando | T | L | M | token re-verificado dentro de la transacción tras `FOR UPDATE` del grupo, que `regenerateInvite` también toma; test con el lock forzado |
-| R-14 | el administrador reemplaza el link sin querer y corta los ya compartidos | T | M | L | "Generar link nuevo" pide confirmación con `AlertDialog` |
+| R-14 | el administrador reemplaza el link sin querer y corta los ya compartidos | T | M | L | aceptado, ver abajo |
 | R-15 | un grupo queda sin administrador si se borra la cuenta del administrador | E | L | L | no existe borrado de cuentas en la app (fuera de alcance del PRD 02); la sucesión al salir es FEAT-006b |
 | R-16 | cuentas y grupos creados en masa | D | L | L | límites por cuenta (10 grupos, 20 integrantes); el probar tokens no tiene chance (R-02) |
 
@@ -110,6 +110,13 @@ sesión con `getAccounts().getCurrentUser()`.
   reemplazarlo (FR-05).
 - **Review conditions:** si se agrega invitación con aprobación del administrador o un grupo maneja
   datos más sensibles que la selección de shows.
+### R-14
+- **Accepted by:** el usuario (VERIFY de FEAT-006a, 2026-11-18: no confirmó el `AlertDialog` y
+  eligió que "Generar link nuevo" actúe sin confirmación)
+- **Justification:** el impacto es bajo: solo el administrador ve el botón y, si corta un link
+  compartido sin querer, comparte el nuevo; nadie pierde datos ni accesos ya ganados.
+- **Review conditions:** si alguien reporta haber cortado un link sin querer, o si FEAT-006b suma
+  acciones del administrador más destructivas en la misma pantalla.
 
 ## Supply chain
 No suma dependencias: `crypto.randomBytes`, `createHmac`, `hkdfSync` y `createCipheriv`
