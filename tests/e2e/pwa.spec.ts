@@ -9,7 +9,8 @@ const SW_URL = "/serwist/sw.js";
 // so that coming back online lands on a page and not on the redirect `/` answers without a session.
 const FAILED_URL = "/login?desde=sin-conexion";
 // The pages that depend on the session: no cache may keep a copy of them (R-17).
-const SESSION_PAGES = ["/", "/login", "/register"];
+// The invitation has a token of the right shape (43 base64url characters) that no group has.
+const SESSION_PAGES = ["/", "/login", "/register", "/grupos", `/invitacion/${"A".repeat(43)}`];
 const TAPPABLE = 'a[href], button, [role="button"], summary, input, select, textarea';
 
 /** Width and height of a PNG, read from its IHDR chunk. */

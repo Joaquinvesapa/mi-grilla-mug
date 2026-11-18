@@ -84,3 +84,17 @@ decir que se mostró al usuario sin pedirle aprobación previa; cualquier objeci
   título fijo "Invitación · Mi Grilla". — orquestador — 2026-11-18 — Block 3
 - Un token con `%XX` en la URL hace que el proxy no lleve `next` (falla del lado seguro: `/login`
   sin parámetros); la app nunca genera esas URLs. — orquestador — 2026-11-18 — Block 3
+
+## Block 4 — E2E de grupos
+
+- AC-08 se cubre por los dos caminos (registrarse y entrar) desde el link sin sesión. AC-13 se lee
+  así: la lista "Grupos" muestra iniciales y la cantidad; el nombre visible y "Administrador" se ven
+  en la pantalla del grupo (FR-11). — orquestador — 2026-11-18 — Block 4
+- Los E2E toman los textos de `src/lib/group-messages.ts` y calculan el vencimiento esperado con
+  `formatInviteExpiry` (el formato tiene su propio unit test); `signUp` suma opciones con los mismos
+  valores por defecto; `openDevice` abre cada cuenta extra en un contexto con las opciones de
+  dispositivo del proyecto. Timeout del `describe`: 120 s. — orquestador — 2026-11-18 — Block 4
+- Pendientes para otro ticket (fuera de este bloque): el 404 de un grupo ajeno es la página por
+  defecto de Next, en inglés y fuera del tema (no filtra nada: AC-29 se cumple), y el nombre accesible
+  de cada tarjeta de "Grupos" queda "Los del Lolla , 2 integrantes" con un espacio antes de la coma.
+  — orquestador — 2026-11-18 — Block 4

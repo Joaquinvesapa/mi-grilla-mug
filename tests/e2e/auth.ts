@@ -18,20 +18,35 @@ export function uniqueEmail(testInfo: TestInfo): string {
   return `e2e-${project}-w${testInfo.workerIndex}-r${testInfo.retry}-${Date.now()}-${random}@example.com`;
 }
 
+export type SignUpOptions = {
+  /** The visible name; `TEST_NAME` by default. */
+  name?: string;
+  /** Where the form is opened; `/register` by default (`/register?next=…` comes back elsewhere). */
+  from?: string;
+  /** The path the sign-up has to land on; `/` by default. */
+  expectedPath?: string;
+};
+
 /**
- * Fills and sends the sign-up form, then waits for `/`. Leaves the page signed in. Takes a frame
- * too: /demo signs up inside its iPhone frame.
+ * Fills and sends the sign-up form, then waits for the expected path (`/` unless told otherwise).
+ * Leaves the page signed in. Takes a frame too: /demo signs up inside its iPhone frame.
  */
-export async function signUp(target: Page | Frame, testInfo: TestInfo): Promise<TestAccount> {
-  const account = { email: uniqueEmail(testInfo), password: TEST_PASSWORD, name: TEST_NAME };
-  await target.goto("/register");
+export async function signUp(
+  target: Page | Frame,
+  testInfo: TestInfo,
+  { name = TEST_NAME, from = "/register", expectedPath = "/" }: SignUpOptions = {},
+): Promise<TestAccount> {
+  const account = { email: uniqueEmail(testInfo), password: TEST_PASSWORD, name };
+  await target.goto(from);
   await target.getByLabel("Nombre").fill(account.name);
   await target.getByLabel("Email").fill(account.email);
   await target.getByLabel("Contraseña", { exact: true }).fill(account.password);
   await target.getByRole("button", { name: "Crear cuenta" }).click();
   await expect
-    .poll(() => new URL(target.url()).pathname, { message: "el registro no terminó en /" })
-    .toBe("/");
+    .poll(() => new URL(target.url()).pathname, {
+      message: `el registro no terminó en ${expectedPath}`,
+    })
+    .toBe(expectedPath);
   return account;
 }
 
