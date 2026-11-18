@@ -21,6 +21,9 @@ export const DOWNLOAD_IMAGE_LABEL = "Descargar imagen";
 /** While the image is being drawn. */
 export const GENERATING_LABEL = "Generando…";
 
+/** Announced once the image is saved, right before the guide (FR-12). */
+export const WALLPAPER_DONE_LABEL = "Listo. Así lo ponés de fondo:";
+
 /** Draw the image again after a failure. */
 export const RETRY_LABEL = "Reintentar";
 

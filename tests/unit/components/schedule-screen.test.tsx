@@ -1,12 +1,17 @@
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { type SaveSelection, ScheduleScreen } from "@/components/schedule-screen";
+import { renderWallpaper } from "@/components/wallpaper-canvas";
 import { pendingKey, SNAPSHOT_KEY } from "@/lib/offline-selection";
 import { selectionMessageFor } from "@/lib/selection-messages";
+import { WALLPAPER_BUTTON_LABEL } from "@/lib/wallpaper-messages";
 
-import { blockOf, SCHEDULE } from "./schedule-fixture";
+import { blockOf, SCHEDULE, showsOf } from "./schedule-fixture";
 import { stubMatchMedia } from "./vaul-env";
+
+// jsdom has no canvas: the wallpaper's drawing is a fake (Block 2 tests the real one).
+vi.mock("@/components/wallpaper-canvas", () => ({ renderWallpaper: vi.fn() }));
 
 afterEach(cleanup);
 beforeAll(stubMatchMedia);
@@ -603,5 +608,60 @@ describe("ScheduleScreen", () => {
     expect(within(blockOf(document, "fri-flow-1800")).getByText(/Choca/)).toBeInTheDocument();
     expect(within(blockOf(document, "fri-perrys-1815")).getByText(/Choca/)).toBeInTheDocument();
     expect(within(blockOf(document, "fri-samsung-1700")).queryByText(/Choca/)).toBeNull();
+  });
+});
+
+describe("ScheduleScreen y el fondo de pantalla", () => {
+  // The drawing is a fake that fails right away: only what the screen hands the button matters.
+  beforeEach(() => {
+    vi.mocked(renderWallpaper).mockReset();
+    vi.mocked(renderWallpaper).mockResolvedValue({ ok: false, code: "ENCODE_FAILED" });
+  });
+
+  async function openWallpaper() {
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: WALLPAPER_BUTTON_LABEL }));
+    });
+  }
+
+  function wallpaperInput() {
+    expect(renderWallpaper).toHaveBeenCalledTimes(1);
+    return vi.mocked(renderWallpaper).mock.calls[0]![0];
+  }
+
+  it("test-schedule-screen-wallpaper-unsaved: marcar un show sin Guardar y abrir el fondo pasa ese id en selectedIds", async () => {
+    renderScreen({ saved: ["sat-flow-1800"] });
+
+    tap("fri-flow-1800");
+    expect(pendingBar()).toHaveTextContent("1 cambio sin guardar");
+    await openWallpaper();
+
+    const input = wallpaperInput();
+    expect(input.day.id).toBe("fri");
+    expect(input.stages).toBe(SCHEDULE.stages);
+    expect(input.shows.map((show) => show.id)).toStrictEqual(showsOf("fri").map((show) => show.id));
+    expect([...input.selectedIds].sort()).toStrictEqual(["fri-flow-1800", "sat-flow-1800"]);
+  });
+
+  it("test-schedule-screen-wallpaper-pending: con una selección pendiente del usuario en el celular, el fondo recibe esa selección", async () => {
+    storePending(USER_ID, ["fri-perrys-1815"]);
+    setOnline(false);
+    renderScreen({ saved: ["fri-flow-1800"], mode: "offline" });
+    await settle();
+
+    await openWallpaper();
+
+    expect([...wallpaperInput().selectedIds]).toStrictEqual(["fri-perrys-1815"]);
+  });
+
+  it("el botón del fondo sigue al día en pantalla", async () => {
+    renderScreen();
+
+    pickDay("Sábado");
+    await openWallpaper();
+
+    const input = wallpaperInput();
+    expect(input.day.id).toBe("sat");
+    expect(input.shows.map((show) => show.id)).toStrictEqual(["sat-flow-1800"]);
   });
 });

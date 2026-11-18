@@ -6,6 +6,7 @@ import {
   RETRY_LABEL,
   SAVE_TO_PHOTOS_LABEL,
   WALLPAPER_BUTTON_LABEL,
+  WALLPAPER_DONE_LABEL,
   WALLPAPER_GUIDE_STEPS,
   WALLPAPER_SHEET_TITLE,
   type WallpaperMessageCode,
@@ -42,6 +43,7 @@ describe("wallpaper-messages", () => {
     expect(GENERATING_LABEL).toBe("Generando…");
     expect(WALLPAPER_SHEET_TITLE).toBe("Fondo de pantalla");
     expect(RETRY_LABEL).toBe("Reintentar");
+    expect(WALLPAPER_DONE_LABEL).toBe("Listo. Así lo ponés de fondo:");
     expect(wallpaperPreviewAlt("Viernes")).toBe("Vista previa del fondo del Viernes");
   });
 });

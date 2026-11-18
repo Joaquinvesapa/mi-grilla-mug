@@ -52,4 +52,42 @@ describe("DayPicker", () => {
       expect(tab).toHaveClass("min-h-11");
     }
   });
+
+  it("test-day-picker-action: con action la muestra en la fila de los días; sin action la fila no cambia", () => {
+    const { container, rerender } = render(
+      <DayPicker days={DAYS} value="fri" onChange={() => {}}>
+        <p>Contenido</p>
+      </DayPicker>,
+    );
+
+    const plainList = screen.getByRole("tablist");
+    const plainRow = plainList.parentElement!;
+    expect(plainRow.className).toBe("px-3 pb-2");
+    expect(plainList).toHaveClass("w-full");
+    expect(plainList).not.toHaveClass("flex-1");
+    expect(plainRow.children).toHaveLength(1);
+    expect(container.querySelector("[data-testid='day-action']")).toBeNull();
+
+    rerender(
+      <DayPicker
+        days={DAYS}
+        value="fri"
+        onChange={() => {}}
+        action={<button data-testid="day-action">Acción</button>}
+      >
+        <p>Contenido</p>
+      </DayPicker>,
+    );
+
+    const list = screen.getByRole("tablist");
+    const row = list.parentElement!;
+    const action = screen.getByTestId("day-action");
+    // Same row as the days, after them; the days take the rest of the width.
+    expect(action.parentElement).toBe(row);
+    expect(row.lastElementChild).toBe(action);
+    expect(row).toHaveClass("flex", "gap-2");
+    expect(list).toHaveClass("flex-1");
+    // Outside the tab panel: it belongs to the row, not to the day's content.
+    expect(screen.getByRole("tabpanel")).not.toContainElement(action);
+  });
 });

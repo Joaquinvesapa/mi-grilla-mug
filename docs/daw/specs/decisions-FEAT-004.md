@@ -68,3 +68,23 @@ decir que se mostró al usuario sin pedirle aprobación previa; cualquier objeci
   — 2026-11-18 — Block 2
 - El threat model (R-04) nombra un código `FONT_UNAVAILABLE` que la spec reemplazó por
   `fontFallback: true`. La implementación sigue la spec. — orquestador — 2026-11-18 — Block 2
+
+## Block 3 — La hoja del fondo en la pantalla de la grilla
+
+- Mientras genera, la acción es el mismo botón principal, deshabilitado, con "Generando…" y un
+  ícono que gira (`motion-reduce:animate-none`). La región `aria-live="polite"` está siempre
+  montada y solo lleva el texto de estado: "Generando…" en `sr-only`, `WALLPAPER_DONE_LABEL` ("Listo.
+  Así lo ponés de fondo:", sumado a `wallpaper-messages.ts`) en `done`, y la alerta. — orquestador
+  — 2026-11-18 — Block 3
+- En `done` no hay botón de acción (como dice la spec): para volver a guardar se cierra y se abre
+  de nuevo. — orquestador — 2026-11-18 — Block 3
+- Mientras la hoja de compartir del sistema está abierta, "Guardar en Fotos" está deshabilitado para
+  no llamar dos veces a `share()`. — orquestador — 2026-11-18 — Block 3
+- La vista previa es un `<img>` con el object URL (`oxlint-disable nextjs/no-img-element`, con el
+  motivo en la misma línea: `next/image` no tiene nada que optimizar en un blob). La vista previa y
+  su lugar vacío comparten el tope `max-h-[45dvh]`. — orquestador — 2026-11-18 — Block 3
+- Al abrir se copian `shows` y `selectedIds`. `day` y `stages` se guardan por referencia porque no
+  cambian. — orquestador — 2026-11-18 — Block 3
+- Para VERIFY, con VoiceOver: hay un `role="alert"` dentro de la región `polite`, que algunos
+  lectores pueden anunciar dos veces. Además, el primer "Generando…" puede no anunciarse porque la
+  región se monta junto con la hoja. — orquestador — 2026-11-18 — Block 3
