@@ -20,6 +20,8 @@ const E2E_COMMAND = "pnpm test:e2e $E2E_PROJECTS";
 const E2E_PROJECTS_EXPR =
   "${{ github.event_name == 'pull_request' && '--project=iphone-webkit' || '' }}";
 const E2E_DOCKER_SCRIPT_PATH = resolve(process.cwd(), "scripts/test-e2e-docker.sh");
+/** Creates, migrates and seeds the test database (FIX-004). */
+const TEST_DATABASE_PREPARE = "pnpm db:test:prepare";
 
 type Step = {
   id?: string;
@@ -135,20 +137,31 @@ function conditionsAt(workflow: Workflow): string[] {
 }
 
 /**
- * Jobs (keys of `suites`) where `pnpm db:seed` is missing or not between `pnpm db:migrate` and the
- * job's suite command: the suites read the grid from the database, so it has to be there first.
+ * Jobs (keys of `suites`) where `pnpm db:test:prepare` is missing or not before the job's suite
+ * command, or that still run `pnpm db:migrate` or `pnpm db:seed`: the suites read the schema and the
+ * grid from the test database, which that one command migrates and seeds (FIX-004).
  */
-function jobsSeedingOutOfOrder(workflow: Workflow, suites: Record<string, string>): string[] {
+function jobsPreparingOutOfOrder(workflow: Workflow, suites: Record<string, string>): string[] {
   const jobs = jobsOf(workflow);
   return Object.entries(suites)
     .filter(([name, suite]) => {
       const commands = commandsOf(jobs[name] ?? {});
-      const migrate = commands.indexOf("pnpm db:migrate");
-      const seed = commands.indexOf("pnpm db:seed");
+      const prepare = commands.indexOf(TEST_DATABASE_PREPARE);
       const run = commands.indexOf(suite);
-      return migrate < 0 || seed < 0 || run < 0 || !(migrate < seed && seed < run);
+      const leftover = commands.some((c) => c === "pnpm db:migrate" || c === "pnpm db:seed");
+      return prepare < 0 || run < 0 || prepare > run || leftover;
     })
     .map(([name]) => name);
+}
+
+/** Jobs (from `names`) whose env lacks `TEST_DATABASE_URL` or still sets `DATABASE_URL`. */
+function jobsWithoutTestDatabase(workflow: Workflow, names: string[]): string[] {
+  const jobs = jobsOf(workflow);
+  return names.filter((name) => {
+    const env = jobs[name]?.env ?? {};
+    const url = env.TEST_DATABASE_URL;
+    return typeof url !== "string" || url === "" || "DATABASE_URL" in env;
+  });
 }
 
 /** The `name:` of every Playwright project in playwright.config.ts. */
@@ -212,10 +225,17 @@ function e2eContainerProblem(workflow: Workflow, version: string): string | null
   );
   if (cache) return `step rechazado, cachea ms-playwright: ${cache.uses}`;
   if (!e2e.services?.postgres) return "service postgres faltante en el job e2e";
-  const rawUrl = e2e.env?.DATABASE_URL;
+  const rawUrl = e2e.env?.TEST_DATABASE_URL;
   const url = typeof rawUrl === "string" ? rawUrl : "";
   const host = /@([^:/]+)[:/]/.exec(url)?.[1];
-  return host === "postgres" ? null : `host de DATABASE_URL inválido: ${JSON.stringify(host)}`;
+  return host === "postgres" ? null : `host de TEST_DATABASE_URL inválido: ${JSON.stringify(host)}`;
+}
+
+/** The variables scripts/test-e2e-docker.sh forwards by name (`-e NAME`) to the container. */
+function e2eDockerForwardedVariables(script: string): string[] {
+  return [...script.matchAll(/^\s*-e\s+([A-Z_][A-Z0-9_]*)\s*\\?$/gm)].map(
+    (match) => match[1] ?? "",
+  );
 }
 
 /** The `IMAGE=` that scripts/test-e2e-docker.sh runs the suite in. */
@@ -388,7 +408,7 @@ describe("CI workflow — jobs (AC-08)", () => {
     }
   });
 
-  it("integration corre las migraciones y la suite de integración contra un postgres:17.N", () => {
+  it("integration prepara la base de tests y corre la suite de integración contra un postgres:17.N", () => {
     const integration = jobsOf(readWorkflow()).integration;
     expect(integration, "falta el job integration").toBeDefined();
 
@@ -396,14 +416,18 @@ describe("CI workflow — jobs (AC-08)", () => {
     expect(commandsOf(integration!)).toEqual(
       expect.arrayContaining([
         "pnpm install --frozen-lockfile",
-        "pnpm db:migrate",
+        TEST_DATABASE_PREPARE,
         "pnpm test:integration",
       ]),
     );
-    expect(JSON.stringify(integration!.env ?? {})).toContain("DATABASE_URL");
+    const env = integration!.env ?? {};
+    expect(typeof env.TEST_DATABASE_URL, "integration: falta TEST_DATABASE_URL").toBe("string");
+    expect(Object.keys(env), "integration no debería definir DATABASE_URL").not.toContain(
+      "DATABASE_URL",
+    );
   });
 
-  it("test-workflow-e2e-container: e2e corre en la imagen de Playwright de su versión, sin instalar navegadores, contra el host postgres, y sube el reporte si falla; una imagen inválida, sin container, con playwright install, con la cache de ms-playwright, con DATABASE_URL a 127.0.0.1 o con el service faltante es rechazado", () => {
+  it("test-workflow-e2e-container: e2e corre en la imagen de Playwright de su versión, sin instalar navegadores, contra el host postgres, y sube el reporte si falla; una imagen inválida, sin container, con playwright install, con la cache de ms-playwright, con TEST_DATABASE_URL a 127.0.0.1 o con el service faltante es rechazado", () => {
     const version = playwrightVersion();
     expect(version, "falta @playwright/test en package.json").toMatch(/^\d+\.\d+\.\d+$/);
     const workflow = readWorkflow();
@@ -425,7 +449,7 @@ describe("CI workflow — jobs (AC-08)", () => {
     const ok: Job = {
       container: { image: playwrightImage(version) },
       services: { postgres: { image: "postgres:17.12" } },
-      env: { DATABASE_URL: "postgresql://u:p@postgres:5432/db" },
+      env: { TEST_DATABASE_URL: "postgresql://u:p@postgres:5432/db" },
       steps: [{ run: E2E_COMMAND }],
     };
     const withJob = (job: Job): Workflow => ({ jobs: { e2e: job } });
@@ -446,7 +470,11 @@ describe("CI workflow — jobs (AC-08)", () => {
       },
       "host 127.0.0.1": {
         ...ok,
-        env: { DATABASE_URL: "postgresql://u:p@127.0.0.1:5432/db" },
+        env: { TEST_DATABASE_URL: "postgresql://u:p@127.0.0.1:5432/db" },
+      },
+      "solo DATABASE_URL": {
+        ...ok,
+        env: { DATABASE_URL: "postgresql://u:p@postgres:5432/db" },
       },
       "service postgres faltante": { ...ok, services: {} },
     };
@@ -465,7 +493,7 @@ describe("CI workflow — jobs (AC-08)", () => {
     expect(e2eDockerScriptImage(stale)).not.toBe(expected);
   });
 
-  it("test-workflow-auth-env: integration y e2e tienen BETTER_AUTH_SECRET y BETTER_AUTH_URL, quality ninguna, y e2e migra antes de correr Playwright", () => {
+  it("test-workflow-auth-env: integration y e2e tienen BETTER_AUTH_SECRET y BETTER_AUTH_URL, quality ninguna, y e2e prepara la base de tests antes de correr Playwright", () => {
     const jobs = jobsOf(readWorkflow());
     const AUTH_URLS: Record<string, string> = {
       integration: "http://localhost:3000",
@@ -491,47 +519,86 @@ describe("CI workflow — jobs (AC-08)", () => {
     expect(quality, "quality no debería tener BETTER_AUTH_URL").not.toContain("BETTER_AUTH_URL");
 
     const e2eCommands = commandsOf(jobs.e2e ?? {});
-    const migrate = e2eCommands.indexOf("pnpm db:migrate");
-    expect(migrate, "e2e no corre pnpm db:migrate").toBeGreaterThanOrEqual(0);
-    expect(migrate, "e2e migra después de pnpm test:e2e").toBeLessThan(
+    const prepare = e2eCommands.indexOf(TEST_DATABASE_PREPARE);
+    expect(prepare, `e2e no corre ${TEST_DATABASE_PREPARE}`).toBeGreaterThanOrEqual(0);
+    expect(prepare, "e2e prepara la base después de pnpm test:e2e").toBeLessThan(
       e2eCommands.indexOf(E2E_COMMAND),
     );
   });
 
-  it("test-workflow-seed-step: integration y e2e corren pnpm db:seed después de pnpm db:migrate y antes de la suite; un workflow sin el paso es rechazado", () => {
+  it("test-workflow-test-database: integration y e2e definen TEST_DATABASE_URL y no DATABASE_URL, corren pnpm db:test:prepare antes de su suite y ya no corren db:migrate ni db:seed; un job sin la variable o con el paso faltante es rechazado", () => {
     const SUITES: Record<string, string> = {
       integration: "pnpm test:integration",
       e2e: E2E_COMMAND,
     };
+    const URL_ENV = { TEST_DATABASE_URL: "postgresql://u:p@postgres:5432/db" };
 
-    // Guard: a job without the seed, or with it out of order, is rejected.
+    // Guard: a job without the step, with it after the suite, or still migrating or seeding on its
+    // own, is rejected; so is one without the variable, or with DATABASE_URL beside it.
     const broken: Workflow = {
       jobs: {
-        missing: { steps: [{ run: "pnpm db:migrate" }, { run: "pnpm test:integration" }] },
-        beforeMigrate: {
-          steps: [{ run: "pnpm db:seed" }, { run: "pnpm db:migrate" }, { run: "pnpm test:e2e" }],
-        },
+        missing: { env: URL_ENV, steps: [{ run: "pnpm test:integration" }] },
         afterSuite: {
-          steps: [{ run: "pnpm db:migrate" }, { run: "pnpm test:e2e" }, { run: "pnpm db:seed" }],
+          env: URL_ENV,
+          steps: [{ run: "pnpm test:e2e" }, { run: TEST_DATABASE_PREPARE }],
         },
-        ok: {
-          steps: [{ run: "pnpm db:migrate" }, { run: "pnpm db:seed" }, { run: "pnpm test:e2e" }],
+        leftover: {
+          env: URL_ENV,
+          steps: [
+            { run: TEST_DATABASE_PREPARE },
+            { run: "pnpm db:migrate" },
+            { run: "pnpm test:e2e" },
+          ],
         },
+        noVariable: { steps: [{ run: TEST_DATABASE_PREPARE }, { run: "pnpm test:e2e" }] },
+        alsoDevelopment: {
+          env: { ...URL_ENV, DATABASE_URL: "postgresql://u:p@postgres:5432/db" },
+          steps: [{ run: TEST_DATABASE_PREPARE }, { run: "pnpm test:e2e" }],
+        },
+        ok: { env: URL_ENV, steps: [{ run: TEST_DATABASE_PREPARE }, { run: "pnpm test:e2e" }] },
       },
     };
     const brokenSuites: Record<string, string> = {
       missing: "pnpm test:integration",
-      beforeMigrate: "pnpm test:e2e",
       afterSuite: "pnpm test:e2e",
+      leftover: "pnpm test:e2e",
+      noVariable: "pnpm test:e2e",
+      alsoDevelopment: "pnpm test:e2e",
       ok: "pnpm test:e2e",
     };
-    expect(jobsSeedingOutOfOrder(broken, brokenSuites)).toEqual([
+    expect(jobsPreparingOutOfOrder(broken, brokenSuites)).toEqual([
       "missing",
-      "beforeMigrate",
       "afterSuite",
+      "leftover",
+    ]);
+    expect(jobsWithoutTestDatabase(broken, Object.keys(brokenSuites))).toEqual([
+      "noVariable",
+      "alsoDevelopment",
     ]);
 
-    expect(jobsSeedingOutOfOrder(readWorkflow(), SUITES)).toEqual([]);
+    const workflow = readWorkflow();
+    expect(jobsPreparingOutOfOrder(workflow, SUITES)).toEqual([]);
+    expect(jobsWithoutTestDatabase(workflow, Object.keys(SUITES))).toEqual([]);
+    // The integration job reaches its service through the runner's loopback.
+    expect(String(jobsOf(workflow).integration?.env?.TEST_DATABASE_URL)).toMatch(/@127\.0\.0\.1:/);
+  });
+
+  it("test-e2e-docker-forwards-test-database: scripts/test-e2e-docker.sh reenvía -e TEST_DATABASE_URL y no -e DATABASE_URL, y package.json define db:test:prepare", () => {
+    const script = readFileSync(E2E_DOCKER_SCRIPT_PATH, "utf8");
+    const forwarded = e2eDockerForwardedVariables(script);
+    expect(forwarded).toContain("TEST_DATABASE_URL");
+    expect(forwarded).not.toContain("DATABASE_URL");
+    expect(forwarded).toContain("BETTER_AUTH_SECRET");
+    // Guard: a script still forwarding DATABASE_URL is caught.
+    expect(e2eDockerForwardedVariables("  -e CI \\\n  -e DATABASE_URL \\\n")).toEqual([
+      "CI",
+      "DATABASE_URL",
+    ]);
+
+    expect(scripts["db:test:prepare"]).toBe("bash scripts/db-test-prepare.sh");
+    expect(existsSync(resolve(process.cwd(), "scripts/db-test-prepare.sh"))).toBe(true);
+    // The development database keeps its own commands (FR-05).
+    expect(scripts["db:migrate"]).toBe("prisma migrate deploy");
     expect(scripts["db:seed"]).toBe("node prisma/seed.ts");
   });
 

@@ -8,7 +8,7 @@ function requireDatabaseUrl(): string {
   const url = process.env.DATABASE_URL;
   if (!url) {
     throw new Error(
-      "Falta DATABASE_URL: copiá .env.example a .env y levantá la base con `docker compose up -d`.",
+      "Falta TEST_DATABASE_URL: copiá .env.example a .env, levantá la base con `pnpm db:up` y preparala con `pnpm db:test:prepare`.",
     );
   }
   return url;
