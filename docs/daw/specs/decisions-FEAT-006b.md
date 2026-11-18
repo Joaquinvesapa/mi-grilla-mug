@@ -36,3 +36,9 @@ Formato: decisión — quién la aprobó — fecha — bloque.
 - Queda sin cambiar: si la red corta con la acción ya enviada, crear y renombrar pierden lo tipeado
   (sin conexión desde el principio no pasa) — orquestador (autonomy minimal), aviso del
   arch-auditor — 2026-11-18 — Block 3.
+- Los E2E del Block 4 no tienen rojo de TDD: la spec los pone después de los Blocks 1-3. El
+  module-verifier revisó que cada aserción falle con el comportamiento roto; se acepta como WARN, no
+  FAIL — orquestador (autonomy minimal) — 2026-11-18 — Block 4.
+- `test-e2e-last-leaves` usa un admin que está solo en el grupo (el último integrante siempre es el
+  admin) y `test-e2e-back-after-leave` hace un solo "Atrás", como pide la spec — supuestos del
+  implementer, aceptados por el module-verifier — 2026-11-18 — Block 4.
