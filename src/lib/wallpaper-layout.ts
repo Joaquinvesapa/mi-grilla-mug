@@ -15,8 +15,11 @@ export const WALLPAPER_WIDTH = 1290;
 export const WALLPAPER_HEIGHT = 2796;
 /** The top 25 % (clock and date on the lock screen), rounded up: nothing but background (FR-07). */
 export const SAFE_TOP = 699;
-/** The bottom 8 % (flashlight and camera), rounded up (FR-07). */
-export const SAFE_BOTTOM = 224;
+/**
+ * The bottom 14 % (flashlight and camera), rounded up (FR-07). On a real lock screen the buttons
+ * start ≈ 347 px above the bottom edge; this leaves ≈ 45 px of air above them (FIX-003).
+ */
+export const SAFE_BOTTOM = 392;
 /** Day title, brand and stage names, at the top of the usable band. */
 const HEADER_HEIGHT = 150;
 /** The artist's name: at least 28 px (NFR-02). */
@@ -40,9 +43,9 @@ export const GRID_RIGHT = WALLPAPER_WIDTH - 24;
 const GUTTER_LEFT = 24;
 const COLUMN_GAP = 8;
 const BLOCK_PADDING_X = 12;
-// One artist line and the time take 2 × 6 + 30 + 22 = 64 px: they fit in the shortest real block
-// (Sunday, Kidzapalooza 18:00–18:20, ≈ 67.8 px once capped by the next show).
-const BLOCK_PADDING_Y = 6;
+// One artist line and the time take 2 × 4 + 30 + 22 = 60 px: they fit in the shortest real block
+// (Sunday, Kidzapalooza 18:00–18:20, ≈ 60.8 px once capped by the next show).
+const BLOCK_PADDING_Y = 4;
 const ARTIST_LINE_HEIGHT = 30;
 const TIME_LINE_HEIGHT = 22;
 /** Room left between a block and the next show on its stage. */
@@ -248,7 +251,7 @@ function blockTexts(
   const artistFont = font(600, ARTIST_FONT_SIZE, fontFamily);
   const timeFont = font(600, TIME_FONT_SIZE, fontFamily);
   const inner = box.height - 2 * BLOCK_PADDING_Y;
-  // One line and the time take 52 px: every real block (≥ ≈ 67.8 px) has both.
+  // One line and the time take 52 px inside the padding: every real block (≥ ≈ 60.8 px) has both.
   const withTime = inner >= ARTIST_LINE_HEIGHT + TIME_LINE_HEIGHT;
   const maxLines = Math.max(
     0,

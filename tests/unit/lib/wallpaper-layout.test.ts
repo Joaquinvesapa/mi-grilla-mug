@@ -231,7 +231,7 @@ describe("wallpaperLayout", () => {
       "01:00",
     ]);
     expect(layout.hourMarks[0]?.y).toBe(849);
-    expect(layout.hourMarks.at(-1)?.y).toBeCloseTo(2572, 6);
+    expect(layout.hourMarks.at(-1)?.y).toBeCloseTo(2404, 6);
   });
 
   it("test-wallpaper-lit-selected: with Tyler, The Creator and Lorde chosen on Friday, only those two are lit", () => {
@@ -279,7 +279,7 @@ describe("wallpaperLayout", () => {
     }
   });
 
-  it("test-wallpaper-safe-zones: on the 3 days no block or hour mark starts above y = 699 or ends below y = 2572", () => {
+  it("test-wallpaper-safe-zones: on the 3 days no block or hour mark starts above y = 699 or ends below y = 2404", () => {
     for (const dayId of DAY_IDS) {
       const layout = layoutOf(dayId);
       expect(layout.blocks.length).toBeGreaterThan(0);
@@ -298,6 +298,32 @@ describe("wallpaperLayout", () => {
         expect(text.y + fontSize(text.font)).toBeLessThanOrEqual(849);
       }
     }
+  });
+
+  it("test-wallpaper-clear-of-lock-screen-buttons: the bottom 392 px (14 %) stay free, so no block or hour mark ends below y = 2404, Peggy Gou and the 01:00 mark included (FIX-003)", () => {
+    // On a real lock screen the flashlight and camera start ≈ 347 px above the bottom edge.
+    const LOCK_SCREEN_BUTTONS_TOP = WALLPAPER_HEIGHT - 347;
+    expect(SAFE_BOTTOM).toBe(392);
+    for (const dayId of DAY_IDS) {
+      const layout = layoutOf(dayId);
+      for (const block of layout.blocks) {
+        expect(block.y + block.height, block.showId).toBeLessThanOrEqual(2404);
+      }
+      for (const mark of layout.hourMarks) {
+        expect(mark.y, mark.label).toBeLessThanOrEqual(2404);
+      }
+      // At least 40 px of air between the grid and the buttons.
+      expect(
+        LOCK_SCREEN_BUTTONS_TOP - (layout.hourMarks.at(-1)?.y ?? Infinity),
+      ).toBeGreaterThanOrEqual(40);
+    }
+    const friday = layoutOf("fri");
+    const peggy = friday.blocks.find((block) => block.showId === "fri-samsung-2330");
+    expect(peggy).toBeDefined();
+    expect((peggy?.y ?? Infinity) + (peggy?.height ?? 0)).toBeCloseTo(2404, 6);
+    const lastMark = friday.hourMarks.at(-1);
+    expect(lastMark?.label).toBe("01:00");
+    expect(lastMark?.y).toBeCloseTo(2404, 6);
   });
 
   it("test-wallpaper-title-brand: Saturday is titled «Sábado» with the «Mi Grilla» brand, and no text says Lollapalooza", () => {
@@ -381,7 +407,7 @@ describe("wallpaperLayout", () => {
   });
 
   it("test-wallpaper-wrap-extra-lines-ellipsis: several words that need more lines than the block allows end in «…» on the last line shown", () => {
-    // 45 min (≈ 107.7 px): two lines of artist and the time. The words need three lines
+    // 45 min (≈ 97.2 px): two lines of artist and the time. The words need three lines
     // ("Uno Dos", "Tres Cuatro", "Cinco Seis"): the second is cut short to end in "…".
     const layout = layoutOf("fri", new Set(), fridayWith("Uno Dos Tres Cuatro Cinco Seis"));
     const block = layout.blocks.find((candidate) => candidate.showId === "fri-kidzapalooza-1600");
@@ -408,7 +434,7 @@ describe("wallpaperLayout", () => {
     }
     expect(block.lines).toStrictEqual([]);
     expect(block.time?.text).toBe("16:00 – 16:20");
-    expect(block.time?.y).toBe(block.y + 6);
+    expect(block.time?.y).toBe(block.y + 4);
     expectInside(block, wideEllipsis);
   });
 
@@ -498,23 +524,23 @@ describe("wallpaperLayout", () => {
       return block!;
     }
 
-    // 20 min (≈ 47.9 px − 4 px of gap ≈ 43.9 px): room for one line of artist, not for the time.
+    // 20 min (≈ 43.2 px − 4 px of gap ≈ 39.2 px): room for one line of artist, not for the time.
     const oneLine = split("16:20");
-    expect(oneLine.height).toBeCloseTo((20 * (2572 - 849)) / 720 - 4, 6);
+    expect(oneLine.height).toBeCloseTo((20 * (2404 - 849)) / 720 - 4, 6);
     expect(oneLine.time).toBeNull();
     expect(oneLine.lines.map((line) => line.text)).toStrictEqual(["Uno"]);
     expectInside(oneLine, measureText);
 
-    // 3 min (≈ 7.2 px − 4 px ≈ 3.2 px): not even one line fits (`maxLines` = 0).
+    // 3 min (≈ 6.5 px − 4 px ≈ 2.5 px): not even one line fits (`maxLines` = 0).
     const empty = split("16:03");
-    expect(empty.height).toBeCloseTo((3 * (2572 - 849)) / 720 - 4, 6);
+    expect(empty.height).toBeCloseTo((3 * (2404 - 849)) / 720 - 4, 6);
     expect(empty.time).toBeNull();
     expect(empty.lines).toStrictEqual([]);
   });
 
   it("test-wallpaper-vertical-scale: on the 3 days every block starts at 849 + minutes from the axis start × scale and its height is its duration at scale (≥ 70, capped by the next show)", () => {
     const AXIS_START_Y = 849;
-    const AXIS_END_Y = 2572;
+    const AXIS_END_Y = 2404;
     for (const dayId of DAY_IDS) {
       const shows = showsOf(dayId);
       const layout = layoutOf(dayId);
