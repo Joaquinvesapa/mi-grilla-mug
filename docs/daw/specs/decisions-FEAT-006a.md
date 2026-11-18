@@ -69,3 +69,18 @@ decir que se mostró al usuario sin pedirle aprobación previa; cualquier objeci
   grupo es fijo ("Grupo · Mi Grilla") para no filtrar el nombre en la metadata; en `/grupos` cada
   tarjeta se lee "Nombre, N integrantes" con las iniciales en `aria-hidden`. — orquestador —
   2026-11-18 — Block 2
+
+## Block 3 — Invitación y vuelta después de entrar
+
+- `src/lib/return-path.ts` suma `withReturnPath("/login" | "/register", next)`, que arma el link con
+  `URLSearchParams`; en las redirecciones `next` viaja codificado (`/login?next=%2Finvitacion%2F…`).
+  — orquestador — 2026-11-18 — Block 3
+- Con sesión y un `next` inválido, login y registro redirigen a `/`. Si `getCurrentUser` lanza en
+  `/invitacion/[token]`, la página no lo maneja (error de Next), igual que `/grupos` y `/login`. —
+  orquestador — 2026-11-18 — Block 3
+- `sessionUser()` de `group-actions.ts` devuelve un código y cada acción elige su mensaje genérico
+  ("No pudimos unirte…" en "Unirme"). Textos nuevos en el catálogo: "Te invitaron a sumarte a",
+  "Unirme", "No pudimos cargar la invitación. Probá de nuevo en un rato." y "Volver a la grilla";
+  título fijo "Invitación · Mi Grilla". — orquestador — 2026-11-18 — Block 3
+- Un token con `%XX` en la URL hace que el proxy no lleve `next` (falla del lado seguro: `/login`
+  sin parámetros); la app nunca genera esas URLs. — orquestador — 2026-11-18 — Block 3

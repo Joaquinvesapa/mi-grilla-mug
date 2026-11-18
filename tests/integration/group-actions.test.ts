@@ -10,8 +10,8 @@ vi.mock("next/headers", async () => {
 const cache = vi.hoisted(() => ({ revalidatePath: vi.fn() }));
 vi.mock("next/cache", () => cache);
 
-import { createGroupAction, regenerateInviteAction } from "@/app/group-actions";
-import { groupMessageFor } from "@/lib/group-messages";
+import { createGroupAction, joinGroupAction, regenerateInviteAction } from "@/app/group-actions";
+import { groupMessageFor, joinGroupMessageFor } from "@/lib/group-messages";
 import { getAccounts } from "@/server/accounts";
 import { getDb } from "@/server/db";
 import { createGroup, getGroup, joinGroup } from "@/server/groups";
@@ -57,6 +57,14 @@ async function redirectDigest(run: () => Promise<unknown>): Promise<string> {
 async function groupCount(): Promise<number> {
   const rows = await getDb().$queryRaw<{ count: number }[]>`
     SELECT count(*)::int AS count FROM groups`;
+  return rows[0]?.count ?? -1;
+}
+
+const JOIN_INITIAL = { error: null };
+
+async function memberCount(groupId: string): Promise<number> {
+  const rows = await getDb().$queryRaw<{ count: number }[]>`
+    SELECT count(*)::int AS count FROM group_members WHERE group_id = ${groupId}`;
   return rows[0]?.count ?? -1;
 }
 
@@ -161,6 +169,79 @@ describe("group-actions", () => {
 
     expect(await tokenOf(anaId, created.groupId)).not.toBe(before);
     expect(cache.revalidatePath).toHaveBeenCalledWith(`/grupos/${created.groupId}`);
+  });
+
+  it("group-actions: Unirme suma al usuario y redirige al grupo", async () => {
+    const anaId = await signUp("ana@mail.com", "Ana Pérez");
+    const created = await createGroup(anaId, "Los del Lolla");
+    if (!created.ok) {
+      throw new Error(created.code);
+    }
+    const token = await tokenOf(anaId, created.groupId);
+    // Beto signs up: the jar now holds his session.
+    await signUp("beto@mail.com", "Beto");
+
+    const digest = await redirectDigest(() => joinGroupAction(JOIN_INITIAL, form({ token })));
+
+    expect(REDIRECT_TO_GROUP.exec(digest)?.[1], digest).toBe(created.groupId);
+    const group = await getGroup(anaId, created.groupId);
+    expect(group.ok && group.group.members).toStrictEqual([
+      { name: "Ana Pérez", initials: "AP", isAdmin: true },
+      { name: "Beto", initials: "BE", isAdmin: false },
+    ]);
+
+    // Joining again is not a second membership: it goes to the group as well (FR-10).
+    const again = await redirectDigest(() => joinGroupAction(JOIN_INITIAL, form({ token })));
+    expect(REDIRECT_TO_GROUP.exec(again)?.[1], again).toBe(created.groupId);
+    expect(await memberCount(created.groupId)).toBe(2);
+  });
+
+  it("group-actions: Unirme con un link inválido no une y muestra el mensaje", async () => {
+    await signUp("beto@mail.com", "Beto");
+
+    expect(await joinGroupAction(JOIN_INITIAL, form({ token: "A".repeat(43) }))).toStrictEqual({
+      error: groupMessageFor("INVALID_INVITE"),
+    });
+    expect(await joinGroupAction(JOIN_INITIAL, form({}))).toStrictEqual({
+      error: groupMessageFor("INVALID_INVITE"),
+    });
+  });
+
+  it("group-actions: Unirme sin sesión es rechazado (no autorizado)", async () => {
+    const anaId = await signUp("ana@mail.com", "Ana");
+    const created = await createGroup(anaId, "Los del Lolla");
+    if (!created.ok) {
+      throw new Error(created.code);
+    }
+    const token = await tokenOf(anaId, created.groupId);
+    clearCookies();
+
+    expect(await joinGroupAction(JOIN_INITIAL, form({ token }))).toStrictEqual({
+      error: groupMessageFor("UNAUTHENTICATED"),
+    });
+    expect(await memberCount(created.groupId)).toBe(1);
+  });
+
+  it("group-actions: Unirme con la base caída devuelve el error genérico", async () => {
+    const anaId = await signUp("ana@mail.com", "Ana");
+    const created = await createGroup(anaId, "Los del Lolla");
+    if (!created.ok) {
+      throw new Error(created.code);
+    }
+    const token = await tokenOf(anaId, created.groupId);
+    await signUp("beto@mail.com", "Beto");
+    const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+    // The session still reads; the join is what fails, as with a dropped connection.
+    vi.spyOn(getDb(), "$transaction").mockRejectedValue(new Error("connect ECONNREFUSED secret"));
+
+    const state = await joinGroupAction(JOIN_INITIAL, form({ token }));
+
+    expect(state).toStrictEqual({ error: "No pudimos unirte. Probá de nuevo en un rato." });
+    expect(state).toStrictEqual({ error: joinGroupMessageFor("SERVICE_UNAVAILABLE") });
+    expect(JSON.stringify(state)).not.toContain("ECONNREFUSED");
+    expect(errors.mock.calls.flat().join(" ")).not.toContain("ECONNREFUSED");
+    vi.restoreAllMocks();
+    expect(await memberCount(created.groupId)).toBe(1);
   });
 
   it("group-actions: sin sesión regenerar es rechazado y un grupo ajeno es NOT_FOUND", async () => {

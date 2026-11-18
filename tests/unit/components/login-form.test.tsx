@@ -90,6 +90,26 @@ describe("LoginForm", () => {
     expect(password).toBeRequired();
   });
 
+  it("login-form: lleva next oculto y el link a registrarse lo conserva codificado", async () => {
+    const next = "/invitacion/AbCdEfGhIjKlMnOpQrStUvWxYz0123456789_-AbCdE";
+    const action = fakeAction(INITIAL_FORM_STATE);
+    const { container } = render(<LoginForm action={action} next={next} />);
+
+    expect(container.querySelector('input[type="hidden"][name="next"]')).toHaveValue(next);
+    const href = screen.getByRole("link", { name: /creá tu cuenta/i }).getAttribute("href") ?? "";
+    expect(href).toBe("/register?next=%2Finvitacion%2FAbCdEfGhIjKlMnOpQrStUvWxYz0123456789_-AbCdE");
+    expect(new URL(href, "http://localhost").searchParams.get("next")).toBe(next);
+
+    await fillAndSubmit("ana@mail.com", PASSWORD);
+    expect(action.mock.calls[0]?.[1].get("next")).toBe(next);
+  });
+
+  it("sin next no lleva el campo oculto", () => {
+    const { container } = render(<LoginForm action={fakeAction(INITIAL_FORM_STATE)} />);
+
+    expect(container.querySelector('input[name="next"]')).toBeNull();
+  });
+
   it("sin error no muestra aviso y lleva a la pantalla de registro", () => {
     render(<LoginForm action={fakeAction(INITIAL_FORM_STATE)} />);
 

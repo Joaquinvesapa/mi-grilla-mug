@@ -82,6 +82,11 @@ export const ASK_THE_ADMIN = "Pedile a quien administra el grupo un link nuevo."
 /** "Generar link nuevo" asks first: the link already shared stops working (R-14). */
 export const REGENERATE_CONFIRM = "El link actual deja de funcionar. ¿Generar uno nuevo?";
 export const LINK_REGENERATED = "Link nuevo generado";
+/** `/invitacion/[token]` (FR-06): the preview's lead-in, its button and its own load error. */
+export const INVITATION_LEAD = "Te invitaron a sumarte a";
+export const JOIN_GROUP_BUTTON = "Unirme";
+export const INVITATION_LOAD_FAILED = "No pudimos cargar la invitación. Probá de nuevo en un rato.";
+export const BACK_TO_SCHEDULE = "Volver a la grilla";
 
 /** The title and text the system share sheet gets with the link. */
 export function inviteShareText(groupName: string): { title: string; text: string } {

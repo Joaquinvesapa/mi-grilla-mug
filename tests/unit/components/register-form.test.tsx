@@ -149,4 +149,19 @@ describe("RegisterForm", () => {
 
     expect(screen.getByRole("link", { name: /entrá/i })).toHaveAttribute("href", "/login");
   });
+
+  it("con next lo lleva oculto y el link a entrar lo conserva codificado", async () => {
+    const next = "/invitacion/AbCdEfGhIjKlMnOpQrStUvWxYz0123456789_-AbCdE";
+    const action = fakeAction(INITIAL_FORM_STATE);
+    const { container } = render(<RegisterForm action={action} next={next} />);
+
+    expect(container.querySelector('input[type="hidden"][name="next"]')).toHaveValue(next);
+    expect(screen.getByRole("link", { name: /entrá/i })).toHaveAttribute(
+      "href",
+      "/login?next=%2Finvitacion%2FAbCdEfGhIjKlMnOpQrStUvWxYz0123456789_-AbCdE",
+    );
+
+    await fillAndSubmit({ name: "Ana", email: "ana@mail.com", password: PASSWORD });
+    expect(action.mock.calls[0]?.[1].get("next")).toBe(next);
+  });
 });
