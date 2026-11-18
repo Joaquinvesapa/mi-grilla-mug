@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { FestivalDay } from "@/lib/schedule-types";
+import { dayStyle } from "@/lib/stage-colors";
 import { cn } from "@/lib/utils";
 
 export type DayPickerProps = {
@@ -28,13 +29,32 @@ export function DayPicker({ days, value, onChange, children, action }: DayPicker
       <div className={cn("px-3 pb-2", hasAction && "flex items-center gap-2")}>
         <TabsList className={cn("w-full", hasAction && "min-w-0 flex-1")}>
           {ordered.map((day) => (
-            <TabsTrigger key={day.id} value={day.id} className="min-h-11">
+            <TabsTrigger
+              key={day.id}
+              value={day.id}
+              style={dayStyle(day.id)}
+              // Active: filled with the day's color; the others show a dot of it (not color alone:
+              // the label and aria-selected say which day is on).
+              className="min-h-11 font-semibold data-[state=active]:border-transparent data-[state=active]:bg-(--day) data-[state=active]:font-bold data-[state=active]:text-(--on-day)"
+            >
+              <span
+                aria-hidden="true"
+                data-day-dot
+                className="size-1.5 shrink-0 rounded-full bg-(--day) in-data-[state=active]:hidden"
+              />
               {day.name}
             </TabsTrigger>
           ))}
         </TabsList>
         {action}
       </div>
+      {/* The selected day's color under the tabs. */}
+      <div
+        aria-hidden="true"
+        data-day-bar
+        className="h-0.5 shrink-0 bg-(--day)"
+        style={dayStyle(value)}
+      />
       <TabsContent value={value} className="flex min-h-0 flex-col">
         {children}
       </TabsContent>

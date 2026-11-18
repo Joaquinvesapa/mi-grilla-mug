@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LIVE_BUTTON_CLEARANCE_PX, ScheduleGrid } from "@/components/schedule-grid";
 import { posterTimeToInstant } from "@/lib/festival-time";
@@ -8,7 +8,20 @@ import type { Show } from "@/lib/schedule-types";
 
 import { blockOf, DAYS, showsOf, STAGES } from "./schedule-fixture";
 
-afterEach(cleanup);
+// Only `Date`, at 12:00 of Friday: before the first show of the fixture, so nothing is playing and
+// the now-line is off the axis, unless a test sets another time.
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  setNow("12:00");
+});
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+});
+
+function setNow(time: string) {
+  vi.setSystemTime(posterTimeToInstant("2026-03-13", time));
+}
 
 const FRIDAY = DAYS[0]!;
 const CLASH_TEXT = "Choca con otro show elegido";
@@ -121,19 +134,22 @@ describe("ScheduleGrid", () => {
       expect(block).toHaveAttribute("aria-pressed", "true");
       expect(within(block).getByText(CLASH_TEXT)).toBeInTheDocument();
       // On the time line, not in the name's row: the mark never takes width from the artist's
-      // name (NFR-04 holds with a clash too). Gold fill, dark outline: legible on the foam fill.
-      const icon = within(block)
-        .getByText(/^\d\d:\d\d – \d\d:\d\d$/)
-        .closest("[data-time-line]")
-        ?.querySelector("svg.lucide-triangle-alert");
+      // name (NFR-04 holds with a clash too). Not gold (Samsung's color): the icon takes the text
+      // color, and the label «Choque» says it in words, next to a hatched left edge.
+      const tag = block.querySelector("[data-clash-tag]");
+      expect(tag).toHaveTextContent("Choque");
+      const icon = tag?.querySelector("svg.lucide-triangle-alert");
       expect(icon).not.toBeNull();
-      expect(icon).toHaveClass("fill-warning");
+      expect(icon).not.toHaveClass("fill-warning");
+      expect(block.querySelector("[data-clash-edge]")).not.toBeNull();
+      expect(block).toHaveAccessibleName(/^[^:]*\d\d:\d\d – \d\d:\d\d$/);
       expect(block.firstElementChild?.querySelector("svg")).toBeNull();
     }
     const edge = blockOf(container, "fri-samsung-1700");
     expect(edge).toHaveAttribute("aria-pressed", "true");
     expect(within(edge).queryByText(CLASH_TEXT)).not.toBeInTheDocument();
     expect(edge.querySelector("svg.lucide-triangle-alert")).toBeNull();
+    expect(edge.querySelector("[data-clash-edge], [data-clash-tag]")).toBeNull();
   });
 
   it("marca como sin guardar solo los shows que difieren de lo guardado", () => {
@@ -284,7 +300,7 @@ describe("ScheduleGrid", () => {
     });
 
     const block = blockOf(container, "fri-flow-1800");
-    expect(block.querySelector("[data-time-line] svg.lucide-triangle-alert")).not.toBeNull();
+    expect(block.querySelector("[data-clash-tag] svg.lucide-triangle-alert")).not.toBeNull();
     expect(block.querySelector("[data-friend-picks] svg")).toBeNull();
     expect(block).toHaveAccessibleDescription(/Choca con otro show elegido/);
     expect(block).toHaveAccessibleDescription(/Lo eligieron: Ana Pérez/);
@@ -467,6 +483,145 @@ describe("ScheduleGrid", () => {
       // 12 px × 1.25 = 15 px: the line itself carries the 12 px, or its strut keeps the inherited
       // 16 px and measures 20 px even with leading-tight.
       expect(line).toHaveClass("text-[12px]", "leading-tight");
+    }
+  });
+});
+
+describe("ScheduleGrid: color por escenario, ahora y shows pasados", () => {
+  it("test-grid-lanes: cada columna se tiñe con su escenario (7 %) y el encabezado con 9 % y un filete de 3 px", () => {
+    const { container } = renderFriday();
+
+    const flowColumn = container.querySelector<HTMLElement>('[data-stage-column="flow"]')!;
+    expect(flowColumn.style.getPropertyValue("--stage")).toBe("#9ccfd8");
+    expect(flowColumn.className).toContain("color-mix(in_srgb,var(--stage)_7%,transparent)");
+    const samsung = container.querySelector<HTMLElement>('[data-stage-column="samsung"]')!;
+    expect(samsung.style.getPropertyValue("--stage")).toBe("#f6c177");
+
+    const headers = [...container.querySelectorAll<HTMLElement>("[data-stage-header]")];
+    expect(headers[0]!.style.getPropertyValue("--stage")).toBe("#9ccfd8");
+    expect(headers[0]!.className).toContain("_9%,");
+    expect(headers[0]!.className).toContain("border-t-[3px]");
+    expect(headers[0]!.className).toContain("border-t-(--stage)");
+    // The text stays foreground.
+    expect(headers[0]!.className).not.toContain("text-(--stage)");
+  });
+
+  it("test-grid-block-colors: elegido relleno del escenario con --on-stage en negrita; no elegido con borde al 45 %", () => {
+    const { container } = renderFriday({ selected: ["fri-flow-1800"] });
+
+    const chosen = blockOf(container, "fri-flow-1800");
+    expect(chosen.style.getPropertyValue("--stage")).toBe("#9ccfd8");
+    expect(chosen.style.getPropertyValue("--on-stage")).toBe("#191724");
+    expect(chosen).toHaveClass("bg-(--stage)", "text-(--on-stage)");
+    expect(chosen.querySelector("span > span")).toHaveClass("font-bold");
+
+    const plain = blockOf(container, "fri-samsung-1700");
+    expect(plain.style.getPropertyValue("--stage")).toBe("#f6c177");
+    expect(plain).toHaveClass("border-(--stage)/45", "bg-card", "text-foreground");
+    expect(plain).not.toHaveClass("bg-(--stage)");
+  });
+
+  it("test-grid-past: los terminados se atenúan: no elegido con borde débil y nombre apagado; elegido con relleno 72 %", () => {
+    setNow("20:00");
+    const { container } = renderFriday({ selected: ["fri-flow-1800"] });
+
+    const pastPlain = blockOf(container, "fri-samsung-1700");
+    expect(pastPlain).toHaveClass("border-(--stage)/27");
+    expect(pastPlain).not.toHaveClass("border-(--stage)/45");
+    expect(pastPlain.querySelector("span > span")).toHaveClass("text-muted-foreground");
+
+    const pastChosen = blockOf(container, "fri-flow-1800");
+    expect(pastChosen.className).toContain(
+      "color-mix(in_srgb,var(--stage)_72%,var(--color-rp-base))",
+    );
+    expect(pastChosen).not.toHaveClass("bg-(--stage)");
+
+    // A show still to come keeps the full look.
+    const upcoming = blockOf(container, "fri-samsung-2330");
+    expect(upcoming).toHaveClass("border-(--stage)/45");
+  });
+
+  it("test-grid-clash-edge: el choque lleva borde rayado en --on-stage, ícono en currentColor y «Choque» visible", () => {
+    const { container } = renderFriday({
+      selected: ["fri-flow-1800", "fri-perrys-1815"],
+      clashes: ["fri-flow-1800", "fri-perrys-1815"],
+    });
+
+    const block = blockOf(container, "fri-flow-1800");
+    const edge = block.querySelector<HTMLElement>("[data-clash-edge]")!;
+    expect(edge).toHaveAttribute("aria-hidden", "true");
+    expect(edge.className).toContain("repeating-linear-gradient");
+    expect(edge.className).toContain("var(--on-stage)");
+    expect(edge).toHaveClass("w-[5px]");
+    const tag = block.querySelector<HTMLElement>("[data-clash-tag]")!;
+    expect(tag).toHaveAttribute("aria-hidden", "true");
+    expect(tag.querySelector("svg")).not.toHaveClass("text-rp-base");
+    // The description for assistive tech stays, and the name does not carry the visible tag.
+    expect(block).toHaveAccessibleDescription(/Choca con otro show elegido/);
+    expect(block).toHaveAccessibleName("DJO 18:00 – 19:00");
+  });
+
+  it("test-grid-now-line: la línea love cruza las columnas a la hora actual y el chip lleva la hora", () => {
+    setNow("18:30");
+    const { container } = renderFriday();
+
+    const line = container.querySelector<HTMLElement>("[data-now-line]")!;
+    expect(line).toHaveAttribute("aria-hidden", "true");
+    expect(line).toHaveClass(
+      "bg-rp-love",
+      "h-0.5",
+      "motion-safe:animate-now-glow",
+      "pointer-events-none",
+    );
+    // 15:00 → 18:30 = 210 min × 2 px = 420 px, under the 40 px stage header row, centered (−1 px) on its 2 px.
+    expect(line.style.top).toBe("459px");
+    // Under the sticky header (z-20) and hour column (z-10).
+    expect(line.className).toContain("z-[5]");
+
+    const chip = container.querySelector<HTMLElement>("[data-now-chip]")!;
+    expect(chip).toHaveTextContent("18:30");
+    expect(chip).toHaveClass("bg-rp-love");
+    expect(chip.style.top).toBe("420px");
+    // The chip lives in the sticky hour column.
+    expect(chip.closest("[data-hour-column]")).not.toBeNull();
+  });
+
+  it("test-grid-now-line: se mueve con la hora y no se dibuja fuera del eje del día", () => {
+    const { container, rerender } = renderFriday();
+    expect(container.querySelector("[data-now-line]")).toBeNull();
+    expect(container.querySelector("[data-now-chip]")).toBeNull();
+
+    // After the last show's end (01:00 of the next day): off the axis again.
+    vi.setSystemTime(posterTimeToInstant("2026-03-13", "01:30").getTime() + 24 * 3_600_000);
+    rerender(
+      <ScheduleGrid
+        day={FRIDAY}
+        stages={STAGES}
+        shows={showsOf("fri")}
+        selectedIds={new Set()}
+        pendingIds={new Set()}
+        clashIds={new Set()}
+        friendPicks={new Map()}
+        onToggle={() => {}}
+      />,
+    );
+    expect(container.querySelector("[data-now-line]")).toBeNull();
+  });
+
+  it("test-grid-playing: el show sonando lleva el punto love y «Ahora»; los demás no", () => {
+    setNow("18:30");
+    const { container } = renderFriday();
+
+    const playing = blockOf(container, "fri-flow-1800");
+    expect(playing.querySelector("[data-live-dot]")).not.toBeNull();
+    expect(playing).toHaveAccessibleDescription(/Ahora/);
+    expect(within(playing).getByText("Ahora")).toBeInTheDocument();
+    expect(playing).toHaveAccessibleName("DJO 18:00 – 19:00");
+
+    for (const id of ["fri-samsung-1700", "fri-samsung-2330"]) {
+      const other = blockOf(container, id);
+      expect(other.querySelector("[data-live-dot]")).toBeNull();
+      expect(within(other).queryByText("Ahora")).toBeNull();
     }
   });
 });
