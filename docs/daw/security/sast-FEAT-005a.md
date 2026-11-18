@@ -6,7 +6,9 @@
 | Tools | grep sobre los 9 archivos de `src/` del ticket (`git diff main...HEAD`), oxlint --type-aware, pnpm audit --prod |
 | Date | 2026-11-18 |
 
-Alcance: los archivos de `src/` del ticket, sobre `1cecf85`.
+Alcance: los archivos de `src/` del ticket, sobre `1cecf85`. Re-cierre de CODE sobre `b9af62b` (vuelta 3
+de la spec, solo ids de test): `git diff 1cecf85 HEAD -- src package.json pnpm-lock.yaml` vacío y
+`pnpm audit --prod` sin vulnerabilidades conocidas, así que el escaneo sigue vigente.
 
 - **Nuevos:** `src/lib/live-now.ts`, `src/lib/live-messages.ts`, `src/components/use-now.ts`,
   `src/components/live-button.tsx`, `src/components/live-panel.tsx`.

@@ -5,7 +5,9 @@ PostgreSQL real (`postgres:17.12` de `docker-compose.yml`, migrada y sembrada) y
 proyectos de Playwright. Los E2E corren dentro de la imagen oficial
 `mcr.microsoft.com/playwright:v1.65.1-noble` con la red del host (`pnpm test:e2e:docker`), porque
 a WebKit le faltan bibliotecas del sistema en este host (libicu74, libxml2). Corrida el 2026-11-18
-sobre `1cecf85`, con Node 24.22.2 (el `node` del PATH del host es v26).
+sobre `b9af62b` (re-cierre de CODE tras la vuelta 3 de la spec, que solo agregó ids `test-…`; el
+código es el mismo de `1cecf85`), con Node 24.22.2 (el `node` del PATH del host es v26). Esta
+corrida reemplaza a la anterior sobre `1cecf85`, que dio los mismos números.
 
 | Field | Value |
 |---|---|
@@ -25,7 +27,7 @@ Detalle:
 - **Unit:** 463 tests en 52 archivos.
 - **Integración:** 48 tests en 6 archivos.
 - **E2E:** 272 ejecuciones en los 4 proyectos (`iphone-webkit`, `mobile-chromium`, `mobile-360` y
-  `desktop`). Pasan 267 y se saltean 5, en 2,5 min. Incluye `grid.spec.ts`, `wallpaper.spec.ts`,
+  `desktop`). Pasan 267 y se saltean 5, en 2,8 min. Incluye `grid.spec.ts`, `wallpaper.spec.ts`,
   `offline.spec.ts` y `demo.spec.ts`: el botón "En vivo" no intercepta sus clics (G12).
 - **Cobertura:** es la de la suite unitaria (statements 99,31 %).
 - **Casos nuevos:**
