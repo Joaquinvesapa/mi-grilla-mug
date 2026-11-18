@@ -5,6 +5,7 @@ import { useActionState, useState, useSyncExternalStore } from "react";
 import type { RegenerateInviteState } from "@/app/group-actions";
 import { FormAlert } from "@/components/form-feedback";
 import { Button } from "@/components/ui/button";
+import { useConnectionGuard } from "@/components/use-connection-guard";
 import {
   ASK_THE_ADMIN,
   formatInviteExpiry,
@@ -77,7 +78,8 @@ async function copyToClipboard(url: string): Promise<boolean> {
  * even though it cuts off the link already shared (R-14, a risk the user accepted in the spec's
  * round 3); the button stays disabled until the answer comes, so it cannot be sent twice.
  * An expired link, or none at all, is not offered for sharing: the admin generates a new one the
- * same way and everyone else is told who to ask.
+ * same way and everyone else is told who to ask. Without a connection "Generar link nuevo" sends
+ * nothing and says so (FR-04 of FEAT-006b).
  */
 export function InviteLink({
   groupId,
@@ -89,8 +91,9 @@ export function InviteLink({
 }: InviteLinkProps) {
   const origin = useOrigin();
   const [notice, setNotice] = useState<CopyNotice>(null);
+  const connection = useConnectionGuard();
   const [state, formAction, pending] = useActionState<RegenerateView, FormData>(
-    async (_prev, formData) => regenerateAction({ ok: true }, formData),
+    connection.guard(async (_prev, formData) => regenerateAction({ ok: true }, formData)),
     null,
   );
 
@@ -155,7 +158,7 @@ export function InviteLink({
       )}
 
       {isAdmin ? (
-        <form action={formAction}>
+        <form action={formAction} onSubmit={connection.onSubmit}>
           <input type="hidden" name="groupId" value={groupId} />
           <Button
             type="submit"
@@ -170,12 +173,12 @@ export function InviteLink({
         </form>
       ) : null}
 
-      {state?.ok === true ? (
+      {state?.ok === true && connection.message === null ? (
         <p role="status" className="text-sm text-muted-foreground">
           {LINK_REGENERATED}
         </p>
       ) : null}
-      <FormAlert message={state?.ok === false ? state.error : null} />
+      <FormAlert message={connection.message ?? (state?.ok === false ? state.error : null)} />
     </section>
   );
 }

@@ -3,9 +3,17 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
-import { regenerateInviteAction } from "@/app/group-actions";
+import {
+  deleteGroupAction,
+  leaveGroupAction,
+  regenerateInviteAction,
+  removeMemberAction,
+  renameGroupAction,
+} from "@/app/group-actions";
+import { GroupDangerZone } from "@/components/group-danger-zone";
 import { GroupMembers } from "@/components/group-members";
 import { InviteLink } from "@/components/invite-link";
+import { RenameGroupForm } from "@/components/rename-group-form";
 import { Button } from "@/components/ui/button";
 import { GROUP_LOAD_FAILED } from "@/lib/group-messages";
 import { getAccounts } from "@/server/accounts";
@@ -16,10 +24,11 @@ export const metadata: Metadata = {
   title: "Grupo · Mi Grilla",
 };
 
-// A group's screen (FR-04, FR-05, FR-11): its name, its members and its invite link. Someone else's
-// group, one that does not exist and a malformed id all answer `notFound()`, with nothing of the
-// group (FR-12, R-04). Dynamic: it reads the request's cookies. The headers are read before
-// getAccounts(), so nothing creates Better Auth while `next build` prerenders.
+// A group's screen (FR-04, FR-05, FR-11): its name, its members and its invite link. Its admin also
+// renames it, takes members out and deletes it; everyone can leave it (FEAT-006b, FR-01, FR-02).
+// Someone else's group, one that does not exist and a malformed id all answer `notFound()`, with
+// nothing of the group (FR-12, R-04). Dynamic: it reads the request's cookies. The headers are
+// read before getAccounts(), so nothing creates Better Auth while `next build` prerenders.
 export default async function GroupPage({ params }: { params: Promise<{ groupId: string }> }) {
   const { groupId } = await params;
   const requestHeaders = await headers();
@@ -42,6 +51,13 @@ export default async function GroupPage({ params }: { params: Promise<{ groupId:
         {result.ok ? (
           <h1 className="text-4xl font-semibold tracking-tight break-words">{result.group.name}</h1>
         ) : null}
+        {result.ok && result.group.isAdmin ? (
+          <RenameGroupForm
+            groupId={result.group.id}
+            name={result.group.name}
+            action={renameGroupAction}
+          />
+        ) : null}
       </header>
 
       {result.ok ? (
@@ -50,7 +66,12 @@ export default async function GroupPage({ params }: { params: Promise<{ groupId:
             <h2 id="members" className="text-xl font-semibold">
               Integrantes
             </h2>
-            <GroupMembers members={result.group.members} />
+            <GroupMembers
+              groupId={result.group.id}
+              members={result.group.members}
+              isAdmin={result.group.isAdmin}
+              removeAction={removeMemberAction}
+            />
           </section>
           <InviteLink
             groupId={result.group.id}
@@ -59,6 +80,13 @@ export default async function GroupPage({ params }: { params: Promise<{ groupId:
             isAdmin={result.group.isAdmin}
             now={new Date()}
             regenerateAction={regenerateInviteAction}
+          />
+          <GroupDangerZone
+            groupId={result.group.id}
+            groupName={result.group.name}
+            isAdmin={result.group.isAdmin}
+            leaveAction={leaveGroupAction}
+            deleteAction={deleteGroupAction}
           />
         </>
       ) : (

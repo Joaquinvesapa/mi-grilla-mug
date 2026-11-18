@@ -1,13 +1,14 @@
-// Local runs read DATABASE_URL from `.env`, the same file `next start` reads; in CI (and in
-// `pnpm test:e2e:docker` when it is exported) it comes from the environment, which dotenv never
-// overrides.
+// Local runs read TEST_DATABASE_URL (and DATABASE_URL, the development database) from `.env`; in CI
+// (and in `pnpm test:e2e:docker`) they come from the environment, which dotenv never overrides.
+// FIX-004: the app under test runs on TEST_DATABASE_URL (playwright.config.ts), so these rows go
+// there too, never to the development database.
 import "dotenv/config";
 
 import { randomUUID } from "node:crypto";
 
 import pg from "pg";
 
-import { assertTruncatableDatabaseUrl } from "../integration/database-guard";
+import { resolveTestDatabaseUrl } from "../test-database";
 
 // The rows FEAT-006c's E2E needs that the UI cannot make fast enough: groups of up to 20 members
 // with their saved selections (AC-21, AC-22, AC-25, AC-30). Written straight into the tables of
@@ -19,12 +20,11 @@ import { assertTruncatableDatabaseUrl } from "../integration/database-guard";
 let pool: pg.Pool | undefined;
 
 /**
- * The pool, opened only after the guard: a DATABASE_URL that is not this machine's or the CI
- * service's is refused before any connection (R-07).
+ * The pool, opened only after the guard: a TEST_DATABASE_URL that is missing, not this machine's or
+ * the CI service's, or the development database is refused before any connection (R-07).
  */
 function database(): pg.Pool {
-  const url = process.env.DATABASE_URL ?? "";
-  assertTruncatableDatabaseUrl(url);
+  const url = resolveTestDatabaseUrl(process.env);
   // Idle connections close on their own, so a worker that is done never waits on the pool.
   pool ??= new pg.Pool({ connectionString: url, max: 2, allowExitOnIdle: true });
   return pool;

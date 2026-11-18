@@ -13,6 +13,7 @@ export type GroupMessageCode =
   | "INVALID_INVITE"
   | "NOT_FOUND"
   | "NOT_ADMIN"
+  | "MEMBER_NOT_FOUND"
   | "UNAUTHENTICATED"
   | "SERVICE_UNAVAILABLE";
 
@@ -22,7 +23,8 @@ const CATALOG = {
   GROUP_FULL: `El grupo está completo (${MAX_GROUP_MEMBERS} integrantes).`,
   INVALID_INVITE: "Este link de invitación ya no es válido. Pedile uno nuevo a alguien del grupo.",
   NOT_FOUND: "No encontramos ese grupo.",
-  NOT_ADMIN: "Solo quien administra el grupo puede generar un link nuevo.",
+  NOT_ADMIN: "Solo quien administra el grupo puede hacer esto.",
+  MEMBER_NOT_FOUND: "Esa persona ya no está en el grupo.",
   UNAUTHENTICATED: "Tu sesión terminó. Volvé a iniciar sesión.",
   SERVICE_UNAVAILABLE: "No pudimos guardar. Probá de nuevo en un rato.",
 } as const satisfies Record<GroupMessageCode, string>;
@@ -85,6 +87,31 @@ export const INVITATION_LEAD = "Te invitaron a sumarte a";
 export const JOIN_GROUP_BUTTON = "Unirme";
 export const INVITATION_LOAD_FAILED = "No pudimos cargar la invitación. Probá de nuevo en un rato.";
 export const BACK_TO_SCHEDULE = "Volver a la grilla";
+
+/** The group's screen, for its admin: renaming it and taking a member out (FR-01). */
+export const RENAME_GROUP_LABEL = "Cambiar nombre";
+export const SAVE_NAME_BUTTON = "Guardar nombre";
+export const NAME_SAVED = "Nombre guardado";
+export const REMOVE_MEMBER_BUTTON = "Sacar";
+/** The "Sacar" button's accessible name: which row it takes out. */
+export function removeMemberLabel(memberName: string): string {
+  return `Sacar a ${memberName}`;
+}
+/** Leaving (FR-02, everyone) and deleting (FR-01, the admin), each asking first. */
+export const LEAVE_GROUP_BUTTON = "Salir del grupo";
+export const LEAVE_GROUP_CONFIRM = "Salir";
+export function leaveGroupTitle(groupName: string): string {
+  return `¿Salir de ${groupName}?`;
+}
+export const DELETE_GROUP_BUTTON = "Borrar grupo";
+export const DELETE_GROUP_CONFIRM = "Borrar";
+export const DELETE_GROUP_WARNING = "Se borra para todos sus integrantes.";
+export function deleteGroupTitle(groupName: string): string {
+  return `¿Borrar ${groupName}?`;
+}
+export const CANCEL = "Cancelar";
+/** Any group action tried without a connection (FR-04, AC-28): nothing is sent. */
+export const OFFLINE_ACTION = "Necesitás conexión para hacer esto";
 
 /** The title and text the system share sheet gets with the link. */
 export function inviteShareText(groupName: string): { title: string; text: string } {

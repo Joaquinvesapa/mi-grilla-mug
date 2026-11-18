@@ -55,6 +55,12 @@ Todos los cambios notables de Mi Grilla se registran en este archivo. El formato
   copiar; el administrador puede generar uno nuevo, que corta el anterior. Quien abre el link ve el
   nombre del grupo y cuántos son, y se une con "Unirme"; sin sesión, entra o se registra y vuelve a
   la invitación.
+- [FEAT-006b] Administrar un grupo: quien lo administra puede cambiarle el nombre, sacar a un
+  integrante y borrarlo, con confirmación. Cualquier integrante puede salir, también con
+  confirmación: si sale el administrador pasa a serlo el integrante más antiguo, y si sale el
+  último el grupo se borra. Quien sale o es sacado deja de ver el grupo y puede volver con un link.
+- [FEAT-006b] Sin conexión, crear, unirse, generar link, renombrar, sacar, salir y borrar dicen
+  "Necesitás conexión para hacer esto" y no hacen el cambio.
 - [FEAT-006c] El grupo en la grilla: si el usuario está en algún grupo, arriba de los días aparece
   el selector "Grupo" (con "Sin grupo") y cada show muestra las iniciales de los amigos que lo
   eligieron, hasta 3 y "+N". Solo cuenta la selección guardada de cada amigo. El grupo elegido se
@@ -63,6 +69,10 @@ Todos los cambios notables de Mi Grilla se registran en este archivo. El formato
   cerrar sesión borra esos datos del celular.
 
 ### Changed
+
+- [FEAT-006b] El mensaje para quien no administra un grupo pasa a ser genérico ("Solo quien
+  administra el grupo puede hacer esto."), y "Generar link nuevo" lee el permiso del administrador
+  después de bloquear el grupo.
 
 - [FEAT-002] La pantalla principal `/` requiere sesión iniciada; sin sesión lleva a `/login`.
 - [FEAT-002] La CI recibe las variables de Better Auth y el job `e2e` migra la base antes de correr.
@@ -83,6 +93,10 @@ Todos los cambios notables de Mi Grilla se registran en este archivo. El formato
   bibliotecas, sin `playwright install` ni cache de navegadores.
 - [FIX-003] En la pantalla de bloqueo del iPhone, la linterna y la cámara ya no tapan la última hora
   del fondo de pantalla: la grilla deja libre el 14 % inferior (392 px) en vez del 8 %.
+- [FIX-004] Los tests ya no borran ni ensucian la base de desarrollo: la integración y los E2E usan
+  una base aparte (`TEST_DATABASE_URL`, `mi_grilla_test` en el mismo Postgres del compose), que se
+  prepara con `pnpm db:test:prepare`. Si falta, es remota o es la misma que `DATABASE_URL`, los tests
+  no corren.
 - [FEAT-006c] La línea del horario de cada show mide 15 px en vez de heredar 24 px; en los bloques
   cortos con amigos que no tienen alto para el nombre en dos líneas, el nombre se recorta a una
   línea con "…", así entran el horario y las iniciales.

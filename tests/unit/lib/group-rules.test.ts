@@ -9,6 +9,7 @@ import {
   MAX_GROUP_MEMBERS,
   MAX_GROUPS_PER_USER,
   normalizeGroupName,
+  USER_ID_PATTERN,
 } from "@/lib/group-rules";
 
 describe("group limits", () => {
@@ -70,6 +71,28 @@ describe("GROUP_ID_PATTERN", () => {
       "0b6c1f0e-8f5d-4c1a-9b8e-2f3d4c5b6a7e' OR 1=1",
     ]) {
       expect(GROUP_ID_PATTERN.test(id)).toBe(false);
+    }
+  });
+});
+
+describe("USER_ID_PATTERN", () => {
+  it("acepta ids de Better Auth y los literales de los tests, y rechaza otras formas", () => {
+    // Better Auth: 32 alphanumeric characters.
+    expect(USER_ID_PATTERN.test("aB3dE5gH7jK9mN1pQ3sT5vW7yZ9bC1dE")).toBe(true);
+    for (const id of ["ana", "user-01", "a_b", "x", "a".repeat(64)]) {
+      expect(USER_ID_PATTERN.test(id)).toBe(true);
+    }
+    for (const id of [
+      "",
+      "a".repeat(65),
+      "ana pérez",
+      "ana ",
+      "ana\n",
+      "ana'; DROP TABLE users; --",
+      "a/b",
+      "a.b",
+    ]) {
+      expect(USER_ID_PATTERN.test(id)).toBe(false);
     }
   });
 });

@@ -133,6 +133,22 @@ export async function readInviteLink(page: Page): Promise<string> {
   return (await link.textContent())?.trim() ?? "";
 }
 
+/**
+ * Opens the invite link with a session, taps "Unirme" and waits for the group's screen, named
+ * `groupName`. For the second and third members of a test (FEAT-006b).
+ */
+export async function joinGroup(
+  page: Page,
+  link: string,
+  groupId: string,
+  groupName: string,
+): Promise<void> {
+  await page.goto(link);
+  await page.getByRole("button", { name: JOIN_GROUP_BUTTON }).click();
+  await expect(page).toHaveURL(`/grupos/${groupId}`);
+  await expect(page.getByRole("heading", { level: 1, name: groupName })).toBeVisible();
+}
+
 /** One row per member in the group's screen, in the list's order (who joined first goes first). */
 export function memberRows(page: Page): Locator {
   return page.getByRole("list", { name: "Integrantes" }).getByRole("listitem");

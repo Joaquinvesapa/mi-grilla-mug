@@ -1,9 +1,10 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-// The E2E helper writes groups and friends straight into the database (FEAT-006c, Block 5). Its
-// guard has to refuse a non-local DATABASE_URL before a single connection is opened (R-07): `pg` is
-// replaced here so any connection attempt is recorded instead of made.
+// The E2E helper writes groups and friends straight into the test database (FEAT-006c, Block 5).
+// Its guard (FIX-004's `resolveTestDatabaseUrl`) has to refuse a missing, non-local or development
+// TEST_DATABASE_URL before a single connection is opened (R-07): `pg` is replaced here so any
+// connection attempt is recorded instead of made.
 const connections = vi.hoisted(() => ({ opened: 0 }));
 
 vi.mock("pg", () => {
@@ -21,35 +22,54 @@ vi.mock("pg", () => {
   return { default: { Pool }, Pool };
 });
 
-const REMOTE_URL = "postgresql://user:secret@db.example.com:5432/mi_grilla";
-const original = process.env.DATABASE_URL;
+const REMOTE_URL = "postgresql://user:secret@db.example.com:5432/mi_grilla_test";
+const DEVELOPMENT_URL = "postgresql://user:secret@127.0.0.1:5432/mi_grilla";
+const LOCAL_TEST_URL = "postgresql://user:secret@127.0.0.1:5432/mi_grilla_test";
+const original = {
+  TEST_DATABASE_URL: process.env.TEST_DATABASE_URL,
+  DATABASE_URL: process.env.DATABASE_URL,
+};
 
 /**
- * The helper and the guard's error class from the same fresh module graph: the helper keeps its
+ * The helper and the guards' error classes from the same fresh module graph: the helper keeps its
  * pool in a module variable, so every test starts from a new one.
  */
 async function load() {
   const db = await import("../../e2e/db");
   const { UntruncatableDatabaseError } = await import("../../integration/database-guard");
-  return { db, UntruncatableDatabaseError };
+  const { MissingTestDatabaseError, SameAsDevelopmentDatabaseError } =
+    await import("../../test-database");
+  return {
+    db,
+    UntruncatableDatabaseError,
+    MissingTestDatabaseError,
+    SameAsDevelopmentDatabaseError,
+  };
+}
+
+function restore(name: keyof typeof original): void {
+  const value = original[name];
+  if (value === undefined) {
+    delete process.env[name];
+  } else {
+    process.env[name] = value;
+  }
 }
 
 describe("tests/e2e/db.ts", () => {
   beforeEach(() => {
     connections.opened = 0;
     vi.resetModules();
+    process.env.DATABASE_URL = DEVELOPMENT_URL;
   });
 
   afterEach(() => {
-    if (original === undefined) {
-      delete process.env.DATABASE_URL;
-    } else {
-      process.env.DATABASE_URL = original;
-    }
+    restore("TEST_DATABASE_URL");
+    restore("DATABASE_URL");
   });
 
-  it("test-e2e-db-guard-rejected: el helper con una DATABASE_URL no local es rechazado antes de conectarse", async () => {
-    process.env.DATABASE_URL = REMOTE_URL;
+  it("test-e2e-db-guard-rejected: el helper con una TEST_DATABASE_URL no local es rechazado antes de conectarse", async () => {
+    process.env.TEST_DATABASE_URL = REMOTE_URL;
     const { db, UntruncatableDatabaseError } = await load();
 
     await expect(
@@ -67,19 +87,29 @@ describe("tests/e2e/db.ts", () => {
     expect(connections.opened).toBe(0);
   });
 
-  it("sin DATABASE_URL también se rechaza antes de conectarse", async () => {
+  it("sin TEST_DATABASE_URL también se rechaza antes de conectarse", async () => {
     // `.env` would fill it back in: an empty value is one dotenv never overrides.
-    process.env.DATABASE_URL = "";
-    const { db, UntruncatableDatabaseError } = await load();
+    process.env.TEST_DATABASE_URL = "";
+    const { db, MissingTestDatabaseError } = await load();
 
     await expect(db.userIdByEmail("e2e@example.com")).rejects.toBeInstanceOf(
-      UntruncatableDatabaseError,
+      MissingTestDatabaseError,
     );
     expect(connections.opened).toBe(0);
   });
 
-  it("con una base local sí se conecta", async () => {
-    process.env.DATABASE_URL = "postgresql://user:secret@127.0.0.1:5432/mi_grilla";
+  it("con la base de desarrollo como TEST_DATABASE_URL es rechazado antes de conectarse", async () => {
+    process.env.TEST_DATABASE_URL = DEVELOPMENT_URL;
+    const { db, SameAsDevelopmentDatabaseError } = await load();
+
+    await expect(db.userIdByEmail("e2e@example.com")).rejects.toBeInstanceOf(
+      SameAsDevelopmentDatabaseError,
+    );
+    expect(connections.opened).toBe(0);
+  });
+
+  it("con una base de tests local sí se conecta", async () => {
+    process.env.TEST_DATABASE_URL = LOCAL_TEST_URL;
     const { db } = await load();
 
     await expect(db.userIdByEmail("e2e@example.com")).rejects.toThrow("no debería consultar");

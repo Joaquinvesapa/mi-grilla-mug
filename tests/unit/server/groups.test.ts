@@ -14,12 +14,16 @@ import { INVITE_TTL_MS } from "@/lib/group-rules";
 import {
   createGroup,
   createGroupsService,
+  deleteGroup,
   getGroup,
   getInvitePreview,
   joinGroup,
+  leaveGroup,
   listGroupPicks,
   listGroups,
   regenerateInvite,
+  removeMember,
+  renameGroup,
 } from "@/server/groups";
 
 // Tests may not import the generated client (no-restricted-imports): take its type from the signature.
@@ -110,6 +114,9 @@ const GROUP_COUNT = /FROM group_members WHERE group_id = \$$/;
 const INVITE_BY_HASH = /FROM group_invites WHERE token_hash = \$$/;
 const INVITE_BY_GROUP = /FROM group_invites WHERE group_id = \$$/;
 const MEMBERSHIP = /FROM group_members WHERE group_id = \$ AND user_id = \$$/;
+/** The session's role, read in its own statement once the group is locked (spec round 1, F1). */
+const ROLE = /^SELECT is_admin FROM group_members WHERE group_id = \$ AND user_id = \$$/;
+const OTHER_USER_ID = "user-beto";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -167,6 +174,14 @@ describe("input validation", () => {
         ok: false,
         code: "NOT_FOUND",
       });
+      for (const result of [
+        await service.renameGroup(USER_ID, groupId, "Nuevo"),
+        await service.removeMember(USER_ID, groupId, OTHER_USER_ID),
+        await service.deleteGroup(USER_ID, groupId),
+        await service.leaveGroup(USER_ID, groupId),
+      ]) {
+        expect(result).toStrictEqual({ ok: false, code: "NOT_FOUND" });
+      }
     }
     expect(db.$queryRaw).not.toHaveBeenCalled();
     expect(db.$transaction).not.toHaveBeenCalled();
@@ -179,6 +194,31 @@ describe("input validation", () => {
       expect(await service.createGroup(USER_ID, name)).toStrictEqual({
         ok: false,
         code: "INVALID_NAME",
+      });
+      expect(await service.renameGroup(USER_ID, GROUP_ID, name)).toStrictEqual({
+        ok: false,
+        code: "INVALID_NAME",
+      });
+    }
+    expect(db.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("un memberUserId mal formado es MEMBER_NOT_FOUND sin consultar la base", async () => {
+    const { db } = fakeDb();
+    const { service } = serviceOver(db);
+    for (const memberUserId of [
+      "",
+      "a".repeat(65),
+      "ana pérez",
+      "' OR 1=1 --",
+      null,
+      undefined,
+      42,
+      [OTHER_USER_ID],
+    ]) {
+      expect(await service.removeMember(USER_ID, GROUP_ID, memberUserId)).toStrictEqual({
+        ok: false,
+        code: "MEMBER_NOT_FOUND",
       });
     }
     expect(db.$transaction).not.toHaveBeenCalled();
@@ -424,8 +464,8 @@ describe("getGroup", () => {
     expires_at: new Date(NOW.getTime() + INVITE_TTL_MS),
   };
   const memberRows = [
-    { name: "Ana Pérez", is_admin: true },
-    { name: "Bruno", is_admin: false },
+    { user_id: USER_ID, name: "Ana Pérez", is_admin: true },
+    { user_id: OTHER_USER_ID, name: "Bruno", is_admin: false },
   ];
 
   it("devuelve nombre, integrantes, si administra y el link abierto", async () => {
@@ -442,8 +482,8 @@ describe("getGroup", () => {
         name: "Los del Lolla",
         isAdmin: true,
         members: [
-          { name: "Ana Pérez", initials: "AP", isAdmin: true },
-          { name: "Bruno", initials: "BR", isAdmin: false },
+          { name: "Ana Pérez", initials: "AP", isAdmin: true, userId: USER_ID, isSelf: true },
+          { name: "Bruno", initials: "BR", isAdmin: false, userId: OTHER_USER_ID, isSelf: false },
         ],
         invite: { token: TOKEN, expiresAt: groupRow.expires_at },
       },
@@ -509,14 +549,19 @@ describe("getGroup", () => {
 });
 
 describe("regenerateInvite", () => {
-  const ADMIN_LOCK = /FROM groups g JOIN group_members m .* FOR UPDATE OF g$/;
-
   it("el administrador reemplaza la invitación con el reloj, con el grupo bloqueado", async () => {
-    const { db, tx } = fakeDb([[ADMIN_LOCK, [{ is_admin: true }]]]);
+    const { db, tx } = fakeDb([
+      [GROUP_LOCK, [{ id: GROUP_ID }]],
+      [ROLE, [{ is_admin: true }]],
+    ]);
     const { service } = serviceOver(db);
 
     expect(await service.regenerateInvite(USER_ID, GROUP_ID)).toStrictEqual({ ok: true });
-    expect(paramsOf(tx.$queryRaw.mock.calls[0])).toStrictEqual([USER_ID, GROUP_ID]);
+    // The lock and the role are two statements: the role is read after the lock is held.
+    expect(sqlOf(tx.$queryRaw.mock.calls[0])).toMatch(GROUP_LOCK);
+    expect(paramsOf(tx.$queryRaw.mock.calls[0])).toStrictEqual([GROUP_ID]);
+    expect(sqlOf(tx.$queryRaw.mock.calls[1])).toMatch(ROLE);
+    expect(paramsOf(tx.$queryRaw.mock.calls[1])).toStrictEqual([GROUP_ID, USER_ID]);
     const upsert = tx.$executeRaw.mock.calls[0];
     expect(sqlOf(upsert)).toMatch(
       /^INSERT INTO group_invites .* ON CONFLICT \(group_id\) DO UPDATE/,
@@ -530,19 +575,202 @@ describe("regenerateInvite", () => {
     ]);
   });
 
-  it("un integrante común es NOT_ADMIN y un no integrante NOT_FOUND, sin escribir", async () => {
-    const common = fakeDb([[ADMIN_LOCK, [{ is_admin: false }]]]);
+  it("un integrante común es NOT_ADMIN y un no integrante o un grupo borrado NOT_FOUND, sin escribir", async () => {
+    const common = fakeDb([
+      [GROUP_LOCK, [{ id: GROUP_ID }]],
+      [ROLE, [{ is_admin: false }]],
+    ]);
     expect(await serviceOver(common.db).service.regenerateInvite(USER_ID, GROUP_ID)).toStrictEqual({
       ok: false,
       code: "NOT_ADMIN",
     });
     expect(common.tx.$executeRaw).not.toHaveBeenCalled();
 
-    const stranger = fakeDb([[ADMIN_LOCK, []]]);
+    const stranger = fakeDb([
+      [GROUP_LOCK, [{ id: GROUP_ID }]],
+      [ROLE, []],
+    ]);
     expect(
       await serviceOver(stranger.db).service.regenerateInvite(USER_ID, GROUP_ID),
     ).toStrictEqual({ ok: false, code: "NOT_FOUND" });
     expect(stranger.tx.$executeRaw).not.toHaveBeenCalled();
+
+    const gone = fakeDb([[GROUP_LOCK, []]]);
+    expect(await serviceOver(gone.db).service.regenerateInvite(USER_ID, GROUP_ID)).toStrictEqual({
+      ok: false,
+      code: "NOT_FOUND",
+    });
+    expect(gone.tx.$queryRaw).toHaveBeenCalledTimes(1);
+    expect(gone.tx.$executeRaw).not.toHaveBeenCalled();
+  });
+});
+
+/** The rules every administration takes first: the group's lock, then the session's role. */
+function lockRules(role: unknown[] = [{ is_admin: true }], lock: unknown[] = [{ id: GROUP_ID }]) {
+  return [
+    [GROUP_LOCK, lock],
+    [ROLE, role],
+  ] satisfies Rule[];
+}
+
+/** Rejections every admin-only operation shares: a stranger, a deleted group, a common member. */
+const ADMIN_ONLY_REJECTIONS: [rules: Rule[], code: string][] = [
+  [lockRules([]), "NOT_FOUND"],
+  [lockRules(undefined, []), "NOT_FOUND"],
+  [lockRules([{ is_admin: false }]), "NOT_ADMIN"],
+];
+
+describe("renameGroup", () => {
+  it("el administrador renombra con el nombre recortado, con el grupo bloqueado", async () => {
+    const { db, tx } = fakeDb(lockRules());
+    const { service } = serviceOver(db);
+
+    expect(await service.renameGroup(USER_ID, GROUP_ID, "  Los de siempre ")).toStrictEqual({
+      ok: true,
+    });
+    expect(sqlOf(tx.$queryRaw.mock.calls[0])).toMatch(GROUP_LOCK);
+    expect(sqlOf(tx.$queryRaw.mock.calls[1])).toMatch(ROLE);
+    expect(paramsOf(tx.$queryRaw.mock.calls[1])).toStrictEqual([GROUP_ID, USER_ID]);
+    const update = tx.$executeRaw.mock.calls[0];
+    expect(sqlOf(update)).toMatch(/^UPDATE groups SET name = \$ WHERE id = \$$/);
+    expect(paramsOf(update)).toStrictEqual(["Los de siempre", GROUP_ID]);
+  });
+
+  it("rechaza a un no integrante, un grupo borrado y un integrante común sin escribir", async () => {
+    for (const [rules, code] of ADMIN_ONLY_REJECTIONS) {
+      const { db, tx } = fakeDb(rules);
+      expect(await serviceOver(db).service.renameGroup(USER_ID, GROUP_ID, "Otro")).toStrictEqual({
+        ok: false,
+        code,
+      });
+      expect(tx.$executeRaw).not.toHaveBeenCalled();
+    }
+  });
+});
+
+describe("removeMember", () => {
+  it("el administrador saca a un integrante, con el grupo bloqueado", async () => {
+    const { db, tx } = fakeDb(lockRules());
+    const { service } = serviceOver(db);
+
+    expect(await service.removeMember(USER_ID, GROUP_ID, OTHER_USER_ID)).toStrictEqual({
+      ok: true,
+    });
+    expect(sqlOf(tx.$queryRaw.mock.calls[0])).toMatch(GROUP_LOCK);
+    expect(sqlOf(tx.$queryRaw.mock.calls[1])).toMatch(ROLE);
+    const remove = tx.$executeRaw.mock.calls[0];
+    expect(sqlOf(remove)).toMatch(
+      /^DELETE FROM group_members WHERE group_id = \$ AND user_id = \$$/,
+    );
+    expect(paramsOf(remove)).toStrictEqual([GROUP_ID, OTHER_USER_ID]);
+  });
+
+  it("rechaza a un no integrante, un grupo borrado y un integrante común sin escribir", async () => {
+    for (const [rules, code] of ADMIN_ONLY_REJECTIONS) {
+      const { db, tx } = fakeDb(rules);
+      expect(
+        await serviceOver(db).service.removeMember(USER_ID, GROUP_ID, OTHER_USER_ID),
+      ).toStrictEqual({ ok: false, code });
+      expect(tx.$executeRaw).not.toHaveBeenCalled();
+    }
+  });
+
+  it("sacarse a uno mismo o a alguien que no está es MEMBER_NOT_FOUND", async () => {
+    const self = fakeDb(lockRules());
+    expect(
+      await serviceOver(self.db).service.removeMember(USER_ID, GROUP_ID, USER_ID),
+    ).toStrictEqual({ ok: false, code: "MEMBER_NOT_FOUND" });
+    expect(self.tx.$executeRaw).not.toHaveBeenCalled();
+
+    const absent = fakeDb(lockRules());
+    absent.tx.$executeRaw.mockResolvedValueOnce(0);
+    expect(
+      await serviceOver(absent.db).service.removeMember(USER_ID, GROUP_ID, OTHER_USER_ID),
+    ).toStrictEqual({ ok: false, code: "MEMBER_NOT_FOUND" });
+  });
+});
+
+describe("deleteGroup", () => {
+  it("el administrador borra el grupo, con el grupo bloqueado", async () => {
+    const { db, tx } = fakeDb(lockRules());
+    const { service } = serviceOver(db);
+
+    expect(await service.deleteGroup(USER_ID, GROUP_ID)).toStrictEqual({ ok: true });
+    expect(sqlOf(tx.$queryRaw.mock.calls[0])).toMatch(GROUP_LOCK);
+    expect(sqlOf(tx.$queryRaw.mock.calls[1])).toMatch(ROLE);
+    const remove = tx.$executeRaw.mock.calls[0];
+    expect(sqlOf(remove)).toMatch(/^DELETE FROM groups WHERE id = \$$/);
+    expect(paramsOf(remove)).toStrictEqual([GROUP_ID]);
+  });
+
+  it("rechaza a un no integrante, un grupo borrado y un integrante común sin escribir", async () => {
+    for (const [rules, code] of ADMIN_ONLY_REJECTIONS) {
+      const { db, tx } = fakeDb(rules);
+      expect(await serviceOver(db).service.deleteGroup(USER_ID, GROUP_ID)).toStrictEqual({
+        ok: false,
+        code,
+      });
+      expect(tx.$executeRaw).not.toHaveBeenCalled();
+    }
+  });
+});
+
+describe("leaveGroup", () => {
+  const LEAVE =
+    /^DELETE FROM group_members WHERE group_id = \$ AND user_id = \$ RETURNING is_admin$/;
+  const PROMOTE =
+    /^UPDATE group_members SET is_admin = true WHERE \(group_id, user_id\) = \( ?SELECT group_id, user_id FROM group_members WHERE group_id = \$ ORDER BY joined_at, user_id LIMIT 1 ?\)$/;
+
+  function leaveRules(left: unknown[], remaining: number): Rule[] {
+    return [
+      [GROUP_LOCK, [{ id: GROUP_ID }]],
+      [LEAVE, left],
+      [GROUP_COUNT, [{ count: remaining }]],
+    ];
+  }
+
+  it("un integrante común sale y nadie cambia de rol", async () => {
+    const { db, tx } = fakeDb(leaveRules([{ is_admin: false }], 2));
+    expect(await serviceOver(db).service.leaveGroup(USER_ID, GROUP_ID)).toStrictEqual({ ok: true });
+    expect(sqlOf(tx.$queryRaw.mock.calls[0])).toMatch(GROUP_LOCK);
+    // The role is the one the deleted row had, read after the lock (spec round 1, F1).
+    expect(sqlOf(tx.$queryRaw.mock.calls[1])).toMatch(LEAVE);
+    expect(paramsOf(tx.$queryRaw.mock.calls[1])).toStrictEqual([GROUP_ID, USER_ID]);
+    expect(tx.$executeRaw).not.toHaveBeenCalled();
+  });
+
+  it("el administrador sale y el integrante más antiguo pasa a administrar", async () => {
+    const { db, tx } = fakeDb(leaveRules([{ is_admin: true }], 2));
+    expect(await serviceOver(db).service.leaveGroup(USER_ID, GROUP_ID)).toStrictEqual({ ok: true });
+    const promote = tx.$executeRaw.mock.calls[0];
+    expect(sqlOf(promote)).toMatch(PROMOTE);
+    expect(paramsOf(promote)).toStrictEqual([GROUP_ID]);
+    expect(tx.$executeRaw).toHaveBeenCalledTimes(1);
+  });
+
+  it("el último integrante sale y el grupo se borra", async () => {
+    const { db, tx } = fakeDb(leaveRules([{ is_admin: true }], 0));
+    expect(await serviceOver(db).service.leaveGroup(USER_ID, GROUP_ID)).toStrictEqual({ ok: true });
+    const remove = tx.$executeRaw.mock.calls[0];
+    expect(sqlOf(remove)).toMatch(/^DELETE FROM groups WHERE id = \$$/);
+    expect(paramsOf(remove)).toStrictEqual([GROUP_ID]);
+    expect(tx.$executeRaw).toHaveBeenCalledTimes(1);
+  });
+
+  it("un no integrante o un grupo borrado es NOT_FOUND sin escribir", async () => {
+    const stranger = fakeDb(leaveRules([], 1));
+    expect(await serviceOver(stranger.db).service.leaveGroup(USER_ID, GROUP_ID)).toStrictEqual({
+      ok: false,
+      code: "NOT_FOUND",
+    });
+    expect(stranger.tx.$executeRaw).not.toHaveBeenCalled();
+
+    const gone = fakeDb([[GROUP_LOCK, []]]);
+    expect(await serviceOver(gone.db).service.leaveGroup(USER_ID, GROUP_ID)).toStrictEqual({
+      ok: false,
+      code: "NOT_FOUND",
+    });
+    expect(gone.tx.$queryRaw).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -689,7 +917,7 @@ describe("joinGroup", () => {
 });
 
 describe("errors", () => {
-  it("groups: con la base caída devuelve SERVICE_UNAVAILABLE y registra solo el código", async () => {
+  it("groups: test-service-unavailable: con la base caída cada operación devuelve SERVICE_UNAVAILABLE y registra solo el código", async () => {
     const { service, log } = serviceOver(brokenDb());
     const results = [
       await service.createGroup(USER_ID, "Los del Lolla"),
@@ -699,11 +927,15 @@ describe("errors", () => {
       await service.getInvitePreview(USER_ID, TOKEN),
       await service.joinGroup(USER_ID, TOKEN),
       await service.listGroupPicks(USER_ID),
+      await service.renameGroup(USER_ID, GROUP_ID, "Los de siempre"),
+      await service.removeMember(USER_ID, GROUP_ID, OTHER_USER_ID),
+      await service.deleteGroup(USER_ID, GROUP_ID),
+      await service.leaveGroup(USER_ID, GROUP_ID),
     ];
     for (const result of results) {
       expect(result).toStrictEqual({ ok: false, code: "SERVICE_UNAVAILABLE" });
     }
-    expect(log).toHaveBeenCalledTimes(7);
+    expect(log).toHaveBeenCalledTimes(11);
     for (const [line] of log.mock.calls) {
       expect(line).toBe(LOG_LINE);
       expect(line).not.toContain("hunter2");
@@ -751,12 +983,23 @@ describe("shared functions", () => {
       code: "INVALID_INVITE",
     });
     expect(await joinGroup(USER_ID, "x")).toStrictEqual({ ok: false, code: "INVALID_INVITE" });
+    expect(await renameGroup(USER_ID, "x", "Otro")).toStrictEqual({ ok: false, code: "NOT_FOUND" });
+    expect(await removeMember(USER_ID, "x", OTHER_USER_ID)).toStrictEqual({
+      ok: false,
+      code: "NOT_FOUND",
+    });
+    expect(await deleteGroup(USER_ID, "x")).toStrictEqual({ ok: false, code: "NOT_FOUND" });
+    expect(await leaveGroup(USER_ID, GROUP_ID)).toStrictEqual({
+      ok: false,
+      code: "SERVICE_UNAVAILABLE",
+    });
     expect(getDb).toHaveBeenCalled();
     for (const [line] of errors.mock.calls) {
       expect(String(line)).toMatch(
         /^\[groups\] SERVICE_UNAVAILABLE at=\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/,
       );
     }
-    expect(errors).toHaveBeenCalledTimes(3);
+    // listGroups, listGroupPicks (FEAT-006c), createGroup and leaveGroup (FEAT-006b) reach the base.
+    expect(errors).toHaveBeenCalledTimes(4);
   });
 });
