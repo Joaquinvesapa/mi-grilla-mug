@@ -16,6 +16,7 @@ import {
   expiryTexts,
   GROUP_NAME,
   inviteCard,
+  join,
   memberRows,
   readInviteLink,
   test,
@@ -50,14 +51,6 @@ async function expectPreview(page: Page, members: number): Promise<void> {
   await expect(page.getByRole("heading", { level: 1, name: GROUP_NAME })).toBeVisible();
   await expect(page.getByText(memberCountLabel(members), { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: JOIN_GROUP_BUTTON })).toBeVisible();
-}
-
-/** Opens the link with a session, taps "Unirme" and waits for the group's screen (AC-07). */
-async function join(page: Page, link: string, groupId: string): Promise<void> {
-  await page.goto(link);
-  await page.getByRole("button", { name: JOIN_GROUP_BUTTON }).click();
-  await expect(page).toHaveURL(`/grupos/${groupId}`);
-  await expect(page.getByRole("heading", { level: 1, name: GROUP_NAME })).toBeVisible();
 }
 
 // Several accounts per test, each on its own browser context: the ACs go together so the suite fits

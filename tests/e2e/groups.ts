@@ -6,7 +6,12 @@ import {
   type Page,
 } from "@playwright/test";
 
-import { CREATE_GROUP_BUTTON, formatInviteExpiry, GROUP_NAME_LABEL } from "@/lib/group-messages";
+import {
+  CREATE_GROUP_BUTTON,
+  formatInviteExpiry,
+  GROUP_NAME_LABEL,
+  JOIN_GROUP_BUTTON,
+} from "@/lib/group-messages";
 
 /** The name of AC-01. Every account only sees its own groups, so parallel tests can share it. */
 export const GROUP_NAME = "Los del Lolla";
@@ -106,6 +111,14 @@ export async function createGroup(page: Page, name: string): Promise<string> {
     .toMatch(GROUP_PATH);
   await expect(page.getByRole("heading", { level: 1, name })).toBeVisible();
   return new URL(page.url()).pathname.split("/").at(-1) ?? "";
+}
+
+/** Opens the link with a session, taps "Unirme" and waits for the group's screen (AC-07). */
+export async function join(page: Page, link: string, groupId: string): Promise<void> {
+  await page.goto(link);
+  await page.getByRole("button", { name: JOIN_GROUP_BUTTON }).click();
+  await expect(page).toHaveURL(`/grupos/${groupId}`);
+  await expect(page.getByRole("heading", { level: 1, name: GROUP_NAME })).toBeVisible();
 }
 
 /** The "Link de invitación" card of a group's screen. */

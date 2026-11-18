@@ -32,5 +32,15 @@ Supuestos que declararon los implementadores, revisados por el orquestador y mos
   invierte). La rama de `chooseGroup` que rechaza un id ajeno queda como defensa en profundidad sin
   test: el selector ya filtra los valores desconocidos (Block 3) — implementer, aceptado por las dos
   revisiones — 2026-11-18 — Block 4
+- Bloques cortos con amigos (vuelta 1): el usuario eligió recortar el nombre a 1 línea con "…"
+  (opción 1 de 3) — usuario — 2026-11-18 — Block 6. Para que el horario mida los 15 px de la
+  cuenta, `[data-time-line]` lleva `text-[12px]` además de `leading-tight` (solo con
+  `leading-tight` medía 20 px, 1,25 × 16 del body) — implementer, aceptado por las dos revisiones —
+  2026-11-18 — Block 6
+- E2E: `tests/e2e/db.ts` suma `insertSelection` (la selección de quien mira en AC-30) e
+  `insertGroup` acepta `createdAt` opcional (en AC-25 el grupo más reciente por unión se creó
+  primero); en AC-21 quien mira está también en un grupo más nuevo, así elegir "Los del Lolla" es
+  un cambio real; en AC-26 el amigo guarda, desmarca y marca otro sin guardar; AC-32 fija el
+  viewport en 360 × 780 — implementer, aceptado por las dos revisiones — 2026-11-18 — Block 5
 - El worktree usa su propia base local (`mi_grilla_feat006c`): `mi_grilla_test` la comparte otra
   sesión y una corrida de integración se pisó con la suya — orquestador — 2026-11-18 — Block 1
