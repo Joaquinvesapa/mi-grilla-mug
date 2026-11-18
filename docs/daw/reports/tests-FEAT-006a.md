@@ -4,8 +4,9 @@ Corrida del cierre de CODE: suite completa. Incluye unit con cobertura, integrac
 PostgreSQL real (`postgres:17.12` de `docker-compose.yml`, migrada con la migración de grupos y
 sembrada) y E2E de los 4 proyectos de Playwright, dentro de la imagen oficial
 `mcr.microsoft.com/playwright:v1.65.1-noble` con la red del host (`pnpm test:e2e:docker`), porque a
-WebKit le faltan bibliotecas del sistema en este host. Corrida el 2026-11-18 sobre `bd98d78`, en el
-worktree `mi-grilla-mug--wt-feat-006a`, con Node 24.22.2.
+WebKit le faltan bibliotecas del sistema en este host. Corrida el 2026-11-18 sobre `086f3c5` (re-cierre de CODE tras la vuelta 3 de
+la spec: "Generar link nuevo" sin confirmación), en el worktree
+`mi-grilla-mug--wt-feat-006a`, con Node 24.22.2. Reemplaza a la corrida sobre `bd98d78`.
 
 | Field | Value |
 |---|---|
@@ -16,7 +17,7 @@ worktree `mi-grilla-mug--wt-feat-006a`, con Node 24.22.2.
 | Failed | 0 |
 | Skipped | 3 |
 | Line coverage | 99.6% |
-| Branch coverage | 97.16% |
+| Branch coverage | 97.13% |
 | Function coverage | 99.39% |
 | Coverage floor | 80% líneas, 70% ramas, 80% funciones (AGENTS.md, "Testing") |
 | Lint | `pnpm lint` (`oxlint --type-aware`) — clean, 0 findings; `pnpm format:check` (oxfmt) — OK; `pnpm typecheck` (`next typegen && tsc --noEmit`) — 0 errores |
@@ -26,9 +27,9 @@ Detalle:
 - **Integración:** 80 tests en 9 archivos (incluye `groups.test.ts`, `group-actions.test.ts` y
   `auth-actions.test.ts`, con los tests de concurrencia que fuerzan los locks).
 - **E2E:** 269 ejecuciones en los 4 proyectos (`iphone-webkit`, `mobile-chromium`, `mobile-360` y
-  `desktop`). Pasan 266 y se saltean 3, en 2,5 min. Incluye `groups.spec.ts` (5 tests por proyecto
+  `desktop`). Pasan 266 y se saltean 3, en 2,7 min. Incluye `groups.spec.ts` (5 tests por proyecto
   mobile) y `pwa.spec.ts` con `/grupos` e `/invitacion/<token>` en las páginas que no se cachean.
-- **Cobertura:** es la de la suite unitaria (statements 99,47 %).
+- **Cobertura:** es la de la suite unitaria (statements 99,46 %).
 
 ## Failures
 (none)

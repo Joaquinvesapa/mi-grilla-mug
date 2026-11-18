@@ -7,6 +7,12 @@
 | Date | 2026-11-18 |
 
 Alcance: los archivos de `src/` y `prisma/` del ticket, sobre `bd98d78`.
+Re-cierre de CODE sobre `086f3c5` (vuelta 3 de la spec): el único cambio de código es
+`src/components/invite-link.tsx`, que quita el `AlertDialog` y envía el mismo `<form>` de la Server
+Action de regenerar (con el chequeo de origen de Next, R-07), y `src/lib/group-messages.ts`, que
+pierde la constante `REGENERATE_CONFIRM`. Solo se borra código: ningún sink nuevo (sin
+`innerHTML`, `eval`, `fetch` ni logs), sin dependencias nuevas y `pnpm audit --prod` sin
+vulnerabilidades conocidas. Los veredictos de abajo siguen vigentes.
 
 - **Nuevos:** `prisma/migrations/20261118055108_groups/migration.sql`, `src/server/groups.ts`,
   `src/server/invite-crypto.ts`, `src/lib/group-rules.ts`, `src/lib/group-messages.ts`,
