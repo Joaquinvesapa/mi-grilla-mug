@@ -129,3 +129,11 @@ dos dieron PASS.
 - **M-2 (AC-15):** en un iPhone 12 o más nuevo, la imagen está lista en 3 segundos o menos.
 
 Result: PASSED — la parte automatizada. M-1 y M-2 quedan a cargo del usuario antes de pasar a CLOSEOUT.
+
+## Ronda 3 — 2026-11-18 — verificación manual
+
+Ante el pedido de las pruebas manuales M-1 y M-2 (pasos 1 a 7), el usuario respondió «Bien» y pidió
+pasar a commit, PR y merge. No detalló el resultado de cada paso, así que no quedan registrados por
+separado: la aprobación para cerrar el ticket es del usuario, con esa respuesta.
+
+Result: PASSED
