@@ -2,11 +2,19 @@
 
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
-import { redirect } from "next/navigation";
+import { redirect, RedirectType } from "next/navigation";
 
 import { groupMessageFor, joinGroupMessageFor } from "@/lib/group-messages";
 import { AccountsUnavailableError, type CurrentUser, getAccounts } from "@/server/accounts";
-import { createGroup, joinGroup, regenerateInvite } from "@/server/groups";
+import {
+  createGroup,
+  deleteGroup,
+  joinGroup,
+  leaveGroup,
+  regenerateInvite,
+  removeMember,
+  renameGroup,
+} from "@/server/groups";
 
 // Thin on purpose: the user comes from the verified session, never from the form (R-01), and the
 // fields are validated by src/server/groups.ts. Next rejects a Server Action posted from another
@@ -17,6 +25,12 @@ import { createGroup, joinGroup, regenerateInvite } from "@/server/groups";
 export type CreateGroupFormState = { error: string | null; name: string };
 
 export type RegenerateInviteState = { ok: true } | { ok: false; error: string };
+
+/** What renaming the group or taking a member out answers (FR-01). */
+export type GroupChangeState = { ok: true } | { ok: false; error: string };
+
+/** What leaving or deleting answers when it did not happen; success leaves for `/grupos`. */
+export type GroupExitState = { ok: false; error: string };
 
 /** What "Unirme" shows when the join did not happen; success leaves for the group's screen. */
 export type JoinGroupState = { error: string | null };
@@ -99,4 +113,87 @@ export async function joinGroupAction(
     return { error: joinGroupMessageFor(result.code) };
   }
   redirect(`/grupos/${result.groupId}`);
+}
+
+/** Revalidates the group's screen and the list, where its name and members show. */
+function revalidateGroup(groupId: string): void {
+  revalidatePath(`/grupos/${groupId}`);
+  revalidatePath("/grupos");
+}
+
+/** "Guardar nombre": the service rejects anyone but the admin and an invalid name (FR-01). */
+export async function renameGroupAction(
+  _prev: GroupChangeState,
+  formData: FormData,
+): Promise<GroupChangeState> {
+  const session = await sessionUser();
+  if (!session.ok) {
+    return { ok: false, error: groupMessageFor(session.code) };
+  }
+  const groupId = textField(formData, "groupId");
+  const result = await renameGroup(session.user.id, groupId, textField(formData, "name"));
+  if (!result.ok) {
+    return { ok: false, error: groupMessageFor(result.code) };
+  }
+  revalidateGroup(groupId);
+  return { ok: true };
+}
+
+/** "Sacar": the admin takes `memberUserId` out of the group, without asking (FR-01, AC-14). */
+export async function removeMemberAction(
+  _prev: GroupChangeState,
+  formData: FormData,
+): Promise<GroupChangeState> {
+  const session = await sessionUser();
+  if (!session.ok) {
+    return { ok: false, error: groupMessageFor(session.code) };
+  }
+  const groupId = textField(formData, "groupId");
+  const result = await removeMember(session.user.id, groupId, textField(formData, "memberUserId"));
+  if (!result.ok) {
+    return { ok: false, error: groupMessageFor(result.code) };
+  }
+  revalidateGroup(groupId);
+  return { ok: true };
+}
+
+/**
+ * "Borrar" (FR-01, AC-15): the admin deletes the group for everyone and goes back to the list. A
+ * group that is already gone, or no longer this person's, goes back to the list as well (W6).
+ * `replace`, so "Atrás" does not return to the group's screen from Next's router cache (R-11).
+ */
+export async function deleteGroupAction(
+  _prev: GroupExitState | null,
+  formData: FormData,
+): Promise<GroupExitState> {
+  const session = await sessionUser();
+  if (!session.ok) {
+    return { ok: false, error: groupMessageFor(session.code) };
+  }
+  const result = await deleteGroup(session.user.id, textField(formData, "groupId"));
+  if (!result.ok && result.code !== "NOT_FOUND") {
+    return { ok: false, error: groupMessageFor(result.code) };
+  }
+  revalidatePath("/grupos");
+  redirect("/grupos", RedirectType.replace);
+}
+
+/**
+ * "Salir" (FR-02, AC-19): the person leaves and goes back to the list, also when they were already
+ * out or the group no longer exists. `replace`, as with deleting (R-11).
+ */
+export async function leaveGroupAction(
+  _prev: GroupExitState | null,
+  formData: FormData,
+): Promise<GroupExitState> {
+  const session = await sessionUser();
+  if (!session.ok) {
+    return { ok: false, error: groupMessageFor(session.code) };
+  }
+  const result = await leaveGroup(session.user.id, textField(formData, "groupId"));
+  if (!result.ok && result.code !== "NOT_FOUND") {
+    return { ok: false, error: groupMessageFor(result.code) };
+  }
+  revalidatePath("/grupos");
+  redirect("/grupos", RedirectType.replace);
 }
