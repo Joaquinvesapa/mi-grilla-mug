@@ -3,6 +3,7 @@
 import { Radio, X } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { useAppNow } from "@/components/demo-clock";
 import { LivePanel } from "@/components/live-panel";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,7 +14,6 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "@/components/ui/drawer";
-import { useNow } from "@/components/use-now";
 import { CLOSE_LABEL, LIVE_LABEL } from "@/lib/live-messages";
 import { liveNow, type LiveView } from "@/lib/live-now";
 import type { Schedule } from "@/lib/schedule-types";
@@ -41,7 +41,8 @@ export type LiveButtonProps = {
  */
 export function LiveButton({ schedule, selectedIds, clearHomeIndicator }: LiveButtonProps) {
   const [open, setOpen] = useState(false);
-  const now = useNow(open);
+  // Inside `/demo`, the time of its clock (FEAT-005b); anywhere else, the real time.
+  const now = useAppNow(open);
   const current = useMemo(
     () => (open ? liveNow(schedule, now, selectedIds) : null),
     [open, schedule, now, selectedIds],

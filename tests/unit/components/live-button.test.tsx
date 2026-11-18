@@ -1,8 +1,10 @@
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { resetDemoClockForTests } from "@/components/demo-clock";
 import { LiveButton } from "@/components/live-button";
 import { ScheduleScreen } from "@/components/schedule-screen";
+import { DEMO_CLOCK_MESSAGE } from "@/lib/demo-clock";
 import { CLOSE_LABEL, LIVE_LABEL, NOTHING_NOW, SELECTED_LABEL } from "@/lib/live-messages";
 
 import { SCHEDULE } from "./schedule-fixture";
@@ -11,6 +13,26 @@ import { endVaulCloseAnimation, stubMatchMedia } from "./vaul-env";
 // Viernes 13 de marzo de 2026 en Argentina (UTC-3).
 const FRIDAY_18_30 = Date.parse("2026-03-13T18:30:00-03:00");
 const FRIDAY_23_29_30 = Date.parse("2026-03-13T23:29:30-03:00");
+// La hora que manda /demo: viernes 23:45, Peggy Gou en Samsung.
+const FRIDAY_23_45 = Date.parse("2026-03-13T23:45:00-03:00");
+
+const ORIGINAL_PARENT = Object.getOwnPropertyDescriptor(window, "parent");
+
+/** The app framed by `/demo` of its own origin (`parent` is read-only in jsdom). */
+function setDemoParent() {
+  const parent = { location: { pathname: "/demo" }, postMessage: vi.fn() };
+  Object.defineProperty(window, "parent", { configurable: true, get: () => parent });
+  return parent;
+}
+
+function restoreParent() {
+  if (ORIGINAL_PARENT) {
+    Object.defineProperty(window, "parent", ORIGINAL_PARENT);
+  } else {
+    // `parent` lives on the prototype: dropping the own property restores jsdom's.
+    delete (window as { parent?: unknown }).parent;
+  }
+}
 
 beforeAll(stubMatchMedia);
 afterAll(() => {
@@ -23,6 +45,8 @@ beforeEach(() => {
 });
 afterEach(() => {
   cleanup();
+  resetDemoClockForTests();
+  restoreParent();
   vi.useRealTimers();
   vi.restoreAllMocks();
 });
@@ -186,5 +210,27 @@ describe("LiveButton", () => {
     expect(liveTrigger()).toHaveClass("size-14");
     const panel = await openPanel();
     expect(within(panel).getByRole("button", { name: CLOSE_LABEL })).toHaveClass("size-11");
+  });
+
+  it("live-button: dentro de /demo el panel usa la hora del reloj", async () => {
+    const parent = setDemoParent();
+    renderButton();
+
+    // /demo sends Friday 23:45; the real time is still Friday 18:30.
+    act(() => {
+      window.dispatchEvent(
+        new MessageEvent("message", {
+          data: { type: DEMO_CLOCK_MESSAGE, at: FRIDAY_23_45 },
+          origin: window.location.origin,
+          source: parent as unknown as MessageEventSource,
+        }),
+      );
+    });
+    const panel = await openPanel();
+
+    // The clock's 23:45, not the real 18:30: Peggy Gou plays and DJO is over (AC-16).
+    expect(nowLine(panel, "samsung")).toHaveTextContent("Peggy Gou");
+    expect(nowLine(panel, "flow")).not.toHaveTextContent("DJO");
+    expect(nowLine(panel, "flow")).toHaveTextContent(NOTHING_NOW);
   });
 });

@@ -1,7 +1,9 @@
 // The real time, kept fresh while `active`: a timer refreshes it on every exact minute change and
 // it is re-read when the page becomes visible again (a suspended tab does not run its timers).
 // There is no other source of time on purpose (FR-14): no prop, no URL, no storage. The simulated
-// clock of `/demo` is FEAT-005b. No "use client" of its own: only client components import it.
+// clock of `/demo` lives in `demo-clock.ts` (FEAT-005b): `useAppNow` prefers it inside `/demo` and
+// falls back to this hook, which stays untouched. No "use client" of its own: only client
+// components import it.
 import { useEffect, useMemo, useState } from "react";
 
 const MINUTE_MS = 60_000;
