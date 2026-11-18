@@ -14,7 +14,7 @@ export class UntruncatableDatabaseError extends Error {
   // The message states the rule, never the URL nor its credentials.
   constructor() {
     super(
-      "Los tests de integración solo vacían una base local (localhost, 127.0.0.1, ::1) o el servicio `postgres` de la CI: revisá DATABASE_URL.",
+      "Los tests de integración solo vacían una base local (localhost, 127.0.0.1, ::1) o el servicio `postgres` de la CI: revisá TEST_DATABASE_URL.",
     );
     this.name = "UntruncatableDatabaseError";
   }

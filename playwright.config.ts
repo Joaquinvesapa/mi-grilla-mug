@@ -1,4 +1,16 @@
+import { existsSync } from "node:fs";
+
 import { defineConfig, devices } from "@playwright/test";
+
+import { resolveTestDatabaseUrl } from "./tests/test-database.ts";
+
+// FIX-004: the app under test runs on TEST_DATABASE_URL, never on the development database. `.env`
+// never overrides a variable already in the environment (the CI job's, for one). A missing, remote
+// or development database stops `playwright test` here, before building or starting anything.
+if (existsSync(".env")) {
+  process.loadEnvFile(".env");
+}
+const TEST_DATABASE_URL = resolveTestDatabaseUrl(process.env);
 
 const PORT = 3100;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
@@ -50,8 +62,14 @@ export default defineConfig({
     command: "pnpm build && pnpm start",
     url: BASE_URL,
     // BETTER_AUTH_URL has to be the origin the browser uses, or Better Auth rejects its requests.
-    // The secret and DATABASE_URL come from the environment or `.env` (the database migrated).
-    env: { PORT: String(PORT), HOSTNAME: "127.0.0.1", BETTER_AUTH_URL: BASE_URL },
+    // The secret comes from the environment or `.env`. DATABASE_URL is the test database, migrated
+    // and seeded by `pnpm db:test:prepare`: `next start` never overrides it with the one in `.env`.
+    env: {
+      PORT: String(PORT),
+      HOSTNAME: "127.0.0.1",
+      BETTER_AUTH_URL: BASE_URL,
+      DATABASE_URL: TEST_DATABASE_URL,
+    },
     reuseExistingServer: false,
     timeout: 240_000,
     stdout: "ignore",
