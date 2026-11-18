@@ -1,0 +1,9 @@
+{
+  "title": "Color por escenario y día, línea de tiempo y En vivo",
+  "brief": "Cada escenario y cada día con un color de Rosé Pine (app y fondo de pantalla); reloj de /demo con slider y hora a mano; línea de tiempo que avanza en la grilla; En vivo en love con animación; panel En vivo con punto en los escenarios que están sonando y el resto atenuado. Ver brief.md.",
+  "artboards": [
+    { "file": "01-ficha-de-color.html", "title": "01 · Ficha de color", "tradeoff": "Máximo color en cada show; la grilla se ve viva pero más cargada.", "width": 1760, "height": 1000 },
+    { "file": "02-carriles.html", "title": "02 · Carriles", "tradeoff": "Las columnas se reconocen solas; más capas de color de fondo para leer.", "width": 1760, "height": 1000 },
+    { "file": "03-dia-ambiente.html", "title": "03 · Día ambiente", "tradeoff": "Más sobria y legible; el color de escenario pesa menos en lo no elegido.", "width": 1760, "height": 1000 }
+  ]
+}

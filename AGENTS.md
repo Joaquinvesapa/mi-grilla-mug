@@ -133,8 +133,14 @@ Si un número de acá no coincide con el que exige la CI, gana el de la CI y se 
   bloque de UI los verifica.
 - **Paleta Rosé Pine (decisión del usuario, 2026-11-16):** sus neutros con tinte violeta (base,
   surface, overlay, highlight) son el fondo de la app, y esta decisión prevalece sobre el "nada de
-  violeta ni lavanda" de `design-taste-frontend` para fondos y neutros. Iris (`#c4a7e7`) sigue sin
-  usarse como acento: el acento es foam.
+  violeta ni lavanda" de `design-taste-frontend` para fondos y neutros. El acento de la interfaz es
+  foam.
+- **Colores por escenario y en vivo (decisión del usuario, 2026-11-18):** cada escenario tiene un
+  acento propio de Rosé Pine — Flow foam, Samsung gold, Alternative rose, Perry's pine y
+  Kidzapalooza iris —, en la app y en el fondo de pantalla. Esto levanta, solo para identificar
+  escenarios, la regla anterior de no usar iris como acento. Love (`#eb6f92`) queda reservado para
+  "En vivo" (el ahora, la línea de tiempo y los marcadores de show sonando) y no se asigna a ningún
+  escenario.
 - Sin `any` (si es inevitable, con un comentario del motivo).
 - Componentes de servidor por defecto y `"use client"` solo donde hay interacción.
 

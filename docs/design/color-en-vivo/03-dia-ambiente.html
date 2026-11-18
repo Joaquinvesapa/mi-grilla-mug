@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>03 · Día ambiente — Mi Grilla</title>
+<style>
+:root{
+  --base:#191724;--surface:#1f1d2e;--overlay:#26233a;--subtle:#908caa;--text:#e0def4;
+  --love:#eb6f92;--love-rgb:235,111,146;--med:#403d52;--high:#524f67;--foam:#9ccfd8;
+  --day:#c4a7e7;--day-rgb:196,167,231;
+  --font:ui-sans-serif,system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;background:var(--base);color:var(--text);font-family:var(--font)}
+button,input{font:inherit;color:inherit;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--foam);outline-offset:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.tn{font-variant-numeric:tabular-nums}
+
+/* ───────── Artboard ───────── */
+.board{width:1760px;height:1000px;background:var(--base);padding:18px 32px 0;position:relative;overflow:hidden}
+.head{height:52px;display:flex;align-items:center;gap:28px}
+.head h1{margin:0;font-size:22px;line-height:1.1;white-space:nowrap}
+.head p{white-space:nowrap}
+.head h1 span{color:var(--day)}
+.head p{margin:0;font-size:13px;color:var(--subtle)}
+.head .trade{color:var(--text)}
+.legend{margin-left:auto;display:flex;gap:14px;font-size:12px;color:var(--subtle);white-space:nowrap}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+.panels{display:flex;gap:28px;justify-content:center;margin-top:12px}
+.panel>h2{margin:0 0 6px;font-size:13px;font-weight:600;color:var(--subtle);height:20px;letter-spacing:.02em}
+.panel>h2 b{color:var(--text)}
+.panel.flash .phone{outline:2px solid var(--foam);outline-offset:3px}
+
+/* ───────── Phone ───────── */
+.phone{position:relative;width:390px;height:844px;border-radius:48px;background:var(--base);overflow:hidden;
+  box-shadow:0 0 0 1px var(--high),0 24px 60px rgba(0,0,0,.5)}
+.phone::before{content:"";position:absolute;inset:0 0 auto 0;height:380px;pointer-events:none;z-index:0;
+  background:radial-gradient(ellipse 90% 100% at 50% 0,rgba(var(--day-rgb),.15),rgba(var(--day-rgb),.05) 45%,transparent 75%)}
+.island{position:absolute;top:11px;left:50%;width:120px;height:34px;margin-left:-60px;border-radius:20px;background:#000;z-index:20}
+.home{position:absolute;bottom:8px;left:50%;width:134px;height:5px;margin-left:-67px;border-radius:3px;background:var(--text);opacity:.55;z-index:20}
+.top{position:relative;z-index:2;padding-top:54px}
+.app-h{padding:4px 20px 8px;display:flex;align-items:baseline;justify-content:space-between}
+.app-h h3{margin:0;font-size:26px;font-weight:800;letter-spacing:-.01em;color:var(--day)}
+.app-h span{font-size:12px;color:var(--subtle)}
+.tabs{display:flex;gap:4px;padding:0 12px}
+.tab{flex:1;height:44px;border:0;border-bottom:2px solid transparent;border-radius:10px 10px 0 0;background:transparent;color:var(--subtle);font-size:14px;font-weight:600}
+.tab[aria-pressed=true]{color:var(--day);border-bottom-color:var(--day);background:rgba(var(--day-rgb),.12)}
+@media (hover:hover) and (pointer:fine){.tab:hover{color:var(--text)}.tab[aria-pressed=true]:hover{color:var(--day)}}
+
+/* ───────── Grid ───────── */
+.scroll{position:absolute;left:0;right:0;top:152px;bottom:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;scrollbar-width:none;z-index:1;padding-bottom:90px}
+.scroll::-webkit-scrollbar{display:none}
+.sheads{position:sticky;top:0;z-index:8;display:flex;height:40px;background:rgba(25,23,36,.88);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.sheads .corner{width:30px;flex:none}
+.sh{flex:1;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:600;color:var(--text);letter-spacing:-.1px;white-space:nowrap;border-bottom:2px solid var(--sc)}
+.gbody{position:relative;height:1108px}
+.hours{position:absolute;left:0;top:0;bottom:0;width:30px;z-index:3;background:var(--base)}
+.hours span{position:absolute;left:0;width:30px;text-align:center;font-size:10px;color:var(--subtle);transform:translateY(-50%)}
+.cols{position:absolute;left:30px;right:0;top:0;bottom:0;display:flex;
+  background:repeating-linear-gradient(to bottom,transparent 0 13px,rgba(64,61,82,.55) 13px 14px,transparent 14px 90px)}
+.col{flex:1;position:relative}
+.show{position:absolute;left:3px;right:3px;border-radius:8px;background:var(--surface);color:var(--subtle);padding:5px 4px 4px 6px;overflow:hidden}
+.show .n{display:block;overflow-wrap:anywhere;letter-spacing:-.1px;font-size:10px;line-height:1.2;font-weight:600}
+.show .tm{display:block;font-size:10px;margin-top:2px}
+.show.chosen{background:linear-gradient(rgba(var(--rgb),.15),rgba(var(--rgb),.15)),var(--surface);border-left:4px solid var(--sc);padding-left:5px;color:var(--text)}
+.show.chosen .tm{color:var(--text);opacity:.85}
+.show.chosen.playing{outline:1.5px solid var(--love);outline-offset:-1.5px}
+.foot{position:absolute;left:5px;bottom:4px;right:4px;display:flex;flex-wrap:wrap;gap:3px;align-items:center}
+.foot svg.ck{width:14px;height:14px}
+.clash{display:inline-flex;align-items:center;gap:3px;background:var(--overlay);color:var(--text);border-radius:4px;padding:1px 4px 1px 3px;font-size:9.5px;font-weight:700}
+.clash svg{width:9px;height:9px}
+.pdot{display:none;position:relative;width:8px;height:8px;margin-left:6px;vertical-align:0;border-radius:50%;background:var(--love)}
+.playing .pdot{display:inline-block}
+.sr-live{display:none}
+.playing .sr-live{display:block;position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.nowline{position:absolute;left:0;right:0;height:2px;margin-top:-1px;background:var(--love);z-index:5;pointer-events:none;
+  box-shadow:0 0 10px 1px rgba(var(--love-rgb),.55)}
+.chip{position:absolute;left:1px;top:50%;transform:translateY(-50%);z-index:6;background:var(--love);color:var(--base);font-size:10px;font-weight:800;
+  padding:2px 3px;border-radius:5px;line-height:1.15}
+
+/* live dot pulse — only with motion allowed */
+.ldot{position:relative}
+@media (prefers-reduced-motion:no-preference){
+  .pdot::after,.ldot::after,.fab-dot::after{content:"";position:absolute;inset:0;border-radius:50%;background:var(--love);animation:ping 1.6s cubic-bezier(0,0,.2,1) infinite}
+  .fab::after{content:"";position:absolute;inset:-2px;border-radius:50%;border:2px solid var(--love);animation:ring 2.4s ease-out infinite;pointer-events:none}
+  .glow-in{animation:fade .5s ease both}
+}
+@keyframes ping{0%{transform:scale(1);opacity:.7}75%,100%{transform:scale(2.6);opacity:0}}
+@keyframes ring{0%{transform:scale(1);opacity:.5}100%{transform:scale(1.55);opacity:0}}
+@keyframes fade{from{opacity:.4}to{opacity:1}}
+
+.fab{position:absolute;right:16px;bottom:50px;width:56px;height:56px;border-radius:50%;background:var(--base);border:2px solid var(--love);
+  color:var(--love);display:grid;place-items:center;z-index:12;padding:0;box-shadow:0 8px 20px rgba(0,0,0,.5),0 0 18px rgba(var(--love-rgb),.18)}
+.fab>svg{width:26px;height:26px}
+.fab-dot{position:absolute;top:-2px;right:-2px;width:14px;height:14px;border-radius:50%;background:var(--love);border:2px solid var(--base)}
+.fab:active{transform:scale(.95)}
+
+/* ───────── Sheet ───────── */
+.scrim{position:absolute;inset:0;background:rgba(25,23,36,.62);z-index:3}
+.bg-lines{position:absolute;left:0;right:0;top:152px;bottom:0;z-index:1;opacity:.5;
+  background:repeating-linear-gradient(to bottom,transparent 0 89px,rgba(64,61,82,.7) 89px 90px)}
+.sheet{position:absolute;left:0;right:0;bottom:0;top:128px;z-index:6;background:var(--surface);border-radius:24px 24px 0 0;
+  box-shadow:0 -10px 40px rgba(0,0,0,.45);padding:0 16px 40px;display:flex;flex-direction:column}
+.sheet::before{content:"";position:absolute;left:0;right:0;top:0;height:140px;border-radius:24px 24px 0 0;pointer-events:none;
+  background:radial-gradient(ellipse 80% 100% at 50% 0,rgba(var(--day-rgb),.10),transparent 75%)}
+.grab{width:40px;height:5px;border-radius:3px;background:var(--high);margin:8px auto 10px;position:relative}
+.sh-t{display:flex;align-items:center;justify-content:space-between;position:relative;margin-bottom:4px}
+.sh-t h3{margin:0;font-size:22px;font-weight:800;display:flex;align-items:center;gap:10px}
+.ldot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--love)}
+.sh-t .clk{font-size:13px;color:var(--subtle);text-align:right;line-height:1.25}
+.sh-t .clk b{color:var(--text);font-size:15px}
+.sub{margin:0 0 10px;font-size:13px;color:var(--subtle);position:relative}
+.rows{list-style:none;margin:0;padding:0;background:var(--base);border:1px solid var(--med);border-radius:16px;overflow:hidden;position:relative}
+.row{padding:12px 14px 13px;border-top:1px solid var(--med)}
+.row:first-child{border-top:0}
+.row.on{background:rgba(var(--love-rgb),.07)}
+.rh{display:flex;align-items:center;gap:10px;min-height:24px}
+.sdot{width:10px;height:10px;border-radius:50%;background:var(--sc);flex:none}
+.row.off .sdot{opacity:.45}
+.sname{font-size:16px;font-weight:700}
+.row.off .sname{color:var(--subtle)}
+.tag{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:800;letter-spacing:.06em;color:var(--love);
+  background:rgba(var(--love-rgb),.14);border:1px solid rgba(var(--love-rgb),.4);border-radius:999px;padding:3px 9px 3px 8px}
+.tag i{width:7px;height:7px;border-radius:50%;background:var(--love);display:inline-block;position:relative}
+@media (prefers-reduced-motion:no-preference){.tag i::after{content:"";position:absolute;inset:0;border-radius:50%;background:var(--love);animation:ping 1.6s cubic-bezier(0,0,.2,1) infinite}}
+.now{margin:6px 0 0 20px;font-size:15px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.now .lb{color:var(--subtle)}
+.now b{font-weight:700}
+.now .rng{color:var(--subtle);font-size:13px}
+.now svg{width:15px;height:15px;color:var(--sc)}
+.nxt{margin:4px 0 0 20px;font-size:13px;color:var(--subtle)}
+.nxt svg{width:13px;height:13px;color:var(--sc);vertical-align:-2px;margin-left:6px}
+.row.off .now{font-size:14px;color:var(--subtle)}
+.empty{margin:12px 2px 0;font-size:14px;color:var(--subtle)}
+
+/* ───────── Wallpaper ───────── */
+.wall{position:relative;width:390px;height:845px;border-radius:40px;background:var(--base);overflow:hidden;box-shadow:0 0 0 1px var(--high),0 24px 60px rgba(0,0,0,.5)}
+.wall .glow{position:absolute;inset:0 0 auto 0;height:420px;background:radial-gradient(ellipse 95% 100% at 50% 0,rgba(156,207,216,.16),rgba(156,207,216,.05) 50%,transparent 78%)}
+.lock{position:absolute;top:64px;left:0;right:0;text-align:center;opacity:.3;border-top:1px dashed var(--subtle);border-bottom:1px dashed var(--subtle);height:176px;padding-top:14px}
+.lock small{display:block;font-size:15px;color:var(--text)}
+.lock b{display:block;font-size:84px;font-weight:600;line-height:1;margin-top:4px}
+.lock em{position:absolute;bottom:4px;left:0;right:0;font-size:10px;font-style:normal}
+.wday{position:absolute;top:256px;left:0;right:0;text-align:center;font-size:40px;font-weight:800;letter-spacing:.1em;color:var(--foam);line-height:1}
+.wsub{position:absolute;top:304px;left:0;right:0;text-align:center;font-size:11px;color:var(--subtle)}
+.wgrid{position:absolute;left:8px;right:8px;top:330px;height:480px}
+.wsh{position:absolute;top:0;height:22px;display:flex;align-items:center;justify-content:center;font-size:8.5px;font-weight:700;color:var(--subtle);border-bottom:2px solid var(--sc);white-space:nowrap}
+.wh{position:absolute;left:0;width:100%;border-top:1px solid var(--med)}
+.wh span{position:absolute;left:0;top:-5px;font-size:8px;color:var(--subtle);background:var(--base);padding-right:2px}
+.wb{position:absolute;border-radius:5px;background:var(--sc);color:var(--base);font-size:8px;font-weight:700;line-height:1.15;padding:3px 3px;overflow:hidden;opacity:.25}
+.wb.on{opacity:1;box-shadow:0 0 12px rgba(var(--rgb),.4)}
+.wb.pine{color:var(--text)}
+
+/* ───────── Demo clock panel ───────── */
+.clock{width:420px;background:var(--surface);border-radius:20px;padding:22px 22px 20px;position:relative;overflow:hidden;box-shadow:0 0 0 1px var(--med),0 24px 60px rgba(0,0,0,.4)}
+.clock::before{content:"";position:absolute;inset:0 0 auto 0;height:200px;pointer-events:none;background:radial-gradient(ellipse 90% 100% at 50% 0,rgba(var(--day-rgb),.14),transparent 75%)}
+.clock>*{position:relative}
+.clock h3{margin:0 0 2px;font-size:17px;display:flex;justify-content:space-between;align-items:center}
+.clock h3 span{font-size:11px;font-weight:600;color:var(--subtle);border:1px solid var(--med);border-radius:6px;padding:2px 6px}
+.clock .lead{margin:0 0 14px;font-size:13px;color:var(--subtle)}
+.bigwrap{margin:18px 0 4px;text-align:center;min-height:88px}
+.big{display:inline-flex;align-items:center;gap:12px;background:transparent;border:0;border-bottom:2px dashed var(--high);border-radius:8px 8px 0 0;
+  padding:2px 10px 0;font-size:76px;font-weight:700;line-height:1.1;min-height:76px;letter-spacing:-.02em}
+.big .pen{width:34px;height:34px;padding:7px;border-radius:50%;background:var(--overlay);color:var(--day);flex:none}
+@media (hover:hover) and (pointer:fine){.big:hover{background:rgba(var(--day-rgb),.1)}}
+.editrow{display:flex;gap:8px;align-items:center;justify-content:center}
+.editrow input{width:230px;height:84px;font-size:56px;font-weight:700;text-align:center;background:var(--base);border:2px solid var(--day);border-radius:14px;color:var(--text);padding:0 6px}
+.editrow input[aria-invalid=true]{border-color:var(--text)}
+.go{height:84px;min-width:64px;border-radius:14px;border:0;background:var(--day);color:var(--base);font-size:16px;font-weight:700;padding:0 14px}
+.hint{margin:6px 0 0;text-align:center;font-size:13px;color:var(--subtle);display:flex;gap:6px;align-items:center;justify-content:center;min-height:20px}
+.hint svg{width:14px;height:14px}
+.err{margin:6px 0 0;text-align:center;font-size:13px;font-weight:600;min-height:18px;display:flex;gap:6px;align-items:center;justify-content:center}
+.err svg{width:15px;height:15px;flex:none}
+.cap{margin:2px 0 16px;text-align:center;font-size:13px;color:var(--subtle)}
+.cap b{color:var(--day)}
+.range{position:relative;margin:0 0 0}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:44px;background:transparent;margin:0;display:block}
+input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:linear-gradient(to right,var(--day) var(--pct,50%),var(--med) var(--pct,50%))}
+input[type=range]::-moz-range-track{height:6px;border-radius:3px;background:var(--med)}
+input[type=range]::-moz-range-progress{height:6px;border-radius:3px;background:var(--day)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;border-radius:50%;background:var(--love);border:3px solid var(--base);margin-top:-11px;box-shadow:0 0 0 1px var(--love),0 0 14px rgba(var(--love-rgb),.45)}
+input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:var(--love);border:3px solid var(--base);box-shadow:0 0 0 1px var(--love),0 0 14px rgba(var(--love-rgb),.45)}
+input[type=range]:focus-visible{outline:none}
+input[type=range]:focus-visible::-webkit-slider-thumb{outline:2px solid var(--foam);outline-offset:3px}
+input[type=range]:focus-visible::-moz-range-thumb{outline:2px solid var(--foam);outline-offset:3px}
+.ticks{position:relative;height:30px;margin-top:-6px}
+.ticks span{position:absolute;top:0;transform:translateX(-50%);font-size:11px;color:var(--subtle);text-align:center;line-height:1}
+.ticks span::before{content:"";display:block;width:1px;height:6px;background:var(--high);margin:0 auto 4px}
+.steps{display:flex;gap:10px;margin-top:10px}
+.step{flex:1;height:48px;border-radius:12px;border:1px solid var(--high);background:var(--overlay);font-size:15px;font-weight:600}
+.step:active{transform:scale(.98)}
+@media (hover:hover) and (pointer:fine){.step:hover{background:var(--med)}}
+.note{margin:14px 0 0;font-size:12px;color:var(--subtle);line-height:1.4;border-top:1px solid var(--med);padding-top:12px}
+.note b{color:var(--text)}
+.swatches{display:flex;gap:6px;margin-top:8px}
+.swatches span{flex:1;display:flex;align-items:center;gap:6px;font-size:12px}
+.swatches i{width:10px;height:10px;border-radius:50%}
+</style>
+</head>
+<body>
+<div class="board" id="board">
+  <header class="head">
+    <h1>03 · <span>Día ambiente</span></h1>
+    <p class="trade">Más sobria y legible; el color de escenario pesa menos en lo no elegido.</p>
+    <p>El día pinta el ambiente (brillo superior, pestaña, título); los escenarios son acentos; lo elegido es lo que resalta.</p>
+    <div class="legend" aria-label="Color por día"><span><i style="background:#c4a7e7"></i>Viernes · iris</span><span><i style="background:#9ccfd8"></i>Sábado · foam</span><span><i style="background:#f6c177"></i>Domingo · gold</span></div>
+  </header>
+
+  <main class="panels">
+    <!-- 1 · grilla -->
+    <section class="panel" id="p1" aria-label="App, grilla">
+      <h2><b>1</b> · App · grilla</h2>
+      <div class="phone">
+        <div class="island"></div>
+        <div class="top">
+          <div class="app-h"><h3>Mi Grilla</h3><span id="dateLine">Sábado 14 de marzo</span></div>
+          <div class="tabs" data-tabs></div>
+        </div>
+        <div class="scroll" id="scroll" tabindex="0" aria-label="Grilla del día">
+          <div class="sheads" id="sheads"><div class="corner"></div></div>
+          <div class="gbody" id="gbody">
+            <div class="hours" id="hours"></div>
+            <div class="cols" id="cols"></div>
+            <div class="nowline" id="nowline"><span class="chip tn" id="chip">22:40</span></div>
+          </div>
+        </div>
+        <button class="fab" id="fab" type="button" aria-label="En vivo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8a6 6 0 0 1 0 8.4M7.8 16.2a6 6 0 0 1 0-8.4M19.1 4.9a10 10 0 0 1 0 14.2M4.9 19.1a10 10 0 0 1 0-14.2"/></svg><span class="fab-dot" aria-hidden="true"></span></button>
+        <div class="home"></div>
+      </div>
+    </section>
+
+    <!-- 2 · sheet -->
+    <section class="panel" id="p2" aria-label="App, En vivo abierto">
+      <h2><b>2</b> · App · En vivo abierto</h2>
+      <div class="phone">
+        <div class="island"></div>
+        <div class="top" aria-hidden="true">
+          <div class="app-h"><h3>Mi Grilla</h3><span data-date>Sábado 14 de marzo</span></div>
+          <div class="tabs" data-tabs data-inert></div>
+        </div>
+        <div class="bg-lines"></div>
+        <div class="scrim"></div>
+        <div class="sheet" role="dialog" aria-label="En vivo">
+          <div class="grab" aria-hidden="true"></div>
+          <div class="sh-t">
+            <h3><span class="ldot" aria-hidden="true"></span>En vivo</h3>
+            <div class="clk"><span data-day-name>Sábado</span><br><b class="tn" data-time>22:40</b> <span>· reloj simulado</span></div>
+          </div>
+          <p class="sub" id="subLine"></p>
+          <ul class="rows" id="rows"></ul>
+          <p class="empty" id="emptyMsg" hidden>No hay shows en vivo.</p>
+        </div>
+        <div class="home"></div>
+      </div>
+    </section>
+
+    <!-- 3 · wallpaper -->
+    <section class="panel" id="p3" aria-label="Fondo de pantalla">
+      <h2><b>3</b> · Fondo de pantalla · Sábado <span style="font-weight:400">(1290 × 2796 → 390 × 845)</span></h2>
+      <div class="wall" id="wall" role="img" aria-label="Fondo de pantalla personal del sábado: shows elegidos encendidos en el color de su escenario, el resto al 25 %">
+        <div class="glow"></div>
+        <div class="lock"><small>sábado 14 de marzo</small><b class="tn">9:41</b><em>Zona del reloj de iOS · libre</em></div>
+        <div class="wday">SÁBADO</div>
+        <div class="wsub">Mi Grilla · mi selección</div>
+        <div class="wgrid" id="wgrid"></div>
+      </div>
+    </section>
+
+    <!-- 4 · demo clock -->
+    <section class="panel" id="p4" aria-label="Demo, reloj">
+      <h2><b>4</b> · Demo · reloj <span style="font-weight:400">(/demo, desktop)</span></h2>
+      <div class="clock">
+        <h3>Reloj simulado <span>/demo</span></h3>
+        <p class="lead">Elegí el día y la hora para ver la app como si fuera el festival.</p>
+        <div class="tabs" data-tabs></div>
+
+        <div class="bigwrap">
+          <button type="button" class="big tn" id="big" aria-label="Hora simulada. Tocá para escribir la hora"><span id="bigTxt">22:40</span><svg class="pen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+          <form class="editrow" id="form" hidden novalidate>
+            <input id="inp" class="tn" type="text" inputmode="numeric" autocomplete="off" maxlength="5" placeholder="22:40" aria-label="Hora simulada, formato HH:MM" aria-describedby="err">
+            <button class="go" id="go" type="submit">Ir</button>
+          </form>
+        </div>
+        <p class="hint" id="hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg><span id="hintTxt">Tocá para escribir la hora</span></p>
+        <p class="err" id="err" role="alert"></p>
+        <p class="cap" id="cap"></p>
+
+        <div class="range">
+          <input type="range" id="slider" min="360" max="1800" step="5" value="1360" aria-label="Hora simulada, de 06:00 a 06:00 del día siguiente">
+          <div class="ticks" id="ticks" aria-hidden="true"></div>
+        </div>
+        <div class="steps">
+          <button class="step" type="button" id="minus">−15 min</button>
+          <button class="step" type="button" id="plus">+15 min</button>
+        </div>
+        <p class="note"><b>Cómo se lee:</b> 00:00–05:59 pertenece al día anterior del festival. Viernes y Domingo en este boceto solo recolorean el ambiente; la grilla muestra los datos del Sábado.
+          <span class="swatches"><span><i style="background:#c4a7e7"></i>Viernes</span><span><i style="background:#9ccfd8"></i>Sábado</span><span><i style="background:#f6c177"></i>Domingo</span></span></p>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+(() => {
+  const $ = (s, r = document) => r.querySelector(s);
+  const pad = n => String(n).padStart(2, "0");
+  const fmt = t => pad(Math.floor((t % 1440) / 60)) + ":" + pad(t % 60);
+  const toAbs = (h, m) => { const t = h * 60 + m; return t < 360 ? t + 1440 : t; };
+  const T = s => { const [h, m] = s.split(":").map(Number); return toAbs(h, m); };
+  const dur = n => n < 60 ? n + " min" : Math.floor(n / 60) + " h" + (n % 60 ? " " + (n % 60) + " min" : "");
+
+  const STAGES = [
+    { id: "flow", name: "Flow", c: "#9ccfd8", rgb: "156,207,216" },
+    { id: "samsung", name: "Samsung", c: "#f6c177", rgb: "246,193,119" },
+    { id: "alternative", name: "Alternative", c: "#ebbcba", rgb: "235,188,186" },
+    { id: "perrys", name: "Perry's", c: "#31748f", rgb: "49,116,143" },
+    { id: "kidzapalooza", name: "Kidzapalooza", c: "#c4a7e7", rgb: "196,167,231" }
+  ];
+  const RAW = {
+    flow: [["Joaquina","14:30","15:15"],["Lany","16:00","17:00"],["Marina","18:00","19:00"],["Addison Rae","20:15","21:15"],["Chappell Roan","22:15","23:45"]],
+    samsung: [["Tobika","13:45","14:30"],["Nasa Histoires","15:15","16:00"],["Angela Torres","17:00","18:00"],["Paulo Londra","19:00","20:15"],["Lewis Capaldi","21:15","22:15"],["Skrillex","23:45","01:00"]],
+    alternative: [["Marttein","14:30","15:15"],["Timø","16:00","17:00"],["Soledad","18:00","19:00"],["Tv Girl","20:15","21:15"],["Riize","22:30","23:30"]],
+    perrys: [["Paula Os","13:45","14:30"],["Terra","14:45","15:30"],["Imbermind","16:00","17:00"],["Amigo de Artistas","17:15","18:00"],["Six Sex","18:30","19:30"],["Hamdi","19:45","20:45"],["2Hollis + Rommulas","21:00","22:00"],["Brutalismus 3000","22:30","23:45"]],
+    kidzapalooza: [["Arjaus Crew","15:00","15:45"],["Latin Duo","16:00","16:45"],["School Of Rock","17:00","17:45"],["Kiseki","18:00","18:45"],["Panam Y Circo","19:00","19:45"],["Kidza Boom","20:00","20:45"]]
+  };
+  // Selection by show id (sat-<stage>-<HHMM>)
+  const CHOSEN = new Set(["sat-samsung-1700","sat-samsung-1900","sat-flow-2015","sat-flow-2215","sat-perrys-2230","sat-samsung-2345"]);
+  const SHOWS = [];
+  STAGES.forEach((st, si) => RAW[st.id].forEach(([name, a, b]) => {
+    SHOWS.push({ id: `sat-${st.id}-${a.replace(":", "")}`, name, stage: st, si, s: T(a), e: T(b), chosen: false });
+  }));
+  SHOWS.forEach(s => { s.chosen = CHOSEN.has(s.id); });
+  SHOWS.forEach(s => { s.clash = s.chosen && SHOWS.some(o => o !== s && o.chosen && o.s < s.e && s.s < o.e); });
+
+  const DAYS = [
+    { n: "Viernes", c: "#c4a7e7", rgb: "196,167,231", date: "Viernes 13 de marzo" },
+    { n: "Sábado", c: "#9ccfd8", rgb: "156,207,216", date: "Sábado 14 de marzo" },
+    { n: "Domingo", c: "#f6c177", rgb: "246,193,119", date: "Domingo 15 de marzo" }
+  ];
+  let day = 1, t = toAbs(22, 40);
+
+  const ICON = {
+    check: '<svg class="ck" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>',
+    warn: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 20h20Z"/><path d="M12 10v4M12 17.5v.1"/></svg>',
+    alert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5v.1"/></svg>'
+  };
+
+  /* ── Grid (panel 1) ── */
+  const A0 = 780, PX = 1.5, PADT = 14;
+  const yOf = m => PADT + (m - A0) * PX;
+  const els = {};
+  const sheads = $("#sheads"), cols = $("#cols"), hours = $("#hours");
+  STAGES.forEach(st => {
+    const h = document.createElement("div");
+    h.className = "sh"; h.textContent = st.name; h.style.setProperty("--sc", st.c);
+    sheads.appendChild(h);
+    const col = document.createElement("div"); col.className = "col"; col.dataset.stage = st.id; cols.appendChild(col);
+    SHOWS.filter(s => s.stage === st).forEach(s => {
+      const d = document.createElement("div");
+      d.className = "show" + (s.chosen ? " chosen" : "");
+      d.dataset.showId = s.id;
+      d.style.cssText = `top:${yOf(s.s)}px;height:${(s.e - s.s) * PX - 2}px;--sc:${st.c};--rgb:${st.rgb}`;
+      d.innerHTML = `<span class="n">${s.name}</span><span class="tm tn">${fmt(s.s)}<span class="pdot" aria-hidden="true"></span></span>` +
+        `<span class="sr">de ${fmt(s.s)} a ${fmt(s.e)}</span>` +
+        `<span class="sr-live">Sonando ahora</span>` +
+        (s.chosen ? `<span class="foot">${s.clash ? `<span class="clash">${ICON.warn}Choque</span>` : ""}${ICON.check}<span class="sr">Elegido</span></span>` : "");
+      col.appendChild(d); els[s.id] = d;
+    });
+  });
+  for (let m = 780; m <= 1500; m += 60) {
+    const s = document.createElement("span"); s.className = "tn"; s.style.top = yOf(m) + "px"; s.textContent = fmt(m); hours.appendChild(s);
+  }
+
+  /* ── Wallpaper (panel 3, static, Sábado) ── */
+  (() => {
+    const g = $("#wgrid"), W0 = 38, CW = (374 - W0) / 5, TOP = 28, HH = 452 / 720, S0 = 780;
+    for (let m = 780; m <= 1500; m += 60) {
+      const l = document.createElement("div"); l.className = "wh"; l.style.top = (TOP + (m - S0) * HH) + "px";
+      l.innerHTML = `<span class="tn">${fmt(m)}</span>`; g.appendChild(l);
+    }
+    STAGES.forEach((st, i) => {
+      const h = document.createElement("div"); h.className = "wsh"; h.textContent = st.name;
+      h.style.cssText = `left:${W0 + i * CW}px;width:${CW - 3}px;--sc:${st.c}`; g.appendChild(h);
+    });
+    SHOWS.forEach(s => {
+      const b = document.createElement("div");
+      b.className = "wb" + (s.chosen ? " on" : "") + (s.stage.id === "perrys" ? " pine" : "");
+      b.dataset.showId = s.id;
+      b.style.cssText = `left:${W0 + s.si * CW}px;width:${CW - 3}px;top:${TOP + (s.s - S0) * HH}px;height:${(s.e - s.s) * HH - 2}px;--sc:${s.stage.c};--rgb:${s.stage.rgb}`;
+      b.textContent = s.name; g.appendChild(b);
+    });
+  })();
+
+  /* ── Day tabs (3 tablists, panels 1 and 4 interactive) ── */
+  document.querySelectorAll("[data-tabs]").forEach(box => {
+    DAYS.forEach((d, i) => {
+      const b = document.createElement("button"); b.type = "button"; b.className = "tab"; b.textContent = d.n; b.dataset.day = i;
+      if (box.hasAttribute("data-inert")) { b.tabIndex = -1; } else b.addEventListener("click", () => setDay(i));
+      box.appendChild(b);
+    });
+  });
+  function setDay(i) {
+    day = i;
+    const d = DAYS[i], r = document.documentElement.style;
+    r.setProperty("--day", d.c); r.setProperty("--day-rgb", d.rgb);
+    document.querySelectorAll(".tab").forEach(b => b.setAttribute("aria-pressed", String(+b.dataset.day === i)));
+    $("#dateLine").textContent = d.date + (i === 1 ? "" : " · boceto: datos del Sábado");
+    document.querySelectorAll("[data-date]").forEach(e => { e.textContent = d.date; });
+    document.querySelectorAll("[data-day-name]").forEach(e => { e.textContent = d.n; });
+    update();
+  }
+
+  /* ── Time state → everything ── */
+  const slider = $("#slider"), big = $("#big");
+  function playing(st) { return SHOWS.find(s => s.stage === st && s.s <= t && t < s.e); }
+  function upcoming(st) { return SHOWS.filter(s => s.stage === st && s.s > t).sort((a, b) => a.s - b.s)[0]; }
+
+  function update() {
+    // now-line
+    const nl = $("#nowline"), inAxis = t >= A0 && t <= 1500;
+    nl.hidden = !inAxis; nl.style.top = yOf(t) + "px"; $("#chip").textContent = fmt(t);
+    let n = 0;
+    SHOWS.forEach(s => {
+      const on = s.s <= t && t < s.e; els[s.id].classList.toggle("playing", on);
+    });
+    // sheet rows
+    const info = STAGES.map((st, i) => {
+      const now = playing(st), nx = upcoming(st);
+      const rank = now ? (now.chosen ? 0 : 1) : nx ? 2 : 3;
+      if (now) n++;
+      return { st, i, now, nx, rank };
+    }).sort((a, b) => a.rank - b.rank || (a.rank === 2 ? a.nx.s - b.nx.s : 0) || a.i - b.i);
+    const nowTxt = fmt(t);
+    document.querySelectorAll("[data-time]").forEach(e => { e.textContent = nowTxt; });
+    $("#subLine").textContent = n ? `${n} de 5 escenarios con show ahora` : "Ningún escenario con show ahora";
+    $("#emptyMsg").hidden = n > 0;
+    $("#rows").innerHTML = info.map(({ st, now, nx }) => {
+      const ck = s => s.chosen ? `${ICON.check}<span class="sr">Elegido</span>` : "";
+      const next = nx ? `<p class="nxt">Sigue: <span>${nx.name}</span> en <span class="tn">${dur(nx.s - t)}</span>${ck(nx)}</p>` : "";
+      if (now) return `<li class="row on" data-stage="${st.id}" style="--sc:${st.c}"><div class="rh"><span class="sdot"></span><span class="sname">${st.name}</span>` +
+        `<span class="tag"><i aria-hidden="true"></i>EN VIVO</span></div>` +
+        `<p class="now"><span class="lb">Ahora:</span><b data-show-id="${now.id}">${now.name}</b><span class="rng tn">${fmt(now.s)}–${fmt(now.e)}</span>${ck(now)}</p>${next}</li>`;
+      return `<li class="row off" data-stage="${st.id}" style="--sc:${st.c}"><div class="rh"><span class="sdot"></span><span class="sname">${st.name}</span></div>` +
+        `<p class="now">${nx ? "Nada ahora" : "Terminó por hoy"}</p>${next}</li>`;
+    }).join("");
+    $("#fab").setAttribute("aria-label", n ? `En vivo: ${n} ${n === 1 ? "show sonando" : "shows sonando"} ahora` : "En vivo: nada sonando ahora");
+    // clock panel
+    $("#bigTxt").textContent = nowTxt;
+    slider.value = t; slider.style.setProperty("--pct", ((t - 360) / 1440 * 100) + "%");
+    slider.setAttribute("aria-valuetext", nowTxt + (t >= 1440 ? " de la madrugada" : ""));
+    const d = DAYS[day];
+    $("#cap").innerHTML = t >= 1440 ? `Madrugada: cuenta como <b>${d.n}</b> del festival` : `Día del festival: <b>${d.n}</b>`;
+  }
+  function setT(v) { t = Math.max(360, Math.min(1800, Math.round(v))); update(); }
+
+  /* ── Slider, ±15, ticks ── */
+  slider.addEventListener("input", () => setT(+slider.value));
+  $("#minus").addEventListener("click", () => setT(t - 15));
+  $("#plus").addEventListener("click", () => setT(t + 15));
+  const ticks = $("#ticks");
+  for (let m = 360; m <= 1800; m += 180) {
+    const s = document.createElement("span"); s.className = "tn";
+    s.style.left = `calc(14px + (100% - 28px) * ${(m - 360) / 1440})`; s.textContent = fmt(m); ticks.appendChild(s);
+  }
+
+  /* ── Manual entry (the big time is the control) ── */
+  const form = $("#form"), inp = $("#inp"), err = $("#err"), hintTxt = $("#hintTxt");
+  function parse(v) {
+    const m = /^\s*(\d{1,2})\s*[:.]?\s*(\d{2})\s*$/.exec(v);
+    if (!m) return null;
+    const h = +m[1], mi = +m[2];
+    return h > 23 || mi > 59 ? null : toAbs(h, mi);
+  }
+  function openEdit() {
+    big.hidden = true; form.hidden = false; err.innerHTML = "";
+    inp.removeAttribute("aria-invalid"); inp.value = fmt(t);
+    hintTxt.textContent = "Escribí HH:MM · Enter para ir · Esc para cancelar";
+    inp.focus(); inp.select();
+  }
+  function closeEdit(focusBack) {
+    form.hidden = true; big.hidden = false; err.innerHTML = ""; hintTxt.textContent = "Tocá para escribir la hora";
+    if (focusBack) big.focus();
+  }
+  big.addEventListener("click", openEdit);
+  form.addEventListener("submit", e => {
+    e.preventDefault();
+    const v = parse(inp.value);
+    if (v === null) {
+      inp.setAttribute("aria-invalid", "true");
+      err.innerHTML = ICON.alert + "<span>Escribí una hora entre 06:00 y 05:59 del día siguiente</span>";
+      inp.focus(); return;
+    }
+    setT(v); closeEdit(true);
+  });
+  inp.addEventListener("input", () => { inp.removeAttribute("aria-invalid"); err.innerHTML = ""; });
+  inp.addEventListener("keydown", e => { if (e.key === "Escape") { e.preventDefault(); closeEdit(true); } });
+  inp.addEventListener("blur", e => { if (!form.contains(e.relatedTarget)) closeEdit(false); });
+  $("#go").addEventListener("mousedown", e => e.preventDefault()); // keep focus so blur does not cancel
+
+  /* ── FAB: points to the open sheet ── */
+  $("#fab").addEventListener("click", () => {
+    const p = $("#p2"); p.classList.add("flash"); setTimeout(() => p.classList.remove("flash"), 800);
+  });
+
+  setDay(1);
+  const sc = $("#scroll"); sc.scrollTop = Math.max(0, yOf(t) - 330);
+})();
+</script>
+</body>
+</html>

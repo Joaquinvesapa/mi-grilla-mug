@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "chosen": "02-carriles.html",
+  "handoffs": {
+    "02-carriles.html": {
+      "status": "in_progress",
+      "queued": false,
+      "sentAt": "2026-11-18T20:52:44.347Z",
+      "startedAt": "2026-11-18T20:52:57.360Z",
+      "implementedAt": null,
+      "note": "Mapeando el código y armando odd/tasks/color-en-vivo.md antes de escribir."
+    }
+  }
+}

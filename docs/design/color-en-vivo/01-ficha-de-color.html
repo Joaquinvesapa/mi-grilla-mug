@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1760">
+<title>Mi Grilla · Color en vivo · 01 Ficha de color</title>
+<style>
+:root{
+  --base:#191724; --surface:#1f1d2e; --overlay:#26233a; --subtle:#908caa; --text:#e0def4;
+  --love:#eb6f92; --gold:#f6c177; --rose:#ebbcba; --pine:#31748f; --foam:#9ccfd8; --iris:#c4a7e7;
+  --hl-med:#403d52; --hl-high:#524f67;
+  --day:#f6c177; /* se pisa por JS: Viernes foam, Sábado gold, Domingo iris */
+  --font:ui-sans-serif,system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
+html,body{background:var(--base);color:var(--text);font-family:var(--font);overscroll-behavior:none}
+body{min-width:1760px}
+button,input{font:inherit;color:inherit;touch-action:manipulation}
+button{cursor:pointer;background:none;border:0}
+:focus-visible{outline:2px solid var(--foam);outline-offset:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.num{font-variant-numeric:tabular-nums}
+svg.i{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+/* ---------- lienzo ---------- */
+.canvas{width:1760px;height:1000px;background:var(--base);position:relative;overflow:hidden}
+.top{padding:18px 43px 0}
+.top h1{font-size:20px;font-weight:700;letter-spacing:-.01em}
+.top h1 span{color:var(--subtle);font-weight:500}
+.top p{margin-top:4px;font-size:14px;color:var(--subtle)}
+.top p b{color:var(--text);font-weight:600}
+.panels{display:flex;gap:28px;justify-content:center;margin-top:12px}
+.panel>h2{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--subtle);font-weight:700;margin-bottom:8px;display:flex;gap:8px}
+.panel>h2 b{color:var(--text)}
+
+/* ---------- teléfono ---------- */
+.phone{position:relative;width:390px;height:844px;border-radius:46px;background:var(--base);overflow:hidden;
+  box-shadow:0 0 0 2px var(--hl-high),0 24px 60px rgba(0,0,0,.45);isolation:isolate}
+.island{position:absolute;top:11px;left:50%;width:120px;height:34px;margin-left:-60px;border-radius:20px;background:#000;z-index:30}
+.statusbar{position:absolute;top:0;left:0;right:0;height:47px;z-index:20;display:flex;justify-content:space-between;align-items:center;
+  padding:6px 34px 0;font-size:15px;font-weight:600}
+.home{position:absolute;bottom:8px;left:50%;width:134px;height:5px;margin-left:-67px;border-radius:3px;background:var(--text);opacity:.8;z-index:30}
+.app{position:absolute;inset:0;display:flex;flex-direction:column;padding-top:47px}
+.appbar{height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 16px}
+.appbar h3{font-size:20px;font-weight:700;letter-spacing:-.01em}
+.chip{font-size:11px;color:var(--subtle);border:1px solid var(--hl-med);border-radius:99px;padding:3px 9px}
+.tabs{display:flex;border-bottom:1px solid var(--hl-med);padding:0 8px}
+.tab{flex:1;min-height:44px;font-size:14px;font-weight:500;color:var(--subtle);position:relative}
+.tab[aria-selected=true]{color:var(--day);font-weight:700}
+.tab[aria-selected=true]::after{content:"";position:absolute;left:14px;right:14px;bottom:-1px;height:3px;border-radius:3px 3px 0 0;background:var(--day)}
+.daytitle{padding:10px 16px 6px;display:flex;align-items:baseline;gap:8px}
+.daytitle h4{font-size:22px;font-weight:700;color:var(--day);letter-spacing:-.01em}
+.daytitle span{font-size:12px;color:var(--subtle)}
+
+/* ---------- grilla ---------- */
+.scroller{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;position:relative}
+.scroller::-webkit-scrollbar{display:none}
+.stagehead{position:sticky;top:0;z-index:8;height:40px;display:grid;grid-template-columns:44px repeat(5,1fr);background:var(--base);border-bottom:1px solid var(--hl-med)}
+.sh{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:9.5px;font-weight:600;line-height:1}
+.sh i{width:8px;height:8px;border-radius:50%;background:var(--c)}
+.gbody{position:relative}
+.hl{position:absolute;left:0;right:0;height:1px;background:var(--hl-med);opacity:.55}
+.hlabel{position:absolute;left:0;width:44px;text-align:center;font-size:10px;color:var(--subtle);transform:translateY(-50%)}
+.show{position:absolute;border-radius:8px;padding:5px 4px 4px 7px;overflow:hidden;display:flex;flex-direction:column;gap:1px;
+  font-size:10.5px;line-height:1.15;background:var(--surface);color:var(--text)}
+.show::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--c)}
+.show.chosen{background:var(--c);color:var(--base);font-weight:600}
+.show.chosen::before{display:none}
+.show.chosen.pine{color:var(--text);font-weight:600}
+.show .nm{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;font-weight:500}
+.show.chosen .nm{font-weight:700}
+.show .tm{font-size:9.5px;font-weight:400;opacity:1}
+.show.chosen .tm{font-weight:600}
+.badges{margin-top:auto;display:flex;gap:3px;align-items:center;flex-wrap:wrap;min-height:14px}
+.bx{display:inline-flex;align-items:center;gap:2px;font-size:8.5px;font-weight:700;line-height:1}
+.bx svg{font-size:11px}
+.ahora{display:none;background:var(--base);color:var(--text);padding:2px 5px 2px 4px;border-radius:99px}
+.show.playing .ahora{display:inline-flex}
+.ahora .dot{width:6px;height:6px}
+.nowline{position:absolute;left:0;right:0;height:0;z-index:6;pointer-events:none}
+.nl-line{position:absolute;left:42px;right:0;top:-1px;height:2px;background:var(--love);box-shadow:0 0 0 1px var(--base)}
+.nl-pill{position:absolute;left:2px;top:-9px;width:40px;height:18px;border-radius:9px;background:var(--love);color:var(--base);
+  font-size:10.5px;font-weight:800;display:grid;place-items:center;box-shadow:0 0 0 2px var(--base)}
+
+/* ---------- puntos en vivo + FAB ---------- */
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--love);position:relative;flex:none}
+.fabwrap{position:absolute;right:16px;bottom:50px;z-index:12;display:flex;flex-direction:column;align-items:center;gap:6px}
+.fablabel{font-size:10px;font-weight:800;letter-spacing:.1em;color:var(--love);background:var(--base);padding:3px 8px;border-radius:99px;border:1px solid rgba(235,111,146,.45)}
+.fab{position:relative;width:56px;height:56px;border-radius:50%;background:var(--love);color:var(--base);display:grid;place-items:center;font-size:26px;
+  box-shadow:0 8px 20px rgba(25,23,36,.6),0 0 0 3px var(--base)}
+.fab::before,.fab::after{content:"";position:absolute;inset:0;border-radius:50%;border:2px solid var(--love);opacity:0}
+.fab:active{transform:scale(.96)}
+@media (prefers-reduced-motion:no-preference){
+  .dot.live::after{content:"";position:absolute;inset:0;border-radius:50%;background:var(--love);animation:ping 1.6s cubic-bezier(0,0,.2,1) infinite}
+  .fab::before{animation:ring 2s ease-out infinite}
+  .fab::after{animation:ring 2s ease-out 1s infinite}
+  .nowline{transition:top .35s cubic-bezier(.2,.8,.2,1)}
+}
+@keyframes ping{75%,100%{transform:scale(2.7);opacity:0}}
+@keyframes ring{0%{transform:scale(1);opacity:.7}100%{transform:scale(1.9);opacity:0}}
+
+/* ---------- bottom sheet ---------- */
+.scrim{position:absolute;inset:0;background:rgba(25,23,36,.62);z-index:14}
+.sheet{position:absolute;left:0;right:0;bottom:0;z-index:16;background:var(--surface);border-radius:24px 24px 0 0;padding-bottom:34px;
+  box-shadow:0 -10px 40px rgba(0,0,0,.4)}
+.grab{height:28px;display:grid;place-items:center;touch-action:none;cursor:grab}
+.grab i{width:38px;height:5px;border-radius:3px;background:var(--hl-high)}
+.shead{display:flex;justify-content:space-between;align-items:center;padding:0 18px 8px}
+.shead h3{font-size:20px;font-weight:700;display:flex;align-items:center;gap:8px}
+.shead h3 svg{color:var(--love);font-size:20px}
+.shead .clock{font-size:13px;color:var(--subtle)}
+.shead .clock b{color:var(--text);font-weight:600}
+.rows{list-style:none;padding:0 10px}
+.row{position:relative;display:flex;padding:9px 8px 9px 0}
+.row::before{content:"";width:4px;border-radius:2px;background:var(--c);margin:2px 12px 2px 8px;flex:none}
+.rb{flex:1;min-width:0}
+.row.off .rb{opacity:.55}
+.row + .row{border-top:1px solid rgba(64,61,82,.6)}
+.r1{display:flex;justify-content:space-between;align-items:baseline}
+.r1 strong{font-size:16px;font-weight:600}
+.r1 .rt{font-size:12px;color:var(--subtle)}
+.r2{margin-top:3px;font-size:14px;display:flex;align-items:center;gap:6px}
+.r2 .lbl{color:var(--love);font-weight:700}
+.r2 svg,.r3 svg{font-size:13px;color:var(--text)}
+.r3{margin-top:2px;font-size:12.5px;color:var(--subtle);display:flex;align-items:center;gap:4px}
+.row.off .r3{color:var(--text)}
+
+/* ---------- fondo de pantalla ---------- */
+.wp{position:relative;width:390px;height:845px;border-radius:46px;background:var(--base);overflow:hidden;box-shadow:0 0 0 2px var(--hl-high),0 24px 60px rgba(0,0,0,.45)}
+.clockzone{position:absolute;top:0;left:0;right:0;height:253px;border-bottom:1px dashed var(--hl-med);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--text);opacity:.35}
+.clockzone b{font-size:76px;font-weight:300;letter-spacing:-.03em;line-height:1}
+.clockzone span{font-size:13px;font-weight:600}
+.wp .zl{position:absolute;bottom:4px;font-size:9px;color:var(--subtle);letter-spacing:.06em;text-transform:uppercase}
+.wtitle{position:absolute;left:12px;right:12px;top:262px;display:flex;justify-content:space-between;align-items:baseline}
+.wtitle h4{font-size:24px;font-weight:700;color:var(--day);letter-spacing:-.01em}
+.wtitle span{font-size:10px;color:var(--subtle)}
+.wsh{position:absolute;left:12px;right:12px;top:296px;height:26px;display:grid;grid-template-columns:32px repeat(5,1fr)}
+.wsh .sh{font-size:8px;gap:3px}
+.wsh .sh i{width:6px;height:6px}
+.wg{position:absolute;left:12px;right:12px;top:326px;height:444px}
+.wg .hlabel{width:32px;font-size:7.5px}
+.ws{position:absolute;border-radius:4px;padding:3px 3px 2px 5px;overflow:hidden;font-size:7.5px;line-height:1.1;background:var(--surface);color:var(--text);opacity:.3}
+.ws::before{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--c)}
+.ws.chosen{opacity:1;background:var(--c);color:var(--base);font-weight:700}
+.ws.chosen::before{display:none}
+.ws.chosen.pine{color:var(--text)}
+.ws .nm{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+/* ---------- demo ---------- */
+.demo{width:420px}
+.card{background:var(--surface);border:1px solid var(--hl-med);border-radius:16px;padding:20px}
+.card h3{font-size:16px;font-weight:700}
+.card .sub{font-size:13px;color:var(--subtle);margin-top:2px}
+.demo .tabs{margin-top:14px;padding:0}
+.bigtime{margin-top:16px;display:flex;align-items:baseline;gap:12px}
+.bigtime b{font-size:68px;line-height:1;font-weight:700;letter-spacing:-.03em}
+.bigtime span{font-size:14px;color:var(--day);font-weight:600}
+.bigtime small{display:block;font-size:12px;color:var(--subtle);font-weight:400;margin-top:4px}
+.slider{margin-top:16px}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:44px;background:transparent;display:block;--r:.6944;
+  --fill:calc(var(--r) * (100% - 28px) + 14px)}
+input[type=range]::-webkit-slider-runnable-track{height:8px;border-radius:4px;background:linear-gradient(to right,var(--foam) var(--fill),var(--hl-med) var(--fill))}
+input[type=range]::-moz-range-track{height:8px;border-radius:4px;background:var(--hl-med)}
+input[type=range]::-moz-range-progress{height:8px;border-radius:4px;background:var(--foam)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;margin-top:-10px;border-radius:50%;background:var(--foam);border:0;box-shadow:0 0 0 4px var(--surface),0 2px 8px rgba(0,0,0,.5)}
+input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;background:var(--foam);border:0;box-shadow:0 0 0 4px var(--surface)}
+input[type=range]:focus-visible{outline:none}
+input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 3px var(--surface),0 0 0 5px var(--foam)}
+input[type=range]:focus-visible::-moz-range-thumb{box-shadow:0 0 0 3px var(--surface),0 0 0 5px var(--foam)}
+.ticks{position:relative;height:30px;margin-top:-4px}
+.tick{position:absolute;top:0;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;color:var(--subtle)}
+.tick::before{content:"";width:1px;height:6px;background:var(--hl-high)}
+.manual{margin-top:12px}
+.manual label{display:block;font-size:13px;font-weight:600;margin-bottom:6px}
+.mrow{display:flex;gap:8px}
+.mrow input{flex:1;min-width:0;height:44px;border-radius:10px;border:1px solid var(--hl-med);background:var(--base);padding:0 14px;font-size:16px;font-variant-numeric:tabular-nums}
+.mrow input[aria-invalid=true]{border:2px solid var(--text)}
+.btn{min-height:44px;border-radius:10px;padding:0 18px;font-size:15px;font-weight:600;background:var(--overlay);color:var(--text)}
+.btn.primary{background:var(--foam);color:var(--base);min-width:64px}
+.btn:active{transform:scale(.97)}
+.err{display:none;margin-top:6px;font-size:13px;align-items:center;gap:6px}
+.err.on{display:flex}
+.steps{margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.legend{margin-top:16px}
+.legend h3{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--subtle)}
+.lg{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font-size:12.5px}
+.lg span{display:inline-flex;align-items:center;gap:6px}
+.lg i{width:10px;height:10px;border-radius:3px;background:var(--c)}
+.lg .round{border-radius:50%}
+.note{margin-top:10px;font-size:11.5px;color:var(--subtle);line-height:1.4}
+@media (hover:hover) and (pointer:fine){
+  .btn:not(.primary):hover{background:var(--hl-med)}
+  .btn.primary:hover{filter:brightness(1.08)}
+  .tab:hover{color:var(--text)}
+  .tab[aria-selected=true]:hover{color:var(--day)}
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="radio" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2"/><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.2 19.1 19.1"/></symbol>
+  <symbol id="check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="warn" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol>
+</svg>
+
+<main class="canvas">
+  <header class="top">
+    <h1>01 · Ficha de color <span>— el color del escenario vive en cada show</span></h1>
+    <p><b>Compromiso:</b> Máximo color en cada show; la grilla se ve viva pero más cargada. Días: Viernes foam · Sábado gold · Domingo iris (solo pestaña activa y título del día). Reloj simulado: Sábado 22:40.</p>
+  </header>
+
+  <div class="panels">
+    <!-- 1 · grilla -->
+    <section class="panel" aria-label="App, grilla">
+      <h2><b>1</b> App · grilla</h2>
+      <div class="phone" id="phoneGrid">
+        <div class="island"></div>
+        <div class="statusbar"><span class="num">9:41</span><span aria-hidden="true">5G ▮▮▮</span></div>
+        <div class="app" data-role="bg">
+          <div class="appbar"><h3>Mi Grilla</h3><span class="chip num" data-role="chip">Demo · 22:40</span></div>
+          <div class="tabs" role="tablist" aria-label="Día del festival" data-role="tabs"></div>
+          <div class="daytitle"><h4 data-role="dtitle">Sábado 14</h4><span>13:00 a 01:00</span></div>
+          <div class="scroller" data-role="scroller"></div>
+        </div>
+        <div class="fabwrap">
+          <span class="fablabel">EN VIVO</span>
+          <button class="fab" aria-label="Abrir En vivo"><svg class="i"><use href="#radio"/></svg></button>
+        </div>
+        <div class="home"></div>
+      </div>
+    </section>
+
+    <!-- 2 · sheet -->
+    <section class="panel" aria-label="App, En vivo abierto">
+      <h2><b>2</b> App · En vivo abierto</h2>
+      <div class="phone" id="phoneSheet">
+        <div class="island"></div>
+        <div class="statusbar"><span class="num">9:41</span><span aria-hidden="true">5G ▮▮▮</span></div>
+        <div class="app" data-role="bg" inert>
+          <div class="appbar"><h3>Mi Grilla</h3><span class="chip num" data-role="chip">Demo · 22:40</span></div>
+          <div class="tabs" role="tablist" data-role="tabs"></div>
+          <div class="daytitle"><h4 data-role="dtitle">Sábado 14</h4><span>13:00 a 01:00</span></div>
+          <div class="scroller" data-role="scroller"></div>
+        </div>
+        <div class="scrim"></div>
+        <div class="sheet" role="dialog" aria-label="En vivo">
+          <div class="grab"><i></i></div>
+          <div class="shead">
+            <h3><svg class="i"><use href="#radio"/></svg>En vivo</h3>
+            <span class="clock num"><span data-role="sday">Sábado</span> · <b data-role="sclock">22:40</b></span>
+          </div>
+          <ul class="rows" id="rows"></ul>
+        </div>
+        <div class="home"></div>
+      </div>
+    </section>
+
+    <!-- 3 · fondo -->
+    <section class="panel" aria-label="Fondo de pantalla">
+      <h2><b>3</b> Fondo de pantalla · 1290×2796</h2>
+      <div class="wp" id="wp">
+        <div class="clockzone" aria-hidden="true"><span>sábado, 14 de marzo</span><b class="num">9:41</b><span class="zl" style="position:static;font-weight:500;opacity:.8;font-size:9px;letter-spacing:.06em;text-transform:uppercase">zona del reloj de iOS</span></div>
+        <div class="wtitle"><h4 data-role="wtitle">Sábado 14</h4><span>Mi Grilla · mi selección</span></div>
+        <div class="wsh" id="wsh"></div>
+        <div class="wg" id="wg"></div>
+      </div>
+    </section>
+
+    <!-- 4 · demo -->
+    <section class="panel demo" aria-label="Demo, reloj">
+      <h2><b>4</b> Demo · reloj simulado</h2>
+      <div class="card">
+        <h3>Reloj simulado</h3>
+        <p class="sub">Solo en /demo. Mueve la hora de la app de la izquierda.</p>
+        <div class="tabs" role="tablist" aria-label="Día simulado" data-role="tabs"></div>
+        <div class="bigtime"><b class="num" id="big">22:40</b><div><span id="bigday">Sábado 14</span><small id="bigsub">Dentro de la grilla</small></div></div>
+        <div class="slider">
+          <input type="range" id="slider" min="0" max="1440" step="5" value="1000" aria-label="Hora simulada, de 06:00 a 06:00 del día siguiente" aria-valuetext="22:40">
+          <div class="ticks" id="ticks" aria-hidden="true"></div>
+        </div>
+        <form class="manual" id="manual" novalidate>
+          <label for="tinput">Hora exacta</label>
+          <div class="mrow">
+            <input id="tinput" type="text" inputmode="numeric" autocomplete="off" maxlength="5" placeholder="HH:MM" aria-describedby="terr" value="22:40">
+            <button class="btn primary" type="submit">Ir</button>
+          </div>
+          <p class="err" id="terr" role="alert"><svg class="i"><use href="#warn"/></svg><span></span></p>
+        </form>
+        <div class="steps">
+          <button class="btn" id="minus" type="button">−15 min</button>
+          <button class="btn" id="plus" type="button">+15 min</button>
+        </div>
+        <p class="note">El día va de 06:00 a 06:00 del día siguiente: 00:00–05:59 cuenta como el día anterior. Viernes y Domingo reutilizan los shows del sábado; acá solo cambia el color del día.</p>
+      </div>
+      <div class="card legend">
+        <h3>Cómo se lee</h3>
+        <div class="lg" id="lg"></div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<script>
+const STAGES=[
+  {k:'flow',n:'Flow',c:'#9ccfd8'},{k:'samsung',n:'Samsung',c:'#f6c177'},{k:'alternative',n:'Alternative',c:'#ebbcba'},
+  {k:'perrys',n:"Perry's",c:'#31748f'},{k:'kidzapalooza',n:'Kidzapalooza',c:'#c4a7e7'}];
+const RAW={
+  flow:[['Joaquina','14:30','15:15'],['Lany','16:00','17:00'],['Marina','18:00','19:00'],['Addison Rae','20:15','21:15'],['Chappell Roan','22:15','23:45']],
+  samsung:[['Tobika','13:45','14:30'],['Nasa Histoires','15:15','16:00'],['Angela Torres','17:00','18:00'],['Paulo Londra','19:00','20:15'],['Lewis Capaldi','21:15','22:15'],['Skrillex','23:45','01:00']],
+  alternative:[['Marttein','14:30','15:15'],['Timø','16:00','17:00'],['Soledad','18:00','19:00'],['Tv Girl','20:15','21:15'],['Riize','22:30','23:30']],
+  perrys:[['Paula Os','13:45','14:30'],['Terra','14:45','15:30'],['Imbermind','16:00','17:00'],['Amigo de Artistas','17:15','18:00'],['Six Sex','18:30','19:30'],['Hamdi','19:45','20:45'],['2Hollis + Rommulas','21:00','22:00'],['Brutalismus 3000','22:30','23:45']],
+  kidzapalooza:[['Arjaus Crew','15:00','15:45'],['Latin Duo','16:00','16:45'],['School Of Rock','17:00','17:45'],['Kiseki','18:00','18:45'],['Panam Y Circo','19:00','19:45'],['Kidza Boom','20:00','20:45']]};
+const DAYS=[{k:'vie',n:'Viernes',t:'Viernes 13',c:'#9ccfd8'},{k:'sab',n:'Sábado',t:'Sábado 14',c:'#f6c177'},{k:'dom',n:'Domingo',t:'Domingo 15',c:'#c4a7e7'}];
+const CHOSEN=new Set(['sat-samsung-1700','sat-samsung-1900','sat-flow-2015','sat-flow-2215','sat-perrys-2230','sat-samsung-2345']);
+const AX0=420, AX1=1140, S=1.7, PAD=12; // eje 13:00→01:00 en minutos desde las 06:00; px por minuto
+
+const toM=s=>{const[h,m]=s.split(':').map(Number);return(h*60+m-360+1440)%1440};
+const fmt=m=>{const x=(m+360)%1440;return String(Math.floor(x/60)).padStart(2,'0')+':'+String(x%60).padStart(2,'0')};
+const SHOWS=[];
+STAGES.forEach((st,si)=>RAW[st.k].forEach(([name,a,b])=>SHOWS.push({id:`sat-${st.k}-${a.replace(':','')}`,si,name,s:toM(a),e:toM(b)})));
+SHOWS.forEach(x=>{x.chosen=CHOSEN.has(x.id);x.clash=x.chosen&&SHOWS.some(y=>y!==x&&y.chosen&&x.s<y.e&&y.s<x.e)});
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const ic=n=>`<svg class="i" aria-hidden="true"><use href="#${n}"/></svg>`;
+const reduce=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const state={day:1,t:1000};
+
+/* ----- grilla (se construye una vez por teléfono) ----- */
+function buildGrid(scr){
+  const H=PAD+(AX1-AX0)*S+130;
+  let h=`<div class="stagehead"><div></div>${STAGES.map(s=>`<div class="sh" style="--c:${s.c}"><i></i>${s.n}</div>`).join('')}</div>`;
+  h+=`<div class="gbody" style="height:${H}px">`;
+  for(let m=AX0;m<=AX1;m+=60){const y=PAD+(m-AX0)*S;h+=`<div class="hl" style="top:${y}px;left:44px"></div><div class="hlabel num" style="top:${y}px">${fmt(m)}</div>`}
+  h+=`<div style="position:absolute;left:44px;right:0;top:0;bottom:0;display:grid;grid-template-columns:repeat(5,1fr)">`;
+  STAGES.forEach((st,si)=>{
+    h+=`<div style="position:relative">`;
+    SHOWS.filter(x=>x.si===si).forEach(x=>{
+      const top=PAD+(x.s-AX0)*S+1, ht=(x.e-x.s)*S-2;
+      h+=`<article class="show${x.chosen?' chosen':''}${st.k==='perrys'?' pine':''}" data-id="${x.id}" style="--c:${st.c};top:${top}px;height:${ht}px;left:2px;right:2px">
+        <span class="nm">${x.name}</span><span class="tm num">${fmt(x.s)}–${fmt(x.e)}</span>
+        <span class="badges">
+          ${x.chosen?`<span class="bx">${ic('check')}<span class="sr">Elegido</span></span>`:''}
+          ${x.clash?`<span class="bx">${ic('warn')}Choque</span>`:''}
+          <span class="bx ahora"><span class="dot live"></span>Ahora</span>
+        </span></article>`;
+    });
+    h+=`</div>`;
+  });
+  h+=`</div><div class="nowline" data-role="now"><div class="nl-line"></div><div class="nl-pill num" data-role="npill">22:40</div></div></div>`;
+  scr.innerHTML=h;
+}
+$$('[data-role=scroller]').forEach(buildGrid);
+
+/* ----- pestañas de día (3 sitios) ----- */
+function buildTabs(el){
+  el.innerHTML=DAYS.map((d,i)=>`<button role="tab" class="tab" data-day="${i}" aria-selected="${i===state.day}">${d.n}</button>`).join('');
+  el.addEventListener('click',e=>{const b=e.target.closest('.tab');if(b)setDay(+b.dataset.day)});
+  el.addEventListener('keydown',e=>{
+    const d=e.key==='ArrowRight'?1:e.key==='ArrowLeft'?-1:0;if(!d)return;
+    const n=(state.day+d+3)%3;setDay(n);$$('.tab',el)[n].focus();e.preventDefault()});
+}
+$$('[data-role=tabs]').forEach(buildTabs);
+
+/* ----- fondo de pantalla ----- */
+(function(){
+  const cw=(390-24-32)/5, hw=32, K=444/(AX1-AX0);
+  $('#wsh').innerHTML='<div></div>'+STAGES.map(s=>`<div class="sh" style="--c:${s.c}"><i></i>${s.n}</div>`).join('');
+  let h='';
+  for(let m=AX0;m<=AX1;m+=60){const y=(m-AX0)*K;h+=`<div class="hl" style="top:${y}px;left:${hw}px"></div><div class="hlabel num" style="top:${y}px">${fmt(m)}</div>`}
+  SHOWS.forEach(x=>{
+    const st=STAGES[x.si];
+    h+=`<div class="ws${x.chosen?' chosen':''}${st.k==='perrys'?' pine':''}" data-id="${x.id}" style="--c:${st.c};left:${hw+x.si*cw+1}px;width:${cw-2}px;top:${(x.s-AX0)*K+.5}px;height:${(x.e-x.s)*K-1.5}px"><span class="nm">${x.name}</span></div>`;
+  });
+  $('#wg').innerHTML=h;
+})();
+
+/* ----- leyenda ----- */
+$('#lg').innerHTML=STAGES.map(s=>`<span><i style="--c:${s.c}"></i>${s.n}</span>`).join('')+
+  DAYS.map(d=>`<span><i style="--c:${d.c}"></i>${d.n}</span>`).join('')+
+  `<span><i class="round" style="--c:#eb6f92"></i>En vivo</span>`;
+
+/* ----- ticks ----- */
+$('#ticks').innerHTML=Array.from({length:9},(_,i)=>`<span class="tick num" style="left:calc(14px + (100% - 28px) * ${i/8})">${fmt(i*180)}</span>`).join('');
+
+/* ----- lógica de tiempo ----- */
+function showsAt(t){
+  return STAGES.map((st,si)=>{
+    const l=SHOWS.filter(x=>x.si===si).sort((a,b)=>a.s-b.s);
+    const cur=l.find(x=>t>=x.s&&t<x.e)||null, next=l.find(x=>x.s>t)||null;
+    return{st,si,cur,next};
+  });
+}
+function sortKey(r){return(r.cur&&r.cur.chosen?0:r.cur?1:r.next?2:3)*10+r.si}
+
+function renderSheet(){
+  const rows=showsAt(state.t).sort((a,b)=>sortKey(a)-sortKey(b));
+  $('#rows').innerHTML=rows.map(r=>{
+    const chk=x=>x.chosen?`${ic('check')}<span class="sr">Elegido</span>`:'';
+    let l2,l3='';
+    if(r.cur){
+      l2=`<span class="dot live"></span><span class="lbl">Ahora:</span><span>${r.cur.name}</span>${chk(r.cur)}`;
+    }else l2=`<span>${r.next?'Nada ahora':'Terminó por hoy'}</span>`;
+    if(r.next)l3=`Sigue: ${r.next.name} ${chk(r.next)} en ${r.next.s-state.t} min`;
+    else if(r.cur)l3='Último show de hoy';
+    return`<li class="row${r.cur?'':' off'}" style="--c:${r.st.c}" data-stage="${r.st.k}"><div class="rb">
+      <div class="r1"><strong>${r.st.n}</strong><span class="rt num">${r.cur?fmt(r.cur.s)+'–'+fmt(r.cur.e):''}</span></div>
+      <div class="r2">${l2}</div>${l3?`<div class="r3 num">${l3}</div>`:''}</div></li>`;
+  }).join('');
+}
+
+function update(scroll){
+  const t=state.t, clock=fmt(t), inGrid=t>=AX0&&t<=AX1;
+  const playing=new Set(showsAt(t).filter(r=>r.cur).map(r=>r.cur.id));
+  $$('.show').forEach(el=>el.classList.toggle('playing',playing.has(el.dataset.id)));
+  $$('[data-role=now]').forEach(n=>{
+    n.style.display=inGrid?'':'none';n.style.top=(PAD+(t-AX0)*S)+'px';
+    $('[data-role=npill]',n).textContent=clock;
+  });
+  $$('[data-role=chip]').forEach(c=>c.textContent=inGrid?`Demo · ${clock}`:`Demo · ${clock} · fuera de la grilla`);
+  $('[data-role=sclock]').textContent=clock;
+  $('#big').textContent=clock;
+  $('#bigsub').textContent=(t>=1080&&t<1440)?`Madrugada: cuenta como ${DAYS[state.day].n}`:inGrid?'Dentro de la grilla':'Fuera del horario de la grilla';
+  const sl=$('#slider');sl.value=Math.round(t/5)*5;
+  sl.style.setProperty('--r',t/1440);sl.setAttribute('aria-valuetext',clock);
+  if(document.activeElement!==$('#tinput'))$('#tinput').value=clock;
+  renderSheet();
+  $$('[data-role=scroller]').forEach((sc,i)=>{
+    if(!inGrid)return;
+    const y=PAD+(t-AX0)*S+40, vis=sc.clientHeight;
+    if(scroll==='force'||y<sc.scrollTop+70||y>sc.scrollTop+vis-110)
+      sc.scrollTo({top:Math.max(0,y-vis*.42),behavior:scroll==='force'||reduce()?'auto':'smooth'});
+  });
+}
+function setTime(t){state.t=Math.max(0,Math.min(1440,t));update()}
+function setDay(i){
+  state.day=i;const d=DAYS[i];
+  document.documentElement.style.setProperty('--day',d.c);
+  $$('.tab').forEach(b=>b.setAttribute('aria-selected',String(+b.dataset.day===i)));
+  $$('[data-role=dtitle]').forEach(e=>e.textContent=d.t);
+  $('[data-role=wtitle]').textContent=d.t;
+  $('#bigday').textContent=d.t;$('[data-role=sday]').textContent=d.n;
+  update();
+}
+
+/* ----- controles de la demo ----- */
+$('#slider').addEventListener('input',e=>setTime(+e.target.value));
+$('#minus').onclick=()=>setTime(state.t-15);
+$('#plus').onclick=()=>setTime(state.t+15);
+const tin=$('#tinput'), terr=$('#terr');
+function showErr(msg){terr.classList.add('on');$('span',terr).textContent=msg;tin.setAttribute('aria-invalid','true')}
+function clearErr(){terr.classList.remove('on');tin.removeAttribute('aria-invalid')}
+tin.addEventListener('input',clearErr);
+$('#manual').addEventListener('submit',e=>{
+  e.preventDefault();
+  const m=/^(\d{1,2})\s*[:.]?\s*(\d{2})$/.exec(tin.value.trim());
+  if(!m)return showErr('Escribí la hora con el formato HH:MM, por ejemplo 22:40');
+  const h=+m[1], mi=+m[2];
+  if(h>23||mi>59)return showErr('Escribí una hora entre 06:00 y 05:59 del día siguiente');
+  clearErr();setTime((h*60+mi-360+1440)%1440);tin.value=fmt(state.t);
+});
+
+setDay(1);
+update('force');
+</script>
+</body>
+</html>
