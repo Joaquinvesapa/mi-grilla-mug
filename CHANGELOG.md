@@ -55,8 +55,18 @@ Todos los cambios notables de Mi Grilla se registran en este archivo. El formato
   copiar; el administrador puede generar uno nuevo, que corta el anterior. Quien abre el link ve el
   nombre del grupo y cuántos son, y se une con "Unirme"; sin sesión, entra o se registra y vuelve a
   la invitación.
+- [FEAT-006b] Administrar un grupo: quien lo administra puede cambiarle el nombre, sacar a un
+  integrante y borrarlo, con confirmación. Cualquier integrante puede salir, también con
+  confirmación: si sale el administrador pasa a serlo el integrante más antiguo, y si sale el
+  último el grupo se borra. Quien sale o es sacado deja de ver el grupo y puede volver con un link.
+- [FEAT-006b] Sin conexión, crear, unirse, generar link, renombrar, sacar, salir y borrar dicen
+  "Necesitás conexión para hacer esto" y no hacen el cambio.
 
 ### Changed
+
+- [FEAT-006b] El mensaje para quien no administra un grupo pasa a ser genérico ("Solo quien
+  administra el grupo puede hacer esto."), y "Generar link nuevo" lee el permiso del administrador
+  después de bloquear el grupo.
 
 - [FEAT-002] La pantalla principal `/` requiere sesión iniciada; sin sesión lleva a `/login`.
 - [FEAT-002] La CI recibe las variables de Better Auth y el job `e2e` migra la base antes de correr.
