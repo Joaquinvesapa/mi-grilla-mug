@@ -20,6 +20,8 @@ real. Brief: `design/color-en-vivo/brief.md`. Tokens: `design/system.md`. Rama `
   - Brief: «A stage with a show playing: pulsing love dot + "Ahora:" artist + time range, full opacity. A stage with nothing playing: lower opacity and no live dot ("Nada ahora" / "Terminó por hoy"), still showing "Sigue: <artista> en N min" when there is one. Chosen shows keep a check + sr-only "Elegido". Stages playing a chosen show sort first.» Artboard: chip del escenario en su color, barra de avance love, «quedan N min».
 - **S6** — Calidad (brief): «Every animation (live button, dots) under `@media (prefers-reduced-motion: no-preference)`; with reduced motion the dot stays solid and the "EN VIVO"/live meaning is still readable as text.» «Status never by color alone: playing = dot + "Ahora" text; chosen = check icon; clash = icon + text.» «WCAG AA for text (4.5:1 normal, 3:1 large); visible focus rings (foam) on every control.»
 
+- **S7** — Bug reportado (L7): «me esta pasando que veo que cuando quiero hacer la imagen para descargar la imagen de fondo de pantalla primero se carga asi hasta que elijo cambiar el formato de con amigos a solo grilla». Captura: hoja «Fondo de pantalla» con «Con amigos» elegido y la vista previa vacía (rectángulo sin dibujar); al pasar a «Grilla sola» se dibuja. Esperado (L8): «Por defecto tiene que ser 'Solo grilla'»: con grupos, la hoja abre con «Grilla sola» elegida y su vista previa ya dibujada, sin tocar nada; «Con amigos» se dibuja al tocarlo. El botón que se ve relleno es el elegido (aria-pressed), no siempre «Con amigos».
+
 ## Tasks
 
 | ID  | Specs      | Route                                                                                                                                                       | Commit    |
@@ -29,6 +31,7 @@ real. Brief: `design/color-en-vivo/brief.md`. Tokens: `design/system.md`. Rama `
 | T3  | S1, S6     | worker — fondo de pantalla: colores por escenario y día (layout + canvas)                                                                                   | a6c4a09   |
 | T4  | S4, S5, S6 | worker — botón «En vivo» en love animado y panel con chips de color, punto, atenuado, avance                                                                | 29b9e65   |
 | T5  | S2, S6     | worker — reloj de `/demo`: slider + hora a mano + ±15                                                                                                       | a9c457b   |
+| T7  | S7         | worker — diagnosticar y corregir la vista previa vacía del fondo «Con amigos» al abrir la hoja                                                              | 7f0225c   |
 | T6  | S1–S6      | inline — cierre: suite completa, e2e en 4 proyectos, handoff                                                                                                | pendiente |
 
 ## Log
@@ -44,3 +47,6 @@ real. Brief: `design/color-en-vivo/brief.md`. Tokens: `design/system.md`. Rama `
 - **L4**: contraste medido: texto `#e0def4` sobre pine da 3,96:1 y base sobre pine 3,38:1; ningún texto chico sobre el relleno pine de Perry's llega al 4,5:1 de AA (S6). Se aplica la decisión del brief (texto `#e0def4`, peso ≥ 600) y se avisa al usuario.
 - **L5**: T1 en `dfb626b`. T2–T5 lanzadas en paralelo a 4 workers con superficies disjuntas, sin commits propios ni e2e; el padre commitea cada una y corre los e2e en T6.
 - **L6**: T2–T5 commiteadas (`8e57ffe`, `a6c4a09`, `29b9e65`, `a9c457b`) + fix de tipos de T1 (`41a89c4`). Unit: 803/803 con cobertura; typecheck, lint y formato limpios. Pendiente: e2e en 4 proyectos. Notas de los workers: «Choque» puede recortarse en bloques de 44 px (el rayado y la descripción oculta quedan); `/demo` ahora lee la grilla de la base (`connection()`), sin base solo falta la mini línea de tiempo; el slider llega hasta 05:55.
+- **L7** (2026-11-18, usuario, textual): «me esta pasando que veo que cuando quiero hacer la imagen para descargar la imagen de fondo de pantalla primero se carga asi hasta que elijo cambiar el formato de con amigos a solo grilla» (captura: grupo «Grupo de los capos», Sábado, «Con amigos» elegido, vista previa vacía).
+- **L8** (2026-11-18, usuario, textual): «Por defecto tiene que ser 'Solo grilla'». Corrige S7: el default al abrir con grupos pasa a «Grilla sola» (el primer arreglo había dejado «Con amigos»).
+- **L9**: T7 en `7f0225c`. Causa: desde FEAT-007 la hoja con grupos abría sin opción elegida y sin dibujar, con «Con amigos» siempre relleno. Ahora abre con «Grilla sola» dibujada y el relleno sigue a la opción elegida. Unit 803/803; e2e de `wallpaper-group.spec.ts` actualizado, sin correr.
