@@ -48,6 +48,13 @@ Todos los cambios notables de Mi Grilla se registran en este archivo. El formato
   y lo que sigue en cada escenario, con los escenarios de tus shows elegidos primero, con la hora
   real de Argentina y actualizado solo cada minuto mientras está abierto. Fuera de horario dice
   cuándo es el próximo show o que el festival terminó. Funciona también sin conexión.
+- [FEAT-006a] Grupos: crear uno con nombre (quien lo crea lo administra), ver la lista "Grupos" y la
+  pantalla de cada grupo con sus integrantes, sus iniciales y la marca de administrador. Hasta 20
+  integrantes por grupo y 10 grupos por cuenta.
+- [FEAT-006a] Link de invitación que vence a las 72 h, para compartir con la hoja del sistema o
+  copiar; el administrador puede generar uno nuevo, que corta el anterior. Quien abre el link ve el
+  nombre del grupo y cuántos son, y se une con "Unirme"; sin sesión, entra o se registra y vuelve a
+  la invitación.
 
 ### Changed
 

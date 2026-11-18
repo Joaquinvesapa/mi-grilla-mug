@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { registerAction } from "@/app/auth-actions";
 import { ForgetDeviceCopy } from "@/components/forget-device-copy";
 import { RegisterForm } from "@/components/register-form";
+import { safeReturnPath } from "@/lib/return-path";
 import { getAccounts } from "@/server/accounts";
 
 export const metadata: Metadata = {
@@ -12,11 +13,17 @@ export const metadata: Metadata = {
 };
 
 // Dynamic: it reads the request's cookies. The headers are read before getAccounts(), so nothing
-// creates Better Auth while `next build` prerenders.
-export default async function RegisterPage() {
+// creates Better Auth while `next build` prerenders. `?next=` goes through `safeReturnPath` before
+// anything else sees it: only the validated destination is followed or reaches the form (R-10).
+export default async function RegisterPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const next = safeReturnPath((await searchParams)["next"]);
   const requestHeaders = await headers();
   if (await getAccounts().getCurrentUser(requestHeaders)) {
-    redirect("/");
+    redirect(next ?? "/");
   }
 
   return (
@@ -31,7 +38,7 @@ export default async function RegisterPage() {
       </header>
 
       <section aria-label="Crear cuenta" className="app-card">
-        <RegisterForm action={registerAction} />
+        <RegisterForm action={registerAction} next={next} />
       </section>
     </main>
   );

@@ -57,6 +57,15 @@ describe("AppMenu", () => {
     expect(logout.closest("[data-vaul-no-drag]")).not.toBeNull();
   });
 
+  it("app-menu: la entrada Grupos lleva a /grupos", () => {
+    render(<AppMenu userName="Ana" logoutAction={vi.fn()} pendingCount={0} />);
+
+    const groups = within(openMenu()).getByRole("link", { name: "Grupos" });
+    expect(groups).toHaveAttribute("href", "/grupos");
+    // A tap on it never starts dragging the sheet.
+    expect(groups.closest("[data-vaul-no-drag]")).not.toBeNull();
+  });
+
   it("sin cambios pendientes, Cerrar sesión envía el logout directo", async () => {
     const logoutAction = vi.fn(async () => {});
     render(<AppMenu userName="Ana" logoutAction={logoutAction} pendingCount={0} />);

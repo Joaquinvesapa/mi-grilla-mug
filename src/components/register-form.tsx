@@ -15,12 +15,21 @@ import {
   PASSWORD_MIN_LENGTH,
 } from "@/lib/account-rules";
 import { type AuthFormAction, INITIAL_FORM_STATE, PASSWORD_HINT } from "@/lib/account-messages";
+import { withReturnPath } from "@/lib/return-path";
 
 /**
  * Sign-up form. The browser checks are only a help: the server revalidates everything. After an
- * error the name and the email come back filled; the password never does.
+ * error the name and the email come back filled; the password never does. `next` is an already
+ * validated destination (`safeReturnPath`): it travels hidden to the action, which validates it
+ * again, and the link to sign in keeps it (FR-07).
  */
-export function RegisterForm({ action }: { action: AuthFormAction }) {
+export function RegisterForm({
+  action,
+  next = null,
+}: {
+  action: AuthFormAction;
+  next?: string | null;
+}) {
   const [state, formAction, pending] = useActionState(action, INITIAL_FORM_STATE);
   const id = useId();
   const { fieldErrors } = state;
@@ -36,6 +45,8 @@ export function RegisterForm({ action }: { action: AuthFormAction }) {
 
   return (
     <form action={formAction} className="flex flex-col gap-5">
+      {next === null ? null : <input type="hidden" name="next" value={next} />}
+
       <div className="flex flex-col gap-2">
         <Label htmlFor={ids.name}>Nombre</Label>
         <Input
@@ -102,7 +113,7 @@ export function RegisterForm({ action }: { action: AuthFormAction }) {
       </Button>
 
       <Button asChild variant="link">
-        <Link href="/login">¿Ya tenés cuenta? Entrá</Link>
+        <Link href={withReturnPath("/login", next)}>¿Ya tenés cuenta? Entrá</Link>
       </Button>
     </form>
   );
