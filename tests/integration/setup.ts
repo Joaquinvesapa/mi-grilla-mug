@@ -21,8 +21,9 @@ if (!process.env.BETTER_AUTH_URL) {
 // expects the shared client to be created from it.
 let cleaner: ReturnType<typeof createDb> | undefined;
 
-// Every test starts without accounts nor throttle rows. Only the tables this suite owns: deleting
-// `users` cascades to `sessions` and `accounts`.
+// Every test starts without accounts, groups nor throttle rows. Only the tables this suite owns:
+// deleting `groups` cascades to `group_members` and `group_invites`, and deleting `users` to
+// `sessions`, `accounts` and `selected_shows`. Groups go first: a group outlives its members.
 beforeEach(async () => {
   const url = process.env.DATABASE_URL;
   if (!url) {
@@ -31,6 +32,7 @@ beforeEach(async () => {
   }
   assertTruncatableDatabaseUrl(url);
   cleaner ??= createDb(url);
+  await cleaner.$executeRaw`DELETE FROM groups`;
   await cleaner.$executeRaw`DELETE FROM users`;
   await cleaner.$executeRaw`DELETE FROM login_throttles`;
 });

@@ -14,17 +14,18 @@ datasource db {
 // Las cuatro tablas que exige Better Auth (ADR-003). Los ids los genera Better Auth.
 
 model User {
-  id            String         @id
-  name          String
+  id               String         @id
+  name             String
   // Siempre en minúsculas: Better Auth lo normaliza y las reglas de cuenta también (FR-02).
-  email         String         @unique
-  emailVerified Boolean        @default(false) @map("email_verified")
-  image         String?
-  createdAt     DateTime       @default(now()) @map("created_at")
-  updatedAt     DateTime       @updatedAt @map("updated_at")
-  sessions      Session[]
-  accounts      Account[]
-  selectedShows SelectedShow[]
+  email            String         @unique
+  emailVerified    Boolean        @default(false) @map("email_verified")
+  image            String?
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+  sessions         Session[]
+  accounts         Account[]
+  selectedShows    SelectedShow[]
+  groupMemberships GroupMember[]
 
   @@map("users")
 }
@@ -149,4 +150,52 @@ model SelectedShow {
   @@id([userId, showId])
   @@index([showId])
   @@map("selected_shows")
+}
+
+// Grupos (FEAT-006a). Las escrituras las hace src/server/groups.ts con el reloj inyectado, sin
+// defaults de PostgreSQL: por eso las fechas no tienen @default(now()).
+
+model Group {
+  // UUID de crypto.randomUUID.
+  id        String        @id
+  // varchar cuenta puntos de código, la misma unidad que normalizeGroupName (1 a 40 tras trim).
+  name      String        @db.VarChar(40)
+  createdAt DateTime      @map("created_at") @db.Timestamptz(3)
+  members   GroupMember[]
+  invite    GroupInvite?
+
+  @@map("groups")
+}
+
+// ÍNDICE PARCIAL FUERA DE PRISMA: la migración de grupos crea a mano
+// `group_members_one_admin_idx`, UNIQUE (group_id) WHERE is_admin (un solo administrador por
+// grupo). Prisma no lo puede declarar, así que `prisma migrate dev` puede proponer borrarlo: si una
+// migración nueva trae `DROP INDEX "group_members_one_admin_idx"`, sacá esa línea antes de aplicarla.
+model GroupMember {
+  groupId  String   @map("group_id")
+  group    Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  userId   String   @map("user_id")
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isAdmin  Boolean  @default(false) @map("is_admin")
+  joinedAt DateTime @map("joined_at") @db.Timestamptz(3)
+
+  @@id([groupId, userId])
+  @@index([userId])
+  @@map("group_members")
+}
+
+// El único link activo de cada grupo (FR-03). El token nunca se guarda en claro (ADR-006, R-12):
+// `token_hash` es su HMAC-SHA256 (para buscarlo) y `token_ciphertext` lo guarda cifrado con
+// AES-256-GCM (`iv.tag.datos` en base64url, con el id del grupo como AAD) para mostrarlo a los
+// integrantes.
+model GroupInvite {
+  groupId         String   @id @map("group_id")
+  group           Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  tokenHash       String   @unique @map("token_hash") @db.Char(64)
+  tokenCiphertext String   @map("token_ciphertext")
+  createdAt       DateTime @map("created_at") @db.Timestamptz(3)
+  // created_at + 72 h: el link vale mientras now < expires_at (NFR-01).
+  expiresAt       DateTime @map("expires_at") @db.Timestamptz(3)
+
+  @@map("group_invites")
 }
