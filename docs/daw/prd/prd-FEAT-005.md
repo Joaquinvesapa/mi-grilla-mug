@@ -12,8 +12,11 @@
 
 | Sub-ticket | Title | PRD | ACs | Dependencies | Status |
 |---|---|---|---|---|---|
-| FEAT-005a | En vivo con la hora real | prd-FEAT-005a.md | AC-01, AC-02, AC-03, AC-04, AC-05, AC-06, AC-07, AC-08, AC-09, AC-10, AC-11, AC-12, AC-13, AC-14, AC-15, AC-20, AC-21, AC-22, AC-23, AC-24 | none | active |
-| FEAT-005b | Reloj simulado de /demo | prd-FEAT-005b.md | AC-16, AC-17, AC-18, AC-19 | depends on a | pending |
+| FEAT-005a | En vivo con la hora real | prd-FEAT-005a.md | AC-01, AC-02, AC-03, AC-04, AC-05, AC-06, AC-07, AC-08, AC-09, AC-10, AC-11, AC-12, AC-13, AC-14, AC-15, AC-20, AC-21, AC-22, AC-23, AC-24 | none | done |
+| FEAT-005b | Reloj simulado de /demo | prd-FEAT-005b.md | AC-16, AC-17, AC-18, AC-19 | depends on a | done |
+
+Integración: FEAT-005a mergeado en `main` por el PR #10; FEAT-005b mergeado en `main` por el PR #14
+(2026-11-18, con la CI en verde y el ok del usuario).
 
 Los 24 criterios de aceptación son los del PRD de DISCOVERY (`prd-DISC-001-05.md`), sin criterios
 agregados en DEFINE.
