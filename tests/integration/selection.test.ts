@@ -1,7 +1,18 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
+// The Server Action reads the session from next/headers: the in-memory jar plays the browser that
+// holds the cookie Better Auth set on sign-up.
+vi.mock("next/headers", async () => {
+  const jar = await import("./next-cookie-jar");
+  return { ...jar.nextHeadersModule, headers: async () => jar.requestHeaders() };
+});
+
+import { saveSelectionAction } from "@/app/selection-actions";
+import { getAccounts } from "@/server/accounts";
 import { getDb } from "@/server/db";
 import { getSelection, saveSelection } from "@/server/selection";
+
+import { clearCookies } from "./next-cookie-jar";
 
 const LATENCY_BUDGET_MS = 1_000;
 
@@ -30,6 +41,10 @@ async function storedIds(userId: string): Promise<string[]> {
   const rows = await getDb().selectedShow.findMany({ where: { userId }, select: { showId: true } });
   return rows.map((row) => row.showId).sort();
 }
+
+beforeEach(() => {
+  clearCookies();
+});
 
 describe("selection", () => {
   it("test-selection-save-replace: saving [a, b] and then [b, c] leaves exactly {b, c}, and getSelection returns it", async () => {
@@ -111,4 +126,38 @@ describe("selection", () => {
       expect(p95(samples)).toBeLessThanOrEqual(LATENCY_BUDGET_MS);
     },
   );
+
+  it("test-selection-sync-overwrites-other-device: with [x] saved from another device, syncing the pending [y] leaves exactly [y]", async () => {
+    const [x = "", y = ""] = await showIds();
+    expect(
+      await getAccounts().registerAccount(
+        { email: "ana@mail.com", password: "festival2026", name: "Ana" },
+        new Headers(),
+      ),
+    ).toStrictEqual({ ok: true });
+    const user = await getDb().user.findUniqueOrThrow({ where: { email: "ana@mail.com" } });
+
+    // The other device saved [x] with a connection.
+    expect(await saveSelection(user.id, [x])).toStrictEqual({ ok: true });
+    // This one syncs the selection it saved without a connection, as its owner.
+    expect(await saveSelectionAction([y], user.id)).toStrictEqual({ ok: true });
+
+    expect(await storedIds(user.id)).toStrictEqual([y]);
+  });
+
+  it("a pending selection of another account is USER_MISMATCH and leaves the session's account as it was", async () => {
+    const [x = "", y = ""] = await showIds();
+    await getAccounts().registerAccount(
+      { email: "beto@mail.com", password: "festival2026", name: "Beto" },
+      new Headers(),
+    );
+    const beto = await getDb().user.findUniqueOrThrow({ where: { email: "beto@mail.com" } });
+    await saveSelection(beto.id, [x]);
+
+    expect(await saveSelectionAction([y], "someone-else")).toStrictEqual({
+      ok: false,
+      code: "USER_MISMATCH",
+    });
+    expect(await storedIds(beto.id)).toStrictEqual([x]);
+  });
 });

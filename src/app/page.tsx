@@ -47,6 +47,8 @@ export default async function HomePage() {
       savedShowIds={selection.showIds}
       initialDayId={festivalDayFor(new Date(), schedule.schedule.days)}
       userName={user.name}
+      userId={user.id}
+      mode="online"
       saveAction={saveSelectionAction}
       logoutAction={logoutAction}
     />

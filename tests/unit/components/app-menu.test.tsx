@@ -2,6 +2,7 @@ import { act, cleanup, fireEvent, render, screen, within } from "@testing-librar
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { AppBar, AppMenu } from "@/components/app-menu";
+import { pendingKey, SNAPSHOT_KEY } from "@/lib/offline-selection";
 
 import { stubMatchMedia } from "./vaul-env";
 
@@ -10,6 +11,21 @@ beforeAll(stubMatchMedia);
 afterAll(() => {
   vi.unstubAllGlobals();
 });
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+function storeCopyAndPending() {
+  localStorage.setItem(SNAPSHOT_KEY, "copy-of-ana");
+  localStorage.setItem(pendingKey("user-ana"), "pending-of-ana");
+  localStorage.setItem(pendingKey("user-beto"), "pending-of-beto");
+}
+
+function expectCopyGonePendingsKept() {
+  expect(localStorage.getItem(SNAPSHOT_KEY)).toBeNull();
+  expect(localStorage.getItem(pendingKey("user-ana"))).toBe("pending-of-ana");
+  expect(localStorage.getItem(pendingKey("user-beto"))).toBe("pending-of-beto");
+}
 
 function openMenu() {
   fireEvent.click(screen.getByRole("button", { name: "Menú" }));
@@ -52,6 +68,95 @@ describe("AppMenu", () => {
 
     expect(logoutAction).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+  });
+});
+
+describe("AppMenu sin conexión y la copia del dispositivo", () => {
+  it("test-app-menu-logout-clears-copy: los dos caminos de Cerrar sesión borran la copia y no las pendientes", async () => {
+    storeCopyAndPending();
+    const direct = vi.fn(async () => {});
+    render(<AppMenu userName="Ana" logoutAction={direct} pendingCount={0} />);
+
+    const sheet = openMenu();
+    await act(async () => {
+      fireEvent.click(within(sheet).getByRole("button", { name: "Cerrar sesión" }));
+    });
+    expect(direct).toHaveBeenCalledTimes(1);
+    expectCopyGonePendingsKept();
+
+    cleanup();
+    storeCopyAndPending();
+    const confirmed = vi.fn(async () => {});
+    render(<AppMenu userName="Ana" logoutAction={confirmed} pendingCount={2} />);
+
+    const confirmSheet = openMenu();
+    await act(async () => {
+      fireEvent.click(within(confirmSheet).getByRole("button", { name: "Cerrar sesión" }));
+    });
+    // Asking first does not forget anything yet.
+    expect(localStorage.getItem(SNAPSHOT_KEY)).toBe("copy-of-ana");
+    await act(async () => {
+      fireEvent.click(
+        within(screen.getByRole("alertdialog")).getByRole("button", { name: "Salir sin guardar" }),
+      );
+    });
+    expect(confirmed).toHaveBeenCalledTimes(1);
+    expectCopyGonePendingsKept();
+  });
+
+  it("test-app-menu-offline-disabled: sin conexión Cerrar sesión está deshabilitado con su texto y no borra la copia", async () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+    storeCopyAndPending();
+    const logoutAction = vi.fn(async () => {});
+    render(<AppMenu userName="Ana" logoutAction={logoutAction} pendingCount={0} />);
+
+    const sheet = openMenu();
+    const logout = within(sheet).getByRole("button", { name: "Cerrar sesión" });
+    expect(logout).toBeDisabled();
+    expect(within(sheet).getByText("Necesitás conexión para cerrar sesión.")).toBeInTheDocument();
+    expect(logout).toHaveAccessibleDescription("Necesitás conexión para cerrar sesión.");
+
+    await act(async () => {
+      fireEvent.click(logout);
+    });
+    expect(logoutAction).not.toHaveBeenCalled();
+    expect(localStorage.getItem(SNAPSHOT_KEY)).toBe("copy-of-ana");
+
+    // Back online, it is enabled again and the text goes away.
+    await act(async () => {
+      vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+      window.dispatchEvent(new Event("online"));
+    });
+    expect(within(sheet).getByRole("button", { name: "Cerrar sesión" })).toBeEnabled();
+    expect(within(sheet).queryByText("Necesitás conexión para cerrar sesión.")).toBeNull();
+  });
+
+  it("test-app-menu-offline-dialog-hint: si se corta la señal con el diálogo abierto, Salir sin guardar queda deshabilitado con su motivo", async () => {
+    render(<AppMenu userName="Ana" logoutAction={vi.fn()} pendingCount={1} />);
+    const sheet = openMenu();
+    await act(async () => {
+      fireEvent.click(within(sheet).getByRole("button", { name: "Cerrar sesión" }));
+    });
+    const dialog = screen.getByRole("alertdialog");
+    expect(within(dialog).getByRole("button", { name: "Salir sin guardar" })).toBeEnabled();
+    expect(within(dialog).queryByText("Necesitás conexión para cerrar sesión.")).toBeNull();
+
+    await act(async () => {
+      vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+      window.dispatchEvent(new Event("offline"));
+    });
+
+    const leave = within(dialog).getByRole("button", { name: "Salir sin guardar" });
+    expect(leave).toBeDisabled();
+    expect(within(dialog).getByText("Necesitás conexión para cerrar sesión.")).toBeInTheDocument();
+    expect(leave).toHaveAccessibleDescription("Necesitás conexión para cerrar sesión.");
+  });
+
+  it("sin conexión y con cambios, el botón que pide confirmar también queda deshabilitado", () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+    render(<AppMenu userName="Ana" logoutAction={vi.fn()} pendingCount={1} />);
+
+    expect(within(openMenu()).getByRole("button", { name: "Cerrar sesión" })).toBeDisabled();
   });
 });
 

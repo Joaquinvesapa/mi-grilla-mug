@@ -1,7 +1,10 @@
 /**
- * The Spanish texts for the selection codes: the ones `src/server` returns, plus `NETWORK_ERROR`
- * (only the client knows the call never arrived) and `SCHEDULE_UNAVAILABLE` (the screen could not
- * load the grid). Pure: no I/O. The server only returns codes, so no message from Prisma or `pg`
+ * The Spanish texts for the selection codes: the ones `src/server` returns, `USER_MISMATCH` (the
+ * action's guard against syncing one account's pending selection into another), plus
+ * `SCHEDULE_UNAVAILABLE` (the screen could not load the grid) and `STORAGE_UNAVAILABLE` (the device
+ * would not keep a selection saved without a connection). `NETWORK_ERROR` stays in the catalog but
+ * nothing in `src/` uses it since FEAT-003b: a save that gets no answer is now kept on the device as
+ * a pending selection instead of failing. Pure: no I/O. The server only returns codes, so no message from Prisma or `pg`
  * can reach the screen (R-05).
  */
 
@@ -10,7 +13,9 @@ export type SelectionMessageCode =
   | "UNAUTHENTICATED"
   | "SERVICE_UNAVAILABLE"
   | "NETWORK_ERROR"
-  | "SCHEDULE_UNAVAILABLE";
+  | "SCHEDULE_UNAVAILABLE"
+  | "USER_MISMATCH"
+  | "STORAGE_UNAVAILABLE";
 
 const CATALOG = {
   INVALID_SELECTION: "No pudimos guardar esa selección. Recargá la grilla y probá de nuevo.",
@@ -18,6 +23,9 @@ const CATALOG = {
   SERVICE_UNAVAILABLE: "No pudimos guardar. Probá de nuevo en un rato.",
   NETWORK_ERROR: "No pudimos guardar. Revisá tu conexión y probá de nuevo.",
   SCHEDULE_UNAVAILABLE: "No pudimos cargar la grilla. Probá de nuevo en un rato.",
+  USER_MISMATCH: "Entraste con otra cuenta. Recargá la grilla para seguir.",
+  STORAGE_UNAVAILABLE:
+    "No pudimos guardar: no hay conexión y este celular no dejó guardar los cambios.",
 } as const satisfies Record<SelectionMessageCode, string>;
 
 // A Map, so `toString` or `__proto__` are not catalog entries.
@@ -32,3 +40,10 @@ export function selectionMessageFor(code: string): string {
 export function pendingChangesLabel(count: number): string {
   return `${count} ${count === 1 ? "cambio" : "cambios"} sin guardar`;
 }
+
+/** The notice while a selection is saved only on this device (FR-04). */
+export const OFFLINE_PENDING_TITLE = "Guardado solo en este celular";
+
+// The wallpaper is PRD 04: until it exists, the notice only suggests it.
+export const OFFLINE_PENDING_BODY =
+  "Tus cambios se suben solos cuando vuelva la conexión. Mientras tanto, descargá la grilla como fondo de pantalla para tenerla a mano.";

@@ -73,11 +73,13 @@ Si un número de acá no coincide con el que exige la CI, gana el de la CI y se 
 - **Folder structure:** `src/app/` (rutas, layouts, route handlers y Server Actions delgados, como
   `src/app/auth-actions.ts`), `src/proxy.ts` (el proxy de Next 16: solo redirige `/` a `/login` sin
   cookie de sesión; la verificación real la hace la página), `src/components/`
-  (UI; `ui/` = shadcn), `src/lib/` (utilidades puras, sin I/O), `src/server/` (acceso a la base y
-  lógica de servidor; cada módulo con `import "server-only"`), `src/server/generated/prisma/`
-  (cliente generado, fuera de git). Tests en `tests/{unit,integration,e2e}/`. `scripts/`:
-  herramientas de desarrollo en shell, invocadas desde `package.json`; nunca se importan desde
-  `src/`. `data/`: la grilla versionada (`schedule.json`, el formato normalizado, y
+  (UI; `ui/` = shadcn; también los helpers de cliente con acceso al almacenamiento del navegador,
+  como `device-store.ts`, ADR-004), `src/lib/` (utilidades puras, sin I/O), `src/server/`
+  (acceso a la base y lógica de servidor; cada módulo con `import "server-only"`),
+  `src/server/generated/prisma/` (cliente generado, fuera de git). Tests en
+  `tests/{unit,integration,e2e}/`. `scripts/`: herramientas de desarrollo en shell, invocadas
+  desde `package.json`; nunca se importan desde `src/`. `data/`: la grilla versionada
+  (`schedule.json`, el formato normalizado, y
   `schedule-source-248dba3.json`, la fuente de la que se convirtió, que solo lee su test).
   `prisma/seed.ts`: carga `data/schedule.json` en la base (`pnpm db:seed`); corre con `node` sin
   transpilar, así que importa con extensión `.ts` y solo de `src/lib/`.
@@ -138,6 +140,14 @@ Si un número de acá no coincide con el que exige la CI, gana el de la CI y se 
 - **No commitear secretos** (`.env`, credenciales de la base).
 - **No sumar funciones que quedaron fuera del MVP** (agenda, amistad 1 a 1, comparar con un amigo,
   perfil con avatar, panel de admin) sin pasar antes por un PRD.
+
+---
+
+## Organizational memory
+
+Servidor MCP: **Cortex** (`mcp__cortex__*`), proyecto `mi-grilla-mug`.
+Acelera la búsqueda, no es la fuente de verdad: si una memoria contradice el repo (código, PRD,
+spec, ADR, `.daw-state.json`), gana el repo y la memoria se corrige con `memoria_update`.
 
 ---
 
