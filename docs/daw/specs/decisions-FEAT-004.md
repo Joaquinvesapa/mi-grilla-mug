@@ -37,3 +37,34 @@ decir que se mostró al usuario sin pedirle aprobación previa; cualquier objeci
 - `MIN_BLOCK_HEIGHT` conserva el nombre de la spec, con un comentario que lo distingue del de la
   grilla en pantalla (`schedule-layout.ts`, 44 px). `MINUTE_MS` se redefine localmente. —
   orquestador — 2026-11-18 — Block 1
+
+## Block 2 — Dibujo y entrega
+
+- La tipografía se pide con `600 28px <familia>` y `700 64px <familia>`. Si
+  `getComputedStyle(document.body).fontFamily` viene vacío, se usa `sans-serif`; si no existe
+  `document.fonts`, o algún `load` rechaza o resuelve `[]`, `fontFallback` es `true` y se dibuja
+  igual. — orquestador — 2026-11-18 — Block 2
+- `fonts.load` tiene un plazo único de 1500 ms (`FONT_LOAD_TIMEOUT_MS`) para todos los pesos. Al
+  vencer, se dibuja con el respaldo (`fontFallback: true`), así el fondo nunca se cuelga sin
+  conexión (FR-10, NFR-01). La spec no lo pedía. — orquestador — 2026-11-18 — Block 2
+- Si el contexto no tiene `roundRect` (WebKit viejo), los bloques se dibujan con un path de
+  `arcTo` con el mismo radio. — orquestador — 2026-11-18 — Block 2
+- Las líneas de hora son `fillRect` de 1 px en `Math.round(y)`, para que salgan nítidas. —
+  orquestador — 2026-11-18 — Block 2
+- Después de `toBlob`, salga bien o mal, el canvas pasa a 0 × 0 para que WebKit libere el bitmap
+  (R-03). — orquestador — 2026-11-18 — Block 2
+- `canShareFile` devuelve `false` si `navigator.canShare` lanza: si no se puede preguntar, se
+  descarga. Sin `navigator.share`, `shareWallpaper` devuelve `SHARE_FAILED`. — orquestador —
+  2026-11-18 — Block 2
+- `downloadWallpaper` agrega un `<a download>` oculto, lo clickea y en un `finally` lo saca y
+  programa el revoke (`setTimeout(…, 0)`, el "siguiente tick" de la spec). Si `append` o `click`
+  lanzan, el error sube a quien llama, y el Block 3 lo muestra como falla. Revocar a 0 ms puede
+  cancelar la descarga en algún Safari: se prueba a mano en VERIFY. — orquestador — 2026-11-18 —
+  Block 2
+- Para el Block 3: si `downloadWallpaper` lanza, la hoja muestra el mensaje genérico del catálogo
+  (`wallpaperMessageFor` con un código desconocido) con `role="alert"` y se queda en `ready` para
+  reintentar. Si `renderWallpaper` rechaza en vez de devolver un código, la hoja pasa a `failed`
+  con `ENCODE_FAILED`. En ningún caso se muestra el `message` del navegador (R-04). — orquestador
+  — 2026-11-18 — Block 2
+- El threat model (R-04) nombra un código `FONT_UNAVAILABLE` que la spec reemplazó por
+  `fontFallback: true`. La implementación sigue la spec. — orquestador — 2026-11-18 — Block 2
