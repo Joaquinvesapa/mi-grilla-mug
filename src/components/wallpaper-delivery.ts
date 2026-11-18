@@ -7,7 +7,10 @@ type ShareWallpaperResult = { ok: true } | { ok: false; code: "SHARE_CANCELLED" 
 
 const PNG = "image/png";
 
-/** The PNG as a `File` named `name` (always `wallpaperFileName(day)`, never text from the person). */
+/**
+ * The PNG as a `File` named `name`: always `wallpaperFileName(day, groupName?)`, whose slug keeps
+ * only `[a-z0-9-]` of the group's name (FEAT-007, R-06), never raw text from the person.
+ */
 export function wallpaperFile(blob: Blob, name: string): File {
   return new File([blob], name, { type: PNG });
 }

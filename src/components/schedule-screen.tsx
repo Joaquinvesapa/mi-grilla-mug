@@ -412,6 +412,10 @@ export function ScheduleScreen({
               stages={schedule.stages}
               shows={dayShows}
               selectedIds={draft}
+              // The groups on screen (the device copy's without signal) and the picker's group,
+              // where "Con amigos" starts (FEAT-007, FR-02, FR-12).
+              groups={groups}
+              groupId={shownGroupId}
             />
           ) : undefined
         }

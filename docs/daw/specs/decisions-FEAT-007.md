@@ -27,3 +27,17 @@ Formato: decisión — quién la aprobó — fecha — fase o bloque.
     ni "…" entra en el encabezado, `groupLabel` es `null`.
   - `groupLabel.y` es el mismo que el de "Mi Grilla" (los dos de 32 px, centrados en la fila del
     título).
+- Supuestos del Block 2, aceptados por su revisión — el modelo, en modo minimal — 2026-11-18 —
+  CODE, Block 2: el nombre del grupo se pinta al final, a alpha 1; las píldoras de cada bloque se
+  pintan justo después del texto de ese bloque.
+- Supuestos y desvíos del Block 3, aceptados por sus revisiones — el modelo, en modo minimal —
+  2026-11-18 — CODE, Block 3:
+  - "Deshabilitados mientras se genera" se implementa con `aria-disabled` y
+    `pointer-events-none`, no con `disabled`, para que el foco no se pierda (hallazgo 6 de PLAN).
+    Para eso `GroupPicker` suma una prop opcional `disabled` (por defecto `false`) que la spec no
+    listaba.
+  - Tocar la opción que ya está en pantalla no redibuja; si el estado es de fallo, reintenta.
+  - La opción apretada lleva un anillo foam (`aria-pressed:ring-2`), porque los colores fijos de la
+    spec ("Con amigos" primario, "Grilla sola" outline) no muestran cuál está elegida.
+  - `GroupPicker` acorta el nombre del grupo (`truncate`, `min-w-0`) para no desbordar la hoja a
+    360 px; el selector de la grilla se ve igual con nombres que entran.

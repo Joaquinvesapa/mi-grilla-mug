@@ -27,9 +27,25 @@ export const WALLPAPER_DONE_LABEL = "Listo. Así lo ponés de fondo:";
 /** Draw the image again after a failure. */
 export const RETRY_LABEL = "Reintentar";
 
-/** The `alt` of the preview: "Vista previa del fondo del Viernes". */
-export function wallpaperPreviewAlt(dayName: string): string {
-  return `Vista previa del fondo del ${dayName}`;
+/** The question the sheet asks when the user is in a group (FEAT-007, FR-01). */
+export const WALLPAPER_CHOICE_LABEL = "¿Qué fondo querés?";
+
+/** The personal wallpaper, as in FEAT-004 (FEAT-007, FR-04). */
+export const PERSONAL_OPTION_LABEL = "Grilla sola";
+
+/** The group's wallpaper, with the friends' initials (FEAT-007, FR-02). */
+export const WITH_FRIENDS_OPTION_LABEL = "Con amigos";
+
+/** The sheet's group select: not the grid picker's "Grupo", so the two names differ. */
+export const WALLPAPER_GROUP_LABEL = "Grupo del fondo";
+
+/**
+ * The `alt` of the preview: "Vista previa del fondo del Viernes", and with a group, "… con Los del
+ * Lolla" (FEAT-007).
+ */
+export function wallpaperPreviewAlt(dayName: string, groupName?: string | null): string {
+  const alt = `Vista previa del fondo del ${dayName}`;
+  return groupName === undefined || groupName === null ? alt : `${alt} con ${groupName}`;
 }
 
 /** How the image was saved: "Guardar en Fotos" (system share sheet) or "Descargar imagen". */
