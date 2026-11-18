@@ -96,6 +96,13 @@ jobs:
     name: e2e
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # La imagen oficial de Playwright trae WebKit, Chromium y sus bibliotecas del sistema: el job no
+    # instala nada con apt ni baja navegadores, que es donde se colgaba hasta agotar el tope
+    # (FIX-002). La versión es la de @playwright/test y la misma de `pnpm test:e2e:docker`; un test
+    # de tests/unit/ci/workflow.test.ts exige que coincidan. Corre como root: Playwright ya lanza
+    # Chromium sin sandbox y con --disable-dev-shm-usage.
+    container:
+      image: mcr.microsoft.com/playwright:v1.65.1-noble
     services:
       postgres:
         image: postgres:17.12
@@ -112,10 +119,11 @@ jobs:
           --health-timeout 3s
           --health-retries 15
     env:
-      DATABASE_URL: postgresql://mi_grilla:ci-only-password@127.0.0.1:5432/mi_grilla
+      # Desde el container, el service se alcanza por su nombre, no por 127.0.0.1.
+      DATABASE_URL: postgresql://mi_grilla:ci-only-password@postgres:5432/mi_grilla
       # Secreto de prueba descartable, NO es un secreto (ver el job integration).
       BETTER_AUTH_SECRET: ci-only-better-auth-secret-not-a-real-one
-      # La URL que sirve `next start` en los E2E (playwright.config.ts).
+      # La URL que sirve `next start` en los E2E (playwright.config.ts), en el mismo container.
       BETTER_AUTH_URL: http://127.0.0.1:3100
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -127,16 +135,6 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # Los navegadores dependen solo de la versión de @playwright/test (exacta en package.json):
-      # la cache se invalida cuando cambia esa versión, no con cualquier cambio del lockfile.
-      - id: playwright-version
-        run: echo "version=$(node -p "require('./package.json').devDependencies['@playwright/test']")" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
-      # Con la cache, solo instala las bibliotecas del sistema; sin ella, también los navegadores.
-      - run: pnpm exec playwright install --with-deps webkit chromium
       # Las cuentas (FEAT-002) viven en la base: el esquema tiene que estar antes del primer registro.
       - run: pnpm db:migrate
       # La grilla (FEAT-003a) también vive en la base: `/` la lee en cada pedido.
