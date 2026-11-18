@@ -64,3 +64,5 @@ Todos los cambios notables de Mi Grilla se registran en este archivo. El formato
 - [FIX-002] El job `e2e` de la CI ya no se cancela por el tope de 10 minutos cuando apt se cuelga:
   corre dentro de la imagen oficial de Playwright (`v1.65.1-noble`), que trae los navegadores y sus
   bibliotecas, sin `playwright install` ni cache de navegadores.
+- [FIX-003] En la pantalla de bloqueo del iPhone, la linterna y la cámara ya no tapan la última hora
+  del fondo de pantalla: la grilla deja libre el 14 % inferior (392 px) en vez del 8 %.

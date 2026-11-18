@@ -72,12 +72,13 @@ const SAT_ONLY = { show: showById("sat-flow-2215").id, at: "23:38" };
 const FRI_ONLY = { show: showById("fri-flow-2000").id, at: "20:08" };
 
 // The image's geometry. The source of these constants is docs/daw/specs/spec-FEAT-004.md (Block 1
-// and Block 2): the hour axis from y = 849 to y = 2572, five equal columns from x = 120 to x = 1266
+// and Block 2), with the axis end of docs/daw/specs/fix-FIX-003.md (the bottom 392 px stay free for
+// the flashlight and camera): the hour axis from y = 849 to y = 2404, five equal columns from x = 120 to x = 1266
 // with 8 px between them, blocks at least 70 px tall that stop 4 px before the next show of their
 // stage, rounded with a 12 px radius, and 1 px hour lines at the rounded y of each whole hour. Each
 // probe sits 5 px from its column's right edge, where the 12 px padding keeps any text away.
 const AXIS_TOP = 849;
-const AXIS_BOTTOM = 2572;
+const AXIS_BOTTOM = 2404;
 const GRID_LEFT = 120;
 const GRID_RIGHT = 1266;
 const COLUMN_GAP = 8;
