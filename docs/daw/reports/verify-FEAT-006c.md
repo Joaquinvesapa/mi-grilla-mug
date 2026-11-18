@@ -95,4 +95,19 @@ de `src/` de FEAT-006c no cambió. Como el árbol sí cambió, se corrió de nue
 
 Los veredictos de los 10 AC y los 6 bloques de arriba siguen valiendo.
 
+## Segunda re-corrida después de traer main (FEAT-005b)
+Antes de que corriera la CI del PR #15, `main` sumó FEAT-005b (el reloj de `/demo`), y el PR quedó
+con conflictos. Se mergeó de nuevo (`3a7086f`). Los conflictos estaban en `schedule-screen.tsx`
+(imports) y en su test, y se resolvieron juntando las dos partes. El test del reloj que renderiza
+`ScheduleScreen` recibe `groups={[]}`. El ADR de este ticket pasó a ADR-008, porque FEAT-005b ya
+tenía el 007.
+
+Se corrió de nuevo la suite completa:
+- unit 714/714, con cobertura de 99,64 % líneas, 97,33 % ramas y 99,57 % funciones;
+- integración 110/110;
+- E2E: pasan 341 de 346, y los 5 restantes se saltean con motivo, en los 4 proyectos;
+- lint, formato y tipos limpios.
+
+Los veredictos de arriba siguen valiendo.
+
 Result: PASSED
