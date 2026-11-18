@@ -6,7 +6,7 @@
 | Origen | docs/daw/prd/prd-DISC-001-04.md (PRD 04 de 7 de DISC-001) |
 | Tracker | none |
 | Date | 2026-11-18 |
-| PRD loops | 1 |
+| PRD loops | 2 |
 | Loops since last human decision | 0 |
 
 ## Context and Problem
@@ -49,8 +49,10 @@ pantalla; este PRD es lo que hace posible esa sugerencia.
   (decisión del usuario, 2026-11-16).
 - FR-06: La imagen usa un único tema oscuro fijo (decisión del usuario, 2026-11-16).
 - FR-07: La imagen deja libres las zonas que tapa la pantalla de bloqueo del iPhone: el 25 %
-  superior, donde van la hora y la fecha, y el 8 % inferior, donde van la linterna y la cámara. En
-  esas zonas no hay bloques de shows ni marcas de hora.
+  superior, donde van la hora y la fecha, y el 14 % inferior, donde van la linterna y la cámara. En
+  esas zonas no hay bloques de shows ni marcas de hora. En una pantalla de bloqueo real, la
+  linterna y la cámara empiezan a unos 347 px del borde inferior (12,4 %); el 14 % deja aire sobre
+  ellas (decisión del usuario, 2026-11-18, FIX-003).
 - FR-08: La imagen incluye el nombre del día (por ejemplo, "Viernes") y la marca "Mi Grilla", sin
   logos ni marcas de Lollapalooza.
 - FR-09: La imagen usa la selección que el usuario ve en la pantalla en ese momento. Eso incluye
@@ -102,7 +104,7 @@ cambios sin guardar y el modo sin conexión por el otro) deja una parte de 12 y 
   fondo oscuro, los shows encendidos en color de acento con contraste de al menos 4.5:1 entre su
   texto y su bloque, y los opacos con, como mucho, el 35 % de la opacidad de uno encendido.
 - AC-08 (FR-07): WHEN se genera la imagen, THE imagen SHALL no tener bloques de shows ni marcas de
-  hora en los 699 px superiores (25 %) ni en los 224 px inferiores (8 %).
+  hora en los 699 px superiores (25 %) ni en los 392 px inferiores (14 %).
 - AC-09 (FR-08): WHEN se genera la imagen del sábado, THE imagen SHALL incluir el texto "Sábado" y
   la marca "Mi Grilla", y SHALL no incluir logos ni marcas de Lollapalooza.
 - AC-10 (FR-09): WHEN el usuario marca un show, no toca "Guardar" y descarga el fondo, THE imagen
