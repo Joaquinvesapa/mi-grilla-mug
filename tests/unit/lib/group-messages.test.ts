@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import {
   ASK_THE_ADMIN,
+  CANCEL,
   CREATE_GROUP_BUTTON,
+  DELETE_GROUP_BUTTON,
+  DELETE_GROUP_CONFIRM,
+  DELETE_GROUP_WARNING,
+  deleteGroupTitle,
   formatInviteExpiry,
   GROUP_LOAD_FAILED,
   GROUP_NAME_LABEL,
@@ -11,13 +16,21 @@ import {
   GROUPS_LOAD_FAILED,
   inviteShareText,
   joinGroupMessageFor,
+  LEAVE_GROUP_BUTTON,
+  LEAVE_GROUP_CONFIRM,
+  leaveGroupTitle,
   LINK_COPIED,
   LINK_COPY_FAILED,
   LINK_EXPIRED,
   LINK_REGENERATED,
   memberCountLabel,
+  NAME_SAVED,
   NO_ACTIVE_LINK,
   NO_GROUPS,
+  REMOVE_MEMBER_BUTTON,
+  removeMemberLabel,
+  RENAME_GROUP_LABEL,
+  SAVE_NAME_BUTTON,
 } from "@/lib/group-messages";
 
 // `satisfies` makes a code missing from (or extra to) the exported union a compile error.
@@ -27,7 +40,8 @@ const CATALOG = {
   GROUP_FULL: "El grupo está completo (20 integrantes).",
   INVALID_INVITE: "Este link de invitación ya no es válido. Pedile uno nuevo a alguien del grupo.",
   NOT_FOUND: "No encontramos ese grupo.",
-  NOT_ADMIN: "Solo quien administra el grupo puede generar un link nuevo.",
+  NOT_ADMIN: "Solo quien administra el grupo puede hacer esto.",
+  MEMBER_NOT_FOUND: "Esa persona ya no está en el grupo.",
   UNAUTHENTICATED: "Tu sesión terminó. Volvé a iniciar sesión.",
   SERVICE_UNAVAILABLE: "No pudimos guardar. Probá de nuevo en un rato.",
 } satisfies Record<GroupMessageCode, string>;
@@ -81,5 +95,21 @@ describe("group-messages", () => {
     });
     expect(memberCountLabel(1)).toBe("1 integrante");
     expect(memberCountLabel(3)).toBe("3 integrantes");
+  });
+
+  it("group-messages: los textos de administrar y salir de un grupo", () => {
+    expect(RENAME_GROUP_LABEL).toBe("Cambiar nombre");
+    expect(SAVE_NAME_BUTTON).toBe("Guardar nombre");
+    expect(NAME_SAVED).toBe("Nombre guardado");
+    expect(REMOVE_MEMBER_BUTTON).toBe("Sacar");
+    expect(removeMemberLabel("Bruno")).toBe("Sacar a Bruno");
+    expect(LEAVE_GROUP_BUTTON).toBe("Salir del grupo");
+    expect(leaveGroupTitle("Los del Lolla")).toBe("¿Salir de Los del Lolla?");
+    expect(LEAVE_GROUP_CONFIRM).toBe("Salir");
+    expect(DELETE_GROUP_BUTTON).toBe("Borrar grupo");
+    expect(deleteGroupTitle("Los del Lolla")).toBe("¿Borrar Los del Lolla?");
+    expect(DELETE_GROUP_WARNING).toBe("Se borra para todos sus integrantes.");
+    expect(DELETE_GROUP_CONFIRM).toBe("Borrar");
+    expect(CANCEL).toBe("Cancelar");
   });
 });
