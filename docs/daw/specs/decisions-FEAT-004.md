@@ -122,3 +122,11 @@ decir que se mostró al usuario sin pedirle aprobación previa; cualquier objeci
   internos del layout, de la entrega y del botón: nadie los importaba. Las constantes siguen en el
   módulo con los valores de la spec. Esto reemplaza la decisión del Block 1 que exportaba
   `AXIS_TOP`/`AXIS_BOTTOM`. — orquestador — 2026-11-18 — corrección VERIFY
+- La zona libre inferior pasa del 8 % (`SAFE_BOTTOM = 224`) al 14 % (`SAFE_BOTTOM = 392`): en una
+  pantalla de bloqueo real la linterna y la cámara empiezan a ≈ 347 px del borde inferior. El eje
+  pasa a ir de y = 849 a y = 2404 (1555 px; 2,16 px/min, un show de 30 min mide ≈ 64,8 px natural y
+  el piso de 70 px lo sube). El padding vertical del bloque baja de 6 a 4 px: el bloque real más
+  corto (domingo, Kidzapalooza 18:00–18:20) queda en ≈ 60,8 px y una línea y el horario ocupan
+  2 × 4 + 30 + 22 = 60 px. Reemplaza las cifras de `spec-FEAT-004.md` (líneas 32, 34, 36, 124, 147
+  y 199) y de la decisión de las medidas internas del bloque de arriba. Detalle en
+  `docs/daw/specs/fix-FIX-003.md`. — orquestador — 2026-11-18 — FIX-003
