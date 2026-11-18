@@ -44,3 +44,16 @@ Supuestos que declararon los implementadores, revisados por el orquestador y mos
   viewport en 360 × 780 — implementer, aceptado por las dos revisiones — 2026-11-18 — Block 5
 - El worktree usa su propia base local (`mi_grilla_feat006c`): `mi_grilla_test` la comparte otra
   sesión y una corrida de integración se pisó con la suya — orquestador — 2026-11-18 — Block 1
+- **El ADR de este ticket es el ADR-008**, no el 007. La spec y el modelo de amenazas lo citan como
+  "ADR-007", que era el número libre en PLAN. FEAT-005b mergeó antes su propio ADR-007 (el reloj de
+  `/demo`). Al traer `main` en CLOSEOUT, el archivo pasó a
+  `docs/adr/adr-008-selecciones-del-grupo-en-la-grilla.md` y se actualizaron las referencias del
+  código y los tests. La spec y el modelo de amenazas no se tocan en CLOSEOUT: donde dicen
+  "ADR-007" en el contexto de FEAT-006c, hay que leer ADR-008 — orquestador — 2026-11-18 — CLOSEOUT
+- Al traer `main` (FEAT-006b, FIX-004 y FEAT-005b) en CLOSEOUT, a pedido del usuario:
+  - los conflictos se resolvieron juntando las dos partes;
+  - `tests/e2e/db.ts` pasó a `TEST_DATABASE_URL` con `resolveTestDatabaseUrl` (FIX-004);
+  - los conteos de llamadas de los tests de servicio suman las dos ramas;
+  - el test del reloj de `/demo` que renderiza `ScheduleScreen` recibe `groups={[]}`.
+
+  — orquestador, pedido del usuario — 2026-11-18 — CLOSEOUT

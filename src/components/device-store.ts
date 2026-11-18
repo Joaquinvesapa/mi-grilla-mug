@@ -86,7 +86,7 @@ export function readGroupChoice(userId: string): GroupChoice | undefined {
 
 /**
  * Remembers the group `userId` chose, or `null` for "Sin grupo". Kept when signing out, like the
- * pending selections (ADR-007): it names a group, never what its members picked.
+ * pending selections (ADR-008): it names a group, never what its members picked.
  */
 export function writeGroupChoice(userId: string, groupId: string | null): DeviceStoreResult {
   return write(groupChoiceKey(userId), JSON.stringify({ version: 1, userId, groupId }));

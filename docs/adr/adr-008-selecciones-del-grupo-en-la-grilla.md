@@ -1,4 +1,4 @@
-# ADR-007: Selecciones del grupo en la grilla: todas al abrir y en la copia del dispositivo
+# ADR-008: Selecciones del grupo en la grilla: todas al abrir y en la copia del dispositivo
 
 | Field | Value |
 |-------|-------|

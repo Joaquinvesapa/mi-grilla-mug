@@ -1,8 +1,10 @@
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { resetDemoClockForTests } from "@/components/demo-clock";
 import { type SaveSelection, ScheduleScreen } from "@/components/schedule-screen";
 import { renderWallpaper } from "@/components/wallpaper-canvas";
+import { DEMO_CLOCK_MESSAGE } from "@/lib/demo-clock";
 import { GROUP_PICKER_LABEL, NO_GROUP_OPTION } from "@/lib/group-messages";
 import { groupChoiceKey, type GroupPicks } from "@/lib/group-picks";
 import { CLOSE_LABEL, LIVE_LABEL, SELECTED_LABEL } from "@/lib/live-messages";
@@ -996,5 +998,102 @@ describe("ScheduleScreen y el grupo", () => {
     expect(saveAction).toHaveBeenCalledWith(["fri-perrys-1815"], USER_ID);
     expect(storedSnapshot()?.savedShowIds).toStrictEqual(["fri-perrys-1815"]);
     expect(storedGroups()).toStrictEqual([GROUPS[1]]);
+  });
+});
+
+describe("ScheduleScreen y el reloj de /demo", () => {
+  const ORIGINAL_PARENT = Object.getOwnPropertyDescriptor(window, "parent");
+  const SATURDAY_18_00 = Date.parse("2026-03-14T18:00:00-03:00");
+  const SUNDAY_23_00 = Date.parse("2026-03-15T23:00:00-03:00");
+
+  afterEach(() => {
+    cleanup();
+    resetDemoClockForTests();
+    if (ORIGINAL_PARENT) {
+      Object.defineProperty(window, "parent", ORIGINAL_PARENT);
+    } else {
+      // `parent` lives on the prototype: dropping the own property restores jsdom's.
+      delete (window as { parent?: unknown }).parent;
+    }
+  });
+
+  /** The app framed by `/demo` of its own origin (`parent` is read-only in jsdom). */
+  function setDemoParent() {
+    const parent = { location: { pathname: "/demo" }, postMessage: vi.fn() };
+    Object.defineProperty(window, "parent", { configurable: true, get: () => parent });
+    return parent;
+  }
+
+  /** `/demo` (or whoever `source` is) sends a time. */
+  function sendClock(at: number, source: unknown) {
+    act(() => {
+      window.dispatchEvent(
+        new MessageEvent("message", {
+          data: { type: DEMO_CLOCK_MESSAGE, at },
+          origin: window.location.origin,
+          source: source as MessageEventSource,
+        }),
+      );
+    });
+  }
+
+  function selectedTab(): string | null {
+    return screen.getByRole("tab", { selected: true }).textContent;
+  }
+
+  it("schedule-screen: el día inicial sale del reloj de /demo", () => {
+    const parent = setDemoParent();
+    renderScreen({ initialDayId: "fri" });
+    // Before /demo answers, the day of the props.
+    expect(selectedTab()).toBe("Viernes");
+
+    // The first time that arrives sets the day: Saturday 18:00 opens Saturday (AC-18).
+    sendClock(SATURDAY_18_00, parent);
+    expect(screen.getByRole("region", { name: "Grilla del Sábado" })).toBeInTheDocument();
+    expect(selectedTab()).toBe("Sábado");
+
+    // Later changes of the clock do not move the tab: "initial day" is literal.
+    sendClock(SUNDAY_23_00, parent);
+    expect(selectedTab()).toBe("Sábado");
+
+    // Opened again (another screen of the iPhone, or a reload): the store's time at mount.
+    cleanup();
+    renderScreen({ initialDayId: "fri" });
+    expect(screen.getByRole("region", { name: "Grilla del Domingo" })).toBeInTheDocument();
+
+    // A day the user picked before the first time arrives is kept.
+    cleanup();
+    resetDemoClockForTests();
+    renderScreen({ initialDayId: "fri" });
+    pickDay("Domingo");
+    sendClock(SATURDAY_18_00, parent);
+    expect(selectedTab()).toBe("Domingo");
+  });
+
+  it("schedule-screen: sin reloj de /demo, el padre faltante deja el día de las props", () => {
+    // No frame at all (jsdom: `parent === window`): nobody listens, so a message changes nothing.
+    renderScreen({ initialDayId: "sat" });
+    sendClock(SUNDAY_23_00, window);
+    expect(selectedTab()).toBe("Sábado");
+    cleanup();
+
+    // Inside /demo, a time that falls on no day of this grid leaves the day of the props.
+    const parent = setDemoParent();
+    render(
+      <ScheduleScreen
+        schedule={{ ...SCHEDULE, days: SCHEDULE.days.filter((day) => day.id !== "sun") }}
+        savedShowIds={[]}
+        initialDayId="sat"
+        userName="Ana"
+        userId={USER_ID}
+        mode="online"
+        groups={[]}
+        saveAction={vi.fn<SaveSelection>(async () => ({ ok: true }))}
+        logoutAction={vi.fn(async () => {})}
+      />,
+    );
+    sendClock(SUNDAY_23_00, parent);
+    expect(selectedTab()).toBe("Sábado");
+    expect(screen.getByRole("region", { name: "Grilla del Sábado" })).toBeInTheDocument();
   });
 });

@@ -140,7 +140,7 @@ describe("AppMenu sin conexión y la copia del dispositivo", () => {
     expectCopyGonePendingsKept();
   });
 
-  it("test-logout-clears-groups: los dos caminos de Cerrar sesión borran la copia con los grupos y conservan la elección de grupo (R-03, ADR-007)", async () => {
+  it("test-logout-clears-groups: los dos caminos de Cerrar sesión borran la copia con los grupos y conservan la elección de grupo (R-03, ADR-008)", async () => {
     storeCopyWithGroups();
     render(<AppMenu userName="Ana" logoutAction={vi.fn(async () => {})} pendingCount={0} />);
 

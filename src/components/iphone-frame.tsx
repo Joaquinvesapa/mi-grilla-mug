@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type Ref } from "react";
 
 /** iPhone 15 screen, in CSS px: the size the app is laid out at inside the frame. */
 export const SCREEN_WIDTH = 393;
@@ -25,11 +25,18 @@ export function computeFrameScale(availableHeight: number, frameHeight: number):
   return Math.min(1, availableHeight / frameHeight);
 }
 
+export type IphoneFrameProps = {
+  /** The app's iframe, for `/demo` to post its clock to (FEAT-005b, ADR-007). */
+  iframeRef?: Ref<HTMLIFrameElement>;
+  /** Called when the app's iframe loads. */
+  onIframeLoad?: () => void;
+};
+
 /**
  * The app running inside a CSS iPhone: bezel, Dynamic Island and the real app in an iframe of the
  * iPhone 15 screen size. It fills the space its parent gives it and scales down to fit its height.
  */
-export function IphoneFrame() {
+export function IphoneFrame({ iframeRef, onIframeLoad }: IphoneFrameProps = {}) {
   const areaRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
 
@@ -68,6 +75,8 @@ export function IphoneFrame() {
             style={{ borderRadius: `${SCREEN_RADIUS}px` }}
           >
             <iframe
+              ref={iframeRef}
+              onLoad={onIframeLoad}
               src="/"
               title="Mi Grilla"
               width={SCREEN_WIDTH}

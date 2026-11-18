@@ -21,7 +21,7 @@ export type DeviceSnapshot = {
   schedule: Schedule;
   /** Confirmed by the server: unique ids, all of them in `schedule.shows`. */
   savedShowIds: string[];
-  /** The user's groups with their friends' picks, all of them on shows of `schedule` (ADR-007). */
+  /** The user's groups with their friends' picks, all of them on shows of `schedule` (ADR-008). */
   groups: GroupPicks[];
 };
 

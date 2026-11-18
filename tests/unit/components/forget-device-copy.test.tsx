@@ -22,7 +22,7 @@ describe("ForgetDeviceCopy", () => {
     expect(localStorage.getItem(pendingKey("user-a"))).toBe("pending-a");
   });
 
-  it("test-logout-clears-groups: /login borra la copia con los grupos de los amigos y conserva la elección de grupo (R-03, ADR-007)", () => {
+  it("test-logout-clears-groups: /login borra la copia con los grupos de los amigos y conserva la elección de grupo (R-03, ADR-008)", () => {
     const groupId = "11111111-1111-4111-8111-111111111111";
     const choice = JSON.stringify({ version: 1, userId: "user-a", groupId });
     writeSnapshot({

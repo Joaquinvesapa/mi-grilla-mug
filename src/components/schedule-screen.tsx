@@ -12,6 +12,7 @@ import {
 
 import { AppBar } from "@/components/app-menu";
 import { DayPicker } from "@/components/day-picker";
+import { useDemoNow } from "@/components/demo-clock";
 import {
   clearPending,
   readGroupChoice,
@@ -28,6 +29,7 @@ import { PendingBar } from "@/components/pending-bar";
 import { ScheduleGrid } from "@/components/schedule-grid";
 import { WallpaperButton } from "@/components/wallpaper-button";
 import { findClashes } from "@/lib/clashes";
+import { festivalDayAt } from "@/lib/festival-time";
 import {
   type GroupChoice,
   type GroupPicks,
@@ -122,6 +124,24 @@ export function ScheduleScreen({
   logoutAction,
 }: ScheduleScreenProps) {
   const [dayId, setDayId] = useState(initialDayId);
+  // Inside `/demo`, the initial day is its clock's (FEAT-005b, FR-01): the first time the store has
+  // (at mount, or the first that arrives), once, and only if the user has not picked a day yet.
+  // Later changes of the clock never move the tab. Adjusted while rendering, like `error` below;
+  // outside `/demo` the time is always `null` and the day stays the one of the props.
+  const demoNow = useDemoNow();
+  const [dayLocked, setDayLocked] = useState(false);
+  if (demoNow !== null && !dayLocked) {
+    setDayLocked(true);
+    const demoDayId = festivalDayAt(demoNow, schedule.days);
+    if (demoDayId !== null) {
+      setDayId(demoDayId);
+    }
+  }
+
+  function pickDay(nextDayId: string) {
+    setDayLocked(true);
+    setDayId(nextDayId);
+  }
   const [saved, setSaved] = useState<ReadonlySet<string>>(() => new Set(savedShowIds));
   const [draft, setDraft] = useState<ReadonlySet<string>>(() => new Set(savedShowIds));
   const [error, setError] = useState<string | null>(null);
@@ -383,7 +403,7 @@ export function ScheduleScreen({
       <DayPicker
         days={schedule.days}
         value={dayId}
-        onChange={setDayId}
+        onChange={pickDay}
         action={
           day ? (
             // The draft, as on screen: unsaved marks and a pending selection included (FR-09).

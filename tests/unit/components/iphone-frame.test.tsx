@@ -1,4 +1,5 @@
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { createRef } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -148,5 +149,25 @@ describe("IphoneFrame", () => {
 
     expect(outerRadius).toBeGreaterThan(bezel);
     expect(cssNumber(screenBox.style.borderRadius)).toBe(outerRadius - bezel);
+  });
+
+  it("iphone-frame: pasa iframeRef y onIframeLoad al iframe", () => {
+    const iframeRef = createRef<HTMLIFrameElement>();
+    const onIframeLoad = vi.fn();
+    render(<IphoneFrame iframeRef={iframeRef} onIframeLoad={onIframeLoad} />);
+
+    const iframe = screen.getByTitle("Mi Grilla");
+    expect(iframeRef.current).toBe(iframe);
+    expect(onIframeLoad).not.toHaveBeenCalled();
+
+    fireEvent.load(iframe);
+
+    expect(onIframeLoad).toHaveBeenCalledTimes(1);
+  });
+
+  it("sin iframeRef ni onIframeLoad el iframe carga sin error", () => {
+    render(<IphoneFrame />);
+
+    expect(() => fireEvent.load(screen.getByTitle("Mi Grilla"))).not.toThrow();
   });
 });
