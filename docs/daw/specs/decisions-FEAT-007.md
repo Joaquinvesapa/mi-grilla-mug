@@ -16,3 +16,14 @@ Formato: decisión — quién la aprobó — fecha — fase o bloque.
   amigos siga exacto. Con `groups === null` la hoja genera el personal sin pregunta, como la grilla.
   — el modelo, en modo minimal, sin pregunta: no cambia ningún requisito ni la opción elegida —
   2026-11-18 — PLAN.
+- Supuestos del Block 1, aceptados por la revisión del bloque (daw-module-verifier) — el modelo, en
+  modo minimal — 2026-11-18 — CODE, Block 1:
+  - En la línea del artista, las píldoras van justo después del texto del artista más `BADGE_GAP`,
+    no pegadas al borde derecho del bloque ("a su derecha" de la decisión del usuario).
+  - Un bloque sin amigos, aun con grupo, conserva exactamente las líneas y el horario de FEAT-004;
+    sin píldoras, el artista usa todo el ancho útil.
+  - Defensas inalcanzables con la grilla real, cubiertas por tests `test-wallpaper-group-defensive-*`:
+    sin lugar para una línea de artista, o sin lugar ni para "+N", el bloque no lleva píldoras; si
+    ni "…" entra en el encabezado, `groupLabel` es `null`.
+  - `groupLabel.y` es el mismo que el de "Mi Grilla" (los dos de 32 px, centrados en la fila del
+    título).

@@ -5,7 +5,12 @@
 //
 // Only `dayAxis` and `hourMarks` come from the on-screen grid: its scale and minimum height are
 // tuned for taps, not for a 1290 × 2796 image.
+//
+// With a `group` (FEAT-007) the same layout carries the group's name in the header and, on each
+// show, a badge per friend who picked it: the same initials and "+N" as the grid.
 import { formatClock } from "@/lib/festival-time";
+import { extraFriendsLabel } from "@/lib/group-messages";
+import { type FriendPicks, indicatorParts } from "@/lib/group-picks";
 import { BASE, FOAM, SUBTLE, TEXT } from "@/lib/palette";
 import { dayAxis, hourMarks, type DayAxis } from "@/lib/schedule-layout";
 import type { FestivalDay, Show, Stage } from "@/lib/schedule-types";
@@ -60,6 +65,24 @@ const BRAND = "Mi Grilla";
 const ELLIPSIS = "…";
 const MINUTE_MS = 60_000;
 
+/** A friend's initials on a badge: at least 20 px (NFR-02). */
+export const INITIALS_FONT_SIZE = 20;
+const BADGE_HEIGHT = 24;
+const BADGE_PADDING_X = 6;
+/** Between two badges, and between the artist and the first badge on its line. */
+const BADGE_GAP = 4;
+/** Between the time and the row of badges below it. */
+const BADGE_ROW_GAP = 2;
+const GROUP_LABEL_FONT_SIZE = 32;
+/** Room on each side of the group's name: after the day's name and before the brand. */
+const GROUP_LABEL_GAP = 24;
+/**
+ * The shortest block with a row of badges below the time: 2 × 4 + 30 + 22 + 2 + 24 = 86 px. A
+ * shorter one (the two 20 min shows on Sunday) puts them on the artist's line instead.
+ */
+const BADGE_ROW_MIN_HEIGHT =
+  2 * BLOCK_PADDING_Y + ARTIST_LINE_HEIGHT + TIME_LINE_HEIGHT + BADGE_ROW_GAP + BADGE_HEIGHT;
+
 /** Width in px of `text` drawn with the canvas `font` (`ctx.measureText(text).width`). */
 export type MeasureText = (text: string, font: string) => number;
 
@@ -69,6 +92,20 @@ type WallpaperStageLabel = WallpaperText & { stageId: string };
 
 /** A whole hour: its line at `y` (from `GRID_LEFT` to `GRID_RIGHT`) and its label in the gutter. */
 type WallpaperHourMark = { label: string; y: number; text: WallpaperText };
+
+/**
+ * A friend's initials (or "+N") on a show: a rounded `fill` box, always drawn at full opacity, with
+ * its `label` already centered in it, so the canvas measures nothing.
+ */
+export type WallpaperBadge = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  radius: number;
+  fill: string;
+  label: WallpaperText;
+};
 
 /** A show: a `FOAM` rectangle, at full opacity if `lit` and at `DIMMED_OPACITY` if not. */
 type WallpaperBlock = {
@@ -82,6 +119,8 @@ type WallpaperBlock = {
   lines: WallpaperText[];
   /** "23:30 – 01:00", or `null` when the block has no room left for it. */
   time: WallpaperText | null;
+  /** The friends who picked the show, left to right; empty without a group or without friends. */
+  badges: WallpaperBadge[];
 };
 
 export type WallpaperLayout = {
@@ -89,9 +128,18 @@ export type WallpaperLayout = {
   height: number;
   title: WallpaperText;
   brand: WallpaperText;
+  /** The group's name, between the title and the brand; `null` without a group. */
+  groupLabel: WallpaperText | null;
   stageLabels: WallpaperStageLabel[];
   hourMarks: WallpaperHourMark[];
   blocks: WallpaperBlock[];
+};
+
+/** The group drawn on the wallpaper: its name and, per show id, the friends who picked it. */
+export type WallpaperGroup = {
+  name: string;
+  /** Only asked `get(id)` for the day's shows (R-01). */
+  friendsByShow: ReadonlyMap<string, readonly FriendPicks[]>;
 };
 
 export type WallpaperInput = {
@@ -104,6 +152,8 @@ export type WallpaperInput = {
   /** The resolved family (`getComputedStyle(document.body).fontFamily`), used as-is in `font`. */
   fontFamily: string;
   measureText: MeasureText;
+  /** The group's wallpaper (FEAT-007); without it, the personal one of FEAT-004. */
+  group?: WallpaperGroup;
 };
 
 function font(weight: number, size: number, family: string): string {
@@ -242,6 +292,37 @@ function blockBox(
   };
 }
 
+/** The artist's name wrapped to `maxWidth` and `maxLines`, one line every `ARTIST_LINE_HEIGHT`. */
+function artistLines(
+  show: Show,
+  maxWidth: number,
+  maxLines: number,
+  origin: { x: number; y: number },
+  artistFont: string,
+  measure: MeasureText,
+): WallpaperText[] {
+  return wrap(show.artist, maxWidth, maxLines, artistFont, measure).map(
+    (text, index): WallpaperText => ({
+      text,
+      x: origin.x,
+      y: origin.y + index * ARTIST_LINE_HEIGHT,
+      font: artistFont,
+      color: BASE,
+    }),
+  );
+}
+
+/** "23:30 – 01:00" at `x`, `y`. */
+function timeText(show: Show, x: number, y: number, timeFont: string): WallpaperText {
+  return {
+    text: `${formatClock(new Date(show.startsAt))} – ${formatClock(new Date(show.endsAt))}`,
+    x,
+    y,
+    font: timeFont,
+    color: BASE,
+  };
+}
+
 function blockTexts(
   show: Show,
   box: Box,
@@ -259,29 +340,166 @@ function blockTexts(
   );
   const textX = box.x + BLOCK_PADDING_X;
   const textTop = box.y + BLOCK_PADDING_Y;
-  const lines = wrap(
-    show.artist,
+  const lines = artistLines(
+    show,
     box.width - 2 * BLOCK_PADDING_X,
     maxLines,
+    { x: textX, y: textTop },
     artistFont,
     measure,
-  ).map((text, index): WallpaperText => ({
-    text,
-    x: textX,
-    y: textTop + index * ARTIST_LINE_HEIGHT,
-    font: artistFont,
-    color: BASE,
-  }));
-  const time: WallpaperText | null = withTime
-    ? {
-        text: `${formatClock(new Date(show.startsAt))} – ${formatClock(new Date(show.endsAt))}`,
-        x: textX,
-        y: textTop + lines.length * ARTIST_LINE_HEIGHT,
-        font: timeFont,
-        color: BASE,
-      }
+  );
+  const time = withTime
+    ? timeText(show, textX, textTop + lines.length * ARTIST_LINE_HEIGHT, timeFont)
     : null;
   return { lines, time };
+}
+
+/** A badge's text and its width: the text plus `BADGE_PADDING_X` on each side. */
+type BadgeSize = { text: string; width: number };
+
+/** The width of `badges` side by side, `BADGE_GAP` apart. */
+function rowWidth(badges: readonly BadgeSize[]): number {
+  return (
+    badges.reduce((sum, badge) => sum + badge.width, 0) + Math.max(0, badges.length - 1) * BADGE_GAP
+  );
+}
+
+/**
+ * The grid's badges for `friends` (up to 3 initials and "+N") that fit in `maxWidth`: while they do
+ * not, the last initials shown fold into "+N", so initials + N is always the number of friends
+ * (NFR-05) and no badge is ever cut. Empty if not even "+N" alone fits, rather than overflowing.
+ */
+function fitBadges(
+  friends: readonly FriendPicks[],
+  maxWidth: number,
+  badgeFont: string,
+  measure: MeasureText,
+): BadgeSize[] {
+  const { initials, extra } = indicatorParts(friends);
+  const sized = (text: string): BadgeSize => ({
+    text,
+    width: measure(text, badgeFont) + 2 * BADGE_PADDING_X,
+  });
+  for (let shown = initials.length; shown >= 0; shown -= 1) {
+    const folded = extra + initials.length - shown;
+    const badges = [
+      ...initials.slice(0, shown),
+      ...(folded > 0 ? [extraFriendsLabel(folded)] : []),
+    ].map(sized);
+    if (rowWidth(badges) <= maxWidth) {
+      return badges;
+    }
+  }
+  return [];
+}
+
+/** `badges` side by side from `x`, their tops at `y`, each with its text centered. */
+function placeBadges(
+  badges: readonly BadgeSize[],
+  x: number,
+  y: number,
+  badgeFont: string,
+): WallpaperBadge[] {
+  let left = x;
+  return badges.map((badge): WallpaperBadge => {
+    const placed: WallpaperBadge = {
+      x: left,
+      y,
+      width: badge.width,
+      height: BADGE_HEIGHT,
+      radius: BADGE_HEIGHT / 2,
+      fill: BASE,
+      label: {
+        text: badge.text,
+        x: left + BADGE_PADDING_X,
+        y: y + (BADGE_HEIGHT - INITIALS_FONT_SIZE) / 2,
+        font: badgeFont,
+        color: TEXT,
+      },
+    };
+    left += badge.width + BADGE_GAP;
+    return placed;
+  });
+}
+
+/**
+ * A block with friends on it. Tall enough (`BADGE_ROW_MIN_HEIGHT`), the badges go in a row below
+ * the time, as wide as the block, and the artist keeps the lines left (at least one). Shorter, the
+ * artist gets one line and the badges go to its right, in at most half the block's width; the time
+ * stays (decision of the user, decisions-FEAT-007.md). Without room for even one line, no badges.
+ */
+function blockWithBadges(
+  show: Show,
+  box: Box,
+  friends: readonly FriendPicks[],
+  fontFamily: string,
+  measure: MeasureText,
+): Pick<WallpaperBlock, "lines" | "time" | "badges"> {
+  const artistFont = font(600, ARTIST_FONT_SIZE, fontFamily);
+  const timeFont = font(600, TIME_FONT_SIZE, fontFamily);
+  const badgeFont = font(600, INITIALS_FONT_SIZE, fontFamily);
+  const inner = box.height - 2 * BLOCK_PADDING_Y;
+  const innerWidth = box.width - 2 * BLOCK_PADDING_X;
+  const origin = { x: box.x + BLOCK_PADDING_X, y: box.y + BLOCK_PADDING_Y };
+
+  if (box.height >= BADGE_ROW_MIN_HEIGHT) {
+    const maxLines = Math.max(
+      1,
+      Math.floor((inner - TIME_LINE_HEIGHT - BADGE_ROW_GAP - BADGE_HEIGHT) / ARTIST_LINE_HEIGHT),
+    );
+    const lines = artistLines(show, innerWidth, maxLines, origin, artistFont, measure);
+    const time = timeText(show, origin.x, origin.y + lines.length * ARTIST_LINE_HEIGHT, timeFont);
+    const rowTop = time.y + TIME_LINE_HEIGHT + BADGE_ROW_GAP;
+    const badges = fitBadges(friends, innerWidth, badgeFont, measure);
+    return { lines, time, badges: placeBadges(badges, origin.x, rowTop, badgeFont) };
+  }
+
+  if (inner < ARTIST_LINE_HEIGHT) {
+    return { ...blockTexts(show, box, fontFamily, measure), badges: [] };
+  }
+
+  const badges = fitBadges(friends, innerWidth / 2, badgeFont, measure);
+  // The badges take at most half the useful width, so the artist keeps at least
+  // `innerWidth / 2 - BADGE_GAP` (≈ 95 px): room for the start of its name and "…" at 28 px. Without
+  // badges (not even "+N" fits) there is no gap to leave: the same width as without a group.
+  const artistWidth = badges.length > 0 ? innerWidth - rowWidth(badges) - BADGE_GAP : innerWidth;
+  const lines = artistLines(show, artistWidth, 1, origin, artistFont, measure);
+  const [line] = lines;
+  const badgesX = line ? line.x + measure(line.text, line.font) + BADGE_GAP : origin.x;
+  const badgesTop = origin.y + (ARTIST_LINE_HEIGHT - BADGE_HEIGHT) / 2;
+  // The time keeps its place below the artist's line, even if the name did not fit at all.
+  const time =
+    inner >= ARTIST_LINE_HEIGHT + TIME_LINE_HEIGHT
+      ? timeText(show, origin.x, origin.y + ARTIST_LINE_HEIGHT, timeFont)
+      : null;
+  return { lines, time, badges: placeBadges(badges, badgesX, badgesTop, badgeFont) };
+}
+
+/**
+ * The group's name in the title's row: `GROUP_LABEL_GAP` after the day's name, cut short with "…"
+ * to end `GROUP_LABEL_GAP` before the brand. `null` when not even "…" fits.
+ */
+function groupLabelText(
+  name: string,
+  title: WallpaperText,
+  brand: WallpaperText,
+  fontFamily: string,
+  measure: MeasureText,
+): WallpaperText | null {
+  const labelFont = font(600, GROUP_LABEL_FONT_SIZE, fontFamily);
+  const x = title.x + measure(title.text, title.font) + GROUP_LABEL_GAP;
+  const maxWidth = brand.x - GROUP_LABEL_GAP - x;
+  const text =
+    measure(name, labelFont) <= maxWidth ? name : ellipsize(name, maxWidth, labelFont, measure);
+  return text
+    ? {
+        text,
+        x,
+        y: TITLE_TOP + (TITLE_FONT_SIZE - GROUP_LABEL_FONT_SIZE) / 2,
+        font: labelFont,
+        color: SUBTLE,
+      }
+    : null;
 }
 
 /**
@@ -291,7 +509,7 @@ function blockTexts(
  * (FR-05). Throws `RangeError` (from `dayAxis`) for a day without shows.
  */
 export function wallpaperLayout(input: WallpaperInput): WallpaperLayout {
-  const { day, fontFamily, measureText, selectedIds } = input;
+  const { day, fontFamily, measureText, selectedIds, group } = input;
   const { columns, width: columnWidth } = stageColumns(input.stages);
   const columnByStage = new Map(columns.map((column) => [column.stage.id, column]));
 
@@ -356,11 +574,16 @@ export function wallpaperLayout(input: WallpaperInput): WallpaperLayout {
   const nextStart = nextStartByShow(shows);
   const blocks = placed.map(({ show, column }): WallpaperBlock => {
     const box = blockBox(show, { x: column.x, width: columnWidth }, axis, nextStart.get(show.id));
+    // Only the day's shows are looked up (R-01). `lit` is the user's alone: a show only friends
+    // picked stays dimmed (FR-07).
+    const friends = group?.friendsByShow.get(show.id) ?? [];
     return {
       showId: show.id,
       ...box,
       lit: !anySelected || selectedIds.has(show.id),
-      ...blockTexts(show, box, fontFamily, measureText),
+      ...(friends.length > 0
+        ? blockWithBadges(show, box, friends, fontFamily, measureText)
+        : { ...blockTexts(show, box, fontFamily, measureText), badges: [] }),
     };
   });
 
@@ -369,22 +592,29 @@ export function wallpaperLayout(input: WallpaperInput): WallpaperLayout {
     height: WALLPAPER_HEIGHT,
     title,
     brand,
+    groupLabel: group ? groupLabelText(group.name, title, brand, fontFamily, measureText) : null,
     stageLabels,
     hourMarks: marks,
     blocks,
   };
 }
 
-/**
- * `mi-grilla-viernes.png`: the day's name in lowercase, without accents, reduced to `[a-z0-9-]`
- * (FR-11). A name with nothing left after that gives `mi-grilla.png`, never `mi-grilla-.png`.
- */
-export function wallpaperFileName(day: Pick<FestivalDay, "name">): string {
-  const slug = day.name
+/** `text` in lowercase, without accents, reduced to `[a-z0-9-]`, with no "-" at either end. */
+function fileSlug(text: string): string {
+  return text
     .normalize("NFD")
     .replace(/\p{M}/gu, "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
-  return slug ? `mi-grilla-${slug}.png` : "mi-grilla.png";
+}
+
+/**
+ * `mi-grilla-viernes.png`, or `mi-grilla-viernes-los-del-lolla.png` with a group (FEAT-007, FR-13):
+ * the day's name and the group's, each through `fileSlug` (FR-11, R-06). A name with nothing left
+ * after that is left out, so the result is never `mi-grilla-.png`: both empty give `mi-grilla.png`.
+ */
+export function wallpaperFileName(day: Pick<FestivalDay, "name">, groupName?: string): string {
+  const slugs = [day.name, groupName ?? ""].map(fileSlug).filter(Boolean);
+  return `${["mi-grilla", ...slugs].join("-")}.png`;
 }

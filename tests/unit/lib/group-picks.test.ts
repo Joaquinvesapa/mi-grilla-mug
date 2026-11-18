@@ -10,6 +10,7 @@ import {
   parseGroupChoice,
   picksByShow,
   resolveGroupChoice,
+  wallpaperGroupDefault,
 } from "@/lib/group-picks";
 
 const GROUP_A = "0b6f3c1e-8a2d-4f7b-9c3e-1d2a3b4c5d6e";
@@ -71,6 +72,23 @@ describe("resolveGroupChoice", () => {
 
   it("test-resolve-choice-stale: una elección de un grupo que ya no está es rechazada y se usa el más reciente", () => {
     expect(resolveGroupChoice(GROUPS, { groupId: GROUP_GONE })).toBe(GROUP_A);
+  });
+});
+
+describe("wallpaperGroupDefault", () => {
+  it("test-group-picks-wallpaper-default: el grupo del selector si es uno de los grupos; con «Sin grupo» o un id inválido, el más reciente; sin grupos, undefined", () => {
+    expect(wallpaperGroupDefault(GROUPS, GROUP_B)).toBe(GROUP_B);
+    expect(wallpaperGroupDefault(GROUPS, GROUP_A)).toBe(GROUP_A);
+    // "Sin grupo" in the grid's picker: the group the user joined last.
+    expect(wallpaperGroupDefault(GROUPS, null)).toBe(GROUP_A);
+    expect(wallpaperGroupDefault(GROUPS, undefined)).toBe(GROUP_A);
+    // Invalid ids: a group that is gone, an empty value, something that is not an id.
+    for (const invalid of [GROUP_GONE, "", "<script>"]) {
+      expect(wallpaperGroupDefault(GROUPS, invalid), invalid).toBe(GROUP_A);
+    }
+    expect(wallpaperGroupDefault([], GROUP_A)).toBeUndefined();
+    expect(wallpaperGroupDefault([], null)).toBeUndefined();
+    expect(wallpaperGroupDefault([], undefined)).toBeUndefined();
   });
 });
 

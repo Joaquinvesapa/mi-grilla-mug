@@ -85,6 +85,19 @@ export function resolveGroupChoice(
   return kept ? kept.id : latest.id;
 }
 
+/**
+ * The group the wallpaper sheet starts with (FEAT-007, FR-02): `shownGroupId` (the grid picker's
+ * value, already resolved by `resolveGroupChoice`) if it is one of `groups`; otherwise, "Sin grupo"
+ * (`null`) included, the most recent one; `undefined` when there are no groups.
+ */
+export function wallpaperGroupDefault(
+  groups: readonly GroupPicks[],
+  shownGroupId: string | null | undefined,
+): string | undefined {
+  const shown = groups.find((group) => group.id === shownGroupId);
+  return shown ? shown.id : groups[0]?.id;
+}
+
 /** The key of the group choice of `userId`. */
 export function groupChoiceKey(userId: string): string {
   return `${GROUP_CHOICE_KEY_PREFIX}${userId}`;
