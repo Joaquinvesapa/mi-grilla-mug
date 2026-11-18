@@ -86,7 +86,8 @@ producción: `pnpm build && pnpm start`.
 
 `.github/workflows/ci.yml` corre al abrir, actualizar o reabrir un PR, y al mergear a `main`, con
 tres jobs en paralelo: `quality` (lint, formato, tipos y unit con coverage), `integration`
-(migraciones y tests de integración contra Postgres 17) y `e2e` (migraciones y Playwright con WebKit
-y Chromium, contra su propio Postgres 17). `integration` y `e2e` reciben un `BETTER_AUTH_SECRET`
+(migraciones y tests de integración contra Postgres 17) y `e2e` (migraciones y Playwright contra su
+propio Postgres 17: en un PR solo con WebKit, en el proyecto `iphone-webkit`; al mergear a `main`,
+con WebKit y Chromium en los 4 proyectos). `integration` y `e2e` reciben un `BETTER_AUTH_SECRET`
 descartable escrito en el workflow, que no es un secreto, y su `BETTER_AUTH_URL`; `quality` no
 necesita ninguna de las dos.

@@ -1,7 +1,8 @@
 # AGENTS.md — Mi Grilla
 
 > Contexto del **proyecto**. El **proceso** (fases, gates, cuándo testear, cuándo commitear) lo
-> define DAW en `.daw/` y no se repite acá.
+> define DAW en `.daw/` y no se repite acá. La excepción es la sección Testing, que fija en qué
+> momento se corren los E2E, como regla del proyecto que complementa a DAW.
 
 ---
 
@@ -54,7 +55,7 @@ dentro de un mockup de iPhone.
 | Coverage floor — line | 80 % (PRD 01, NFR-05; `vitest.config.ts`) |
 | Coverage floor — branch | 70 % (PLAN de FEAT-001; `vitest.config.ts`) |
 | Coverage floor — function | 80 % (PLAN de FEAT-001; `vitest.config.ts`) |
-| How the suite is run | `pnpm test` (unit en jsdom + coverage con los pisos). `pnpm test:integration`: Vitest en node contra una base PostgreSQL real (`DATABASE_URL` de `.env`; antes, `pnpm db:up`, `pnpm db:migrate` y `pnpm db:seed`). `pnpm test:e2e`: Playwright contra el build de producción (`pnpm build && pnpm start` en el puerto 3100, ADR-002; los tests crean cuentas y leen la grilla, así que antes, `pnpm db:up`, `pnpm db:migrate` y `pnpm db:seed`, con `BETTER_AUTH_SECRET` en `.env`) en 4 proyectos: `iphone-webkit` (iPhone 15), `mobile-chromium` (Pixel 7), `mobile-360` (Chromium 360×780) y `desktop` (Chromium 1280×800, solo `/demo`). `pnpm test:e2e:docker`: la misma suite dentro de la imagen oficial `mcr.microsoft.com/playwright:v1.65.1-noble`, para hosts sin las bibliotecas de WebKit (solo Linux: usa la red del host para llegar a la base; no toca el `node_modules` del host; acepta los argumentos de `playwright test`). Calidad: `pnpm lint`, `pnpm format:check`, `pnpm typecheck`. CI: `.github/workflows/ci.yml`, con tres jobs en paralelo de 10 minutos como máximo: `quality` (lint, formato, tipos y `pnpm test`), `integration` (`pnpm db:migrate` + `pnpm db:seed` + `pnpm test:integration` contra un service `postgres:17.12`) y `e2e` (`pnpm db:migrate` + `pnpm db:seed` + `pnpm test:e2e` con WebKit y Chromium, contra su propio service `postgres:17.12`). `integration` y `e2e` reciben un `BETTER_AUTH_SECRET` descartable escrito en el workflow y su `BETTER_AUTH_URL`; `quality`, ninguna de las dos |
+| How the suite is run | `pnpm test` (unit en jsdom + coverage con los pisos). `pnpm test:integration`: Vitest en node contra una base PostgreSQL real (`DATABASE_URL` de `.env`; antes, `pnpm db:up`, `pnpm db:migrate` y `pnpm db:seed`). `pnpm test:e2e`: Playwright contra el build de producción (`pnpm build && pnpm start` en el puerto 3100, ADR-002; los tests crean cuentas y leen la grilla, así que antes, `pnpm db:up`, `pnpm db:migrate` y `pnpm db:seed`, con `BETTER_AUTH_SECRET` en `.env`) en 4 proyectos: `iphone-webkit` (iPhone 15), `mobile-chromium` (Pixel 7), `mobile-360` (Chromium 360×780) y `desktop` (Chromium 1280×800, solo `/demo`). `pnpm test:e2e:docker`: la misma suite dentro de la imagen oficial `mcr.microsoft.com/playwright:v1.65.1-noble`, para hosts sin las bibliotecas de WebKit (solo Linux: usa la red del host para llegar a la base; no toca el `node_modules` del host; acepta los argumentos de `playwright test`). Calidad: `pnpm lint`, `pnpm format:check`, `pnpm typecheck`. CI: `.github/workflows/ci.yml`, con tres jobs en paralelo de 10 minutos como máximo: `quality` (lint, formato, tipos y `pnpm test`), `integration` (`pnpm db:migrate` + `pnpm db:seed` + `pnpm test:integration` contra un service `postgres:17.12`) y `e2e` (`pnpm db:migrate` + `pnpm db:seed` + `pnpm test:e2e $E2E_PROJECTS`, contra su propio service `postgres:17.12`: en un PR solo el proyecto `iphone-webkit`, y al mergear a `main` los 4 proyectos con WebKit y Chromium). `integration` y `e2e` reciben un `BETTER_AUTH_SECRET` descartable escrito en el workflow y su `BETTER_AUTH_URL`; `quality`, ninguna de las dos |
 | What a skipped test owes | El motivo, en la misma línea del test salteado. |
 
 - El mínimo de la CI son los tres pisos de arriba: la cobertura bajo cualquiera de ellos hace fallar
@@ -63,6 +64,11 @@ dentro de un mockup de iPhone.
 - La CI corre al abrir o actualizar un PR y al mergear a `main`; nunca en un push sin PR.
 - Obligatorio: tests unitarios, tests de integración y al menos 1 test E2E.
 - Los tests de integración usan una base PostgreSQL real, no un mock.
+- **Cuándo se corren los E2E en DAW** (FIX-001): en un bloque de CODE, unit, integración y solo el
+  E2E que el bloque crea o cambia, en un proyecto (`pnpm test:e2e <archivo> --project=iphone-webkit`);
+  en el cierre de CODE, la suite E2E completa en los 4 proyectos; en VERIFY, si el código no cambió
+  desde la corrida del cierre de CODE, esa corrida es la evidencia de los E2E, y si cambió, se corre
+  de nuevo la suite completa.
 
 Si un número de acá no coincide con el que exige la CI, gana el de la CI y se corrige este archivo.
 
